@@ -90,7 +90,7 @@ If those inputs changed, abort the stale derived write, re-read, and semanticall
 
 Different independent fields MAY be semantically merged. User-authoritative fields preserve the latest explicit learner update.
 
-Project/design lineage generation guards and target-file CAS solve different problems. When project-design enforcement is active, generation authority is checked according to `project-handoff-policy.md`; the target mutable file still requires the fresh-fetch/semantic-merge/blob-SHA flow above.
+Project/session collaboration authority is external to ordinary Learning OS Core and does not replace product write safety. When the current execution environment or target repository requires an authority check, satisfy that boundary before the product-state write; the target mutable file still requires the fresh-fetch/semantic-merge/blob-SHA flow above. Learning Branch generation guards remain separately governed by the learning continuity protocol.
 
 ## 7. Sparse materialization
 
@@ -106,26 +106,13 @@ Reports/events do not require an atomic multi-file transaction. Recovery order f
 
 If a reconciliation changes canonical Plan/Progress/Weekly decisions, write and verify those decisions before advancing any Hub cursor/runtime optimization. Use at-least-once/idempotent reconciliation rather than exactly-once assumptions.
 
-## 9. Learning handoff and Project design handoff
+## 9. Learning handoff and external project collaboration
 
-Learning handoffs for materialized learning Branch conversation generations follow `continuity-policy.md` and live with the relevant Topic/Subtopic lineage. They are supplemental continuity, not canonical state or Evidence.
+Learning handoffs for materialized learning Branch conversation generations follow `continuity-policy.md` and live with the relevant Topic/Subtopic lineage. They are supplemental product continuity, not canonical learner state or Evidence.
 
-Learning OS design/maintenance generation transfer follows `project-handoff-policy.md`. `docs/handoffs/` remains the supplemental packet home for Learning OS design/maintenance recovery context; project-design writer authority belongs in canonical lineage control, not in the handoff document.
+Project/design Agent collaboration is outside ordinary Learning OS Core. Core does not define a project-design generation, claim/takeover transaction, packet publication protocol, or session writer credential. A target repository or current execution environment may maintain its own recovery/control artifacts, but those rules neither become learner/runtime state nor bypass the product fresh-read, deployment, learning-lineage, or target-CAS guards defined here.
 
-For a Learning OS design/maintenance checkpoint or handoff preparation:
-
-1. reconstruct current repository first;
-2. compare conversation-recoverable information against canonical state;
-3. write confirmed settled operational truth to responsible canonical files only;
-4. preserve only residual rationale, rejected approaches, verified platform tests, unresolved conflicts, implementation state, and frontier information that have future recovery value;
-5. create a new immutable handoff packet only when a real generation/work-surface transfer is being prepared;
-6. source-side readback or amnesia simulation MAY verify packet quality, but does not itself transfer writer authority;
-7. a packet becomes the published transaction packet only when canonical lineage control points to its exact blob identity;
-8. normal transfer completes only after an independently recovered successor successfully claims according to `project-handoff-policy.md`.
-
-A handoff packet created without the corresponding lineage-control publication is supplemental/orphaned recovery material and does not freeze or transfer authority.
-
-Do not archive full transcripts by default and do not persist private chain-of-thought.
+Do not archive full transcripts by default and do not persist private chain-of-thought in product state.
 
 ## 10. Visibility
 

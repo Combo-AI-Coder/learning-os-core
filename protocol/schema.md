@@ -219,8 +219,8 @@ Reference invariants:
 8. Display names MUST NOT be canonical references.
 9. Current mutable references SHOULD resolve to a current canonical entity or explicit successor.
 10. Storage path is not itself the semantic ID.
-11. Reading a canonical `active_generation` does not grant a fresh session that generation. Session generation is acquired only through an established continuous-session identity, successful successor claim, successful explicit takeover, or one-time migration bootstrap.
-12. A physical conversation `Cxx` sequence is independent of Branch/project-design generation and never grants writer authority.
+11. For a materialized learning Branch lineage, reading `active_generation` does not grant a fresh conversation that product-writing generation; acquisition follows the learning continuity protocol.
+12. A physical conversation `Cxx` sequence is independent of learning Branch generation and never grants learner/runtime writer authority.
 
 Curriculum node IDs SHOULD remain semantic and stable, e.g. `probability.random_variable.function_view`. Curriculum edge IDs MUST be stable and unique within a curriculum, normally `edge_<semantic-slug>`.
 
@@ -759,12 +759,12 @@ Rules:
 1. Normal reservation is monotonic within each scope and uses blob-SHA CAS according to `conversation-naming-policy.md`.
 2. Production `Cxx` numbers correspond to real user work conversations. A number confirmed to have belonged to a real user work conversation MUST NOT be reused, even if that conversation is later abandoned or renamed.
 3. Acceptance, test, and migration-simulation allocations MUST use independent non-production scopes (normally `acceptance:<production-scope>` / `test:<production-scope>`) and MUST NOT advance the corresponding production counter.
-4. A generation-authorized maintenance transaction MAY lower a production `last_allocated` only to remove a proven contiguous orphan suffix above the highest confirmed real production conversation. This is not a general rollback mechanism.
+4. A separately authorized maintenance transaction MAY lower a production `last_allocated` only to remove a proven contiguous orphan suffix above the highest confirmed real production conversation. This is not a general rollback mechanism.
 5. Every such orphan repair MUST preserve `repair_history` with the previous counter, repaired counter, exact contiguous orphan suffix, reason, reliable timestamp, and authority provenance, and MUST use CAS.
 6. Interior gaps MUST NOT be repaired by renumbering later real conversations; confirmed real production numbers remain consumed.
 7. CAS conflict requires re-read and recomputation; last-write-wins is invalid.
-8. `Cxx`/`Txx` sequence metadata is independent of Branch/project-design generation. Neither reservation nor authorized repair grants, changes, or proves lineage writer authority.
-9. A fresh/unbound conversation may use only the narrow correctly scoped reservation exception. Orphan repair is generation-authorized maintenance and is not available through the fresh/unbound reservation exception.
+8. `Cxx`/`Txx` sequence metadata is independent of learning Branch generation and external project/session collaboration authority. Neither reservation nor authorized repair grants, changes, or proves lineage writer authority.
+9. A fresh/unbound conversation may use only the narrow correctly scoped reservation exception. Orphan repair is separately authorized maintenance and is not available through the fresh/unbound reservation exception.
 
 Historical V0.2 learner-project Domain Goal/Plan/State/Deferred files and their document types are not current runtime schema. They may remain visible only through Git history or historical handoff/acceptance material. `domains/<domain>/curriculum.yaml` remains the V0.3 Knowledge Plane curriculum home.
 
@@ -778,52 +778,8 @@ Any persistent inferred learner state should be able to answer:
 
 Any derived planning artifact should be able to identify the learner goal/plan revision and other upstream assumptions that were genuinely material to the decision without becoming coupled to every ordinary learning-state revision.
 
-## 30. Project lineage control
+## 30. Private-Control lineage compatibility
 
-Project-level conversation/work lineages MAY materialize sparse canonical writer-authority state under `runtime/lineages/<lineage-id>.yaml`.
+Legacy/private project-design `lineage_control` documents may remain supported by compatibility validation and may remain canonical in the Private Control repository under that target's own governance. They are not ordinary Core or Instance product state.
 
-A minimal control document is:
-
-```yaml
-schema_version: "0.3"
-document_type: lineage_control
-updated_at: <timestamp>
-
-lineage:
-  id: <lineage-id>
-  kind: <lineage-kind>
-
-active_generation: <integer>
-pending_handoff: <object-or-null>
-bootstrap: <optional-object>
-last_transition: <optional-object>
-```
-
-`active_generation` is a monotonic fencing token, not a credential that a fresh session may self-assign.
-
-A normal pending Project Handoff uses:
-
-```yaml
-pending_handoff:
-  id: hnd_<timestamp>_<suffix>
-  from_generation: <integer>
-  to_generation: <integer>
-  anchor:
-    repository: <owner/repo>
-    ref: <ref>
-    canonical_head: <commit-sha>
-  packet:
-    path: <repository-path>
-    blob_sha: <git-blob-sha>
-  published_at: <timestamp>
-```
-
-For a normal handoff, `to_generation` SHOULD be `from_generation + 1`. Takeover also advances monotonically and MUST NOT resurrect an older generation.
-
-`bootstrap` MAY record one-time migration provenance when an already-existing conversational lineage is first brought under project-level fencing. It MUST NOT fabricate historical normal claims that never occurred under this protocol.
-
-`last_transition.kind` initially uses `normal_handoff` or `takeover`. A normal successful claim may record `handoff_id`, `from_generation`, `to_generation`, `claimed_at`, and `recovered_head`; takeover may additionally record a short explicit reason.
-
-The control file is mutable canonical operational state but does not require a semantic `revision` in V0. Git blob SHA supplies CAS concurrency, while generation supplies writer-epoch semantics.
-
-Project Handoff transaction semantics, generation acquisition, writer guard, recovery, cancellation, claim, and takeover are defined in `project-handoff-policy.md`.
+Core does not define Agent/session/project-design generation acquisition, handoff publication, claim, takeover, or writer credentials. Current execution-environment authority and the applicable target repository own those collaboration semantics. A legacy lineage document therefore cannot be used by ordinary Runtime to infer or acquire project/session authority, and it never bypasses deployment, learning-Branch, fresh-read, or target-CAS guards.

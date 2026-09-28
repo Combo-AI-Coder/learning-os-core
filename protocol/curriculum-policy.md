@@ -96,7 +96,32 @@ Externally sourced questions MAY be used as candidate material, but web/source a
 
 A reusable probe bank is Domain teaching infrastructure, not learner Evidence or Knowledge State. Answering a bank item creates no capability transition by itself; observed performance is still classified and integrated through the Evidence protocols.
 
-Current V0.3 Core does not require every Domain to materialize a persistent probe bank. Materialize durable probe assets only when repeated teaching benefit justifies their maintenance; storage/schema may remain sparse and domain-specific until a stable core representation is warranted.
+Core does not require every Domain to materialize a persistent probe bank. Materialize durable probe assets only when repeated teaching benefit justifies their maintenance; storage/schema may remain sparse and domain-specific until a stable core representation is warranted.
+
+### Optional Domain probe assets
+
+A Domain MAY keep sparse reusable anchors in
+`domains/<domain>/probes.md`. The filename is declared by
+`domains.optional_probe_file` in Core configuration and is relative to
+the selected Domain directory. This is an optional Markdown convention,
+not a new canonical document type or a required asset for every Domain.
+
+Runtime MUST NOT load Domain probe assets by default.
+
+Runtime MAY load the selected Domain's asset only when a probe-selection
+decision is relevant under Teaching Decision's probe rule. Orientation,
+Topic entry, an in-progress node, or unknown capability state alone does
+not trigger loading. Reading an asset does not require administering it.
+
+Resolve the optional file within the same trusted Core snapshot used
+for that Domain's curriculum. Do not substitute a newer branch version.
+A missing optional file is normal: continue with existing evidence,
+ordinary teaching, or a suitably designed runtime-generated probe.
+
+Select anchors by target node and capability, then evaluate prerequisites,
+recent exposure, confounds, learner cost, and the decision to be informed.
+Load only the relevant anchor where selective reading is available.
+Keep responses and learner-specific interpretations outside Domain assets.
 
 ## Branching and Subtopic materialization
 
