@@ -230,7 +230,6 @@ protocol:
   curriculum: protocol/curriculum-policy.md
   execution: protocol/execution-policy.md
   coordination: protocol/coordination-policy.md
-  project_handoff: protocol/project-handoff-policy.md
   continuity: protocol/continuity-policy.md
   persistence: protocol/persistence-policy.md
   repository_governance: protocol/repository-governance-policy.md
@@ -244,12 +243,12 @@ governance:
     force_push: forbidden
     deletion: forbidden
     required_checks:
-      - validate-core
+      - validate
   authority_semantics: protocol/repository-governance-policy.md
 
 # Stable reusable template / domain declarations present in this Core tree.
-# Instance-local domains and real learner curricula are NOT Core material;
-# the real modern-language-models curriculum is deferred (D5).
+# Reusable Domain bases belong to Core; learner-specific curricula/extensions
+# and learner state remain Instance-owned.
 domains:
   reusable_bases:
     - _template

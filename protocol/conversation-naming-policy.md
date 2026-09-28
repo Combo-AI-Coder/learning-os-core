@@ -6,12 +6,12 @@ schema_compatibility: "0.3"
 
 # Conversation Naming Policy
 
-This protocol governs first-turn suggested conversation names. It exists only to allocate physical conversation sequence labels safely and must never be used as learner state, project-design authority, or lineage generation identity.
+This protocol governs first-turn suggested conversation names. It exists only to allocate physical conversation sequence labels safely and must never be used as learner state, project/session writer authority, or lineage generation identity.
 
 ## 1. Separation of concerns
 
 - Production `Cxx` identifies an actual user work conversation sequence within one naming scope.
-- `Cxx` is independent of Learning Branch generation and project-design generation.
+- `Cxx` is independent of Learning Branch generation and external project/session writer authority.
 - A conversation-name allocation never grants writer authority, never changes `active_generation`, and never satisfies a generation guard.
 - The sequence registry is durable UI/runtime metadata. It is not learner state, Evidence, Progress, Knowledge, Execution, Coordination, or project-design lineage control.
 - Acceptance, test, migration simulation, abandoned bootstrap probes, and other non-user-work surfaces MUST NOT consume production `Cxx` numbers.
@@ -61,7 +61,7 @@ If a user explicitly selects an already-existing physical work conversation with
 
 On the first assistant turn of a genuinely new user work conversation, after bootstrap and identity resolution:
 
-1. Read `config/project.yaml` and locate the configured sequence registry.
+1. Read the Core `chat_routing.conversation_name_behavior.sequence_registry` setting from `config/core.yaml` and use that repository-relative Instance registry path.
 2. If this physical conversation already has an established valid production `Cxx` identity, reuse it and do not reserve another number.
 3. Otherwise fresh-fetch the sequence registry and its current blob SHA.
 4. Resolve the production naming scope and read `last_allocated`; missing scope means `0`.
@@ -103,9 +103,9 @@ For test/acceptance work, failure to allocate a non-production sequence MUST NOT
 
 An **orphan reservation** is a production reservation for which there is reliable evidence that no real user work conversation ever corresponded to that reserved number. Examples include an acceptance fixture that incorrectly used the production scope or a mistaken reservation made in a conversation that already had a different established production identity.
 
-A generation-authorized Learning OS maintenance session MAY repair orphan reservations only under all of these conditions:
+An explicitly authorized Learning OS maintenance session MAY repair orphan reservations only under all of these conditions:
 
-1. fresh project-design writer guard passes;
+1. current explicit maintenance authorization is established and all applicable target writer guards pass;
 2. the current sequence registry is fresh-read with its blob SHA;
 3. the candidate numbers form a contiguous suffix above the highest independently confirmed real user work conversation in that scope;
 4. each candidate suffix number is independently established as orphaned from canonical provenance plus current explicit user information or equivalent reliable evidence;
@@ -127,7 +127,7 @@ If evidence is insufficient, preserve the higher counter and record the ambiguit
 
 ## 9. Migration and audit
 
-A generation-authorized Learning OS maintenance session may raise a production scope's `last_allocated` floor when a higher already-existing real user work conversation number is independently confirmed.
+An explicitly authorized Learning OS maintenance session may raise a production scope's `last_allocated` floor when a higher already-existing real user work conversation number is independently confirmed.
 
 Historical mistaken test allocations should be migrated into a non-production audit scope when useful, but historical Git commits and acceptance documents need not be rewritten. Current registry state should truthfully distinguish production user-work numbering from non-production test numbering.
 

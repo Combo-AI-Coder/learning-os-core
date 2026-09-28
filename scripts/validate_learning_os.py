@@ -361,7 +361,7 @@ class Validator:
 
 CORE_SCHEMA="0.4"
 CORE_ALLOWED_TOP={"config","protocol","domains","scripts","tests","docs",".github"}
-CORE_ALLOWED_FILES={"README.md","requirements-dev.txt",".gitignore","LICENSE"}
+CORE_ALLOWED_FILES={"README.md","AGENTS.md","requirements-dev.txt",".gitignore","LICENSE"}
 CORE_PROHIBITED_TOP={"learner":"learner state","evidence":"evidence","topics":"topic execution state","execution":"execution state","coordination":"coordination state","runtime":"runtime state incl. private runtime/lineages control"}
 CORE_CONFIG_FORBIDDEN={"project.yaml":"instance-authoritative project configuration","project-instructions.md":"instance-local instructions","project-ui-bootstrap.md":"instance-local UI bootstrap","deployment.yaml":"control-plane deployment binding","instance.yaml":"instance plane configuration"}
 CORE_INSTANCE_DOC_TYPES={"lineage_control","branch_runtime","learning_handoff","conversation_sequence_registry","project_config","deployment_binding","migration_transaction","evidence","learner_background","learner_model","learner_calibration","learner_costs","learner_execution","learner_knowledge","topic_goal","topic_plan","topic_progress","topic_deferred","subtopic_definition","subtopic_plan","subtopic_progress","weekly_execution","daily_execution","execution_session","branch_registry","branch_report","coordination_event","hub_runtime","topic_report"}

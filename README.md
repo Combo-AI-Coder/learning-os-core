@@ -50,5 +50,6 @@ All Instance and deployment test fixtures are synthetic programmatic
 temporaries; no real learner state, real Evidence, or credentials are ever
 materialized.
 
-Core mutation follows PR-required governance. This repository is not part
-of any Runtime installation and is not read by any deployed runtime.
+Core mutation follows PR-required governance. Deployed Runtime resolves and
+reads the exact Core commit pinned by Runtime-Control; advancement of this
+repository's `main` branch alone does not change the deployed Core.

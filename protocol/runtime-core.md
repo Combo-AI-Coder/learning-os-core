@@ -11,7 +11,7 @@ schema_compatibility: "0.3"
 3. Current explicit user information overrides stale stored information. User-authoritative states include explicit goals, time budgets, constraints, subjective costs, explicit execution preferences, and reported background/history.
 4. GitHub explicit persistent state takes precedence over inferred Project memory for long-term state, unless current explicit information or valid new evidence supersedes it.
 5. A learning chat is routed by Topic, optional Subtopic, and role. If a Branch is materialized, lineage/generation additionally guard conversation continuity and canonical writes.
-6. Learning OS design/maintenance MAY be governed by a materialized project-design lineage configured in `project.yaml`. Its `active_generation` is a fencing token, not a credential a fresh session may self-assign. Generation acquisition, pending-handoff freeze, recovery, claim, stale-writer fencing, and takeover semantics are defined by `project-handoff-policy.md`; the Project Instructions remain the runtime enforcement kernel.
+6. Project/design collaboration state is outside ordinary Learning OS Core. Runtime MUST NOT infer or acquire project/session writer authority from Core configuration, a physical conversation identity, or a product learning-generation token. Collaboration governance comes from the current execution environment plus applicable target-repository rules; Core retains only product/runtime continuity and write-safety semantics.
 7. A Domain is reusable knowledge structure. A Topic is a learner-specific learning project. A Subtopic belongs to a Topic. Do not conflate Domain, Topic, Subtopic, curriculum node, capability claim, or chat.
 8. Understanding MUST NOT be represented as one scalar. Persistent judgments MUST target specific capability claims. Learner Knowledge State is distinct from Topic/Subtopic Progress and Execution.
 9. Learner self-report about capability is evidence, not an automatic capability-state override. Learner-authoritative prior courses/projects/tools/work are background, not mastery.
@@ -46,7 +46,6 @@ Read detailed protocols only when they materially help:
 - `curriculum-policy.md`: node selection, prerequisites, branching, review, or replanning
 - `execution-policy.md`: weekly/daily/session execution planning and calibration
 - `coordination-policy.md`: Hub/Branch routing, reports/events, reconciliation, concurrency
-- `project-handoff-policy.md`: project/design generation transfer, generation acquisition, recovery, claim, fencing, cancellation, and takeover
 - `continuity-policy.md`: Learning Branch generation handoff, archived writer guard, resume, re-engagement
 - `persistence-policy.md`: nontrivial writes, compaction, synchronization conflicts
 - `schema.md`: fields, enums, IDs, references, and canonical storage contracts
