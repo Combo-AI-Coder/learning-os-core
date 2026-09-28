@@ -1,208 +1,96 @@
 ---
 protocol: repository-governance-policy
-version: "0.1"
-schema_compatibility: "0.3"
+version: "0.2"
+schema_compatibility: "0.4"
 ---
 
 # Repository Governance Policy
 
-This policy defines how Learning OS repository paths are governed without replacing subsystem semantic authority, generation fencing, fresh-read reconciliation, or blob-SHA compare-and-swap (CAS).
-
-The current repository intentionally contains both architecture/core material and live learner/runtime state. Governance MUST therefore preserve legitimate direct state persistence while making architectural writes harder to perform accidentally.
+This policy defines product/repository mutation boundaries for the split Learning OS architecture. It does not define Agent/session/project-design writer generations. Current execution-environment authority and target-repository rules govern project collaboration; this Core owns reusable product semantics and product/runtime write-safety rules.
 
 ## 1. Principles
 
-1. Deterministic invariants belong in deterministic validation where practical.
-2. Semantic authority remains governed by the responsible Learning OS protocol and generation/session rules.
-3. GitHub controls reinforce but do not replace Learning OS authority.
-4. Runtime persistence must remain live.
-5. Core changes SHOULD use branch -> pull request -> validation -> merge -> production readback.
-6. Direct-CAS permission for runtime state MUST NOT be interpreted as permission to mutate core files.
-7. Force-push/history rewrite is not an acceptable normal repair mechanism.
-8. Repository-snapshot validation cannot prove that a change arrived through a pull request.
-9. Physical conversation naming, chat titles, and reading `active_generation` never grant repository writer authority.
+1. Core, Instance, Runtime-Control, and Private Control are distinct authority surfaces.
+2. Core product changes use feature branch -> pull request -> validation/review -> merge -> readback. Ordinary Runtime never writes Core.
+3. Runtime-Control owns the deployed Core pin, deployment epoch, topology, and write state; Core never self-deploys.
+4. Instance owns learner/runtime state. Direct Instance writes are allowed only where the responsible product protocol permits them and all applicable deployment, learning-lineage, fresh-read, semantic-reconciliation, and target-CAS guards pass.
+5. Learning Branch generation/handoff semantics remain product continuity where they protect learner-state continuity. Project/session collaboration continuity is external to Core.
+6. Private Control may retain project-design lineage/history for its own target governance, but Core does not define or grant that authority.
+7. Green validation is evidence, not deployment or acceptance.
 
 ## 2. Write classes
 
 ### CORE_PROTECTED
-
-Architecture, protocol, deterministic validation, CI configuration, and governance material. Normal project-design changes require a feature branch, pull request, successful validator/tests, merge, and production readback.
-
-Direct writes to `main` are prohibited for ordinary work even when the writer has project-design generation authority. Project-design authority is necessary for semantic ownership but is not a bypass around the core-change flow.
+Reusable Core material: configuration, product protocols, validators, tests, CI, reusable Domain assets, and public-safe product documentation. Mutation uses the protected-branch / pull-request path.
 
 ### INSTANCE_CAS
-
-Mutable learner/runtime canonical state whose normal persistence is part of Learning OS operation. Direct canonical persistence MAY continue when the responsible subsystem writer is authorized and all applicable fresh-read, generation/authority, semantic reconciliation, and blob-SHA CAS guards pass.
+Mutable learner/runtime canonical state in the private Instance. Direct persistence is permitted only under the responsible product protocol plus fresh-read and target CAS, with deployment and learning-lineage guards where applicable.
 
 ### IMMUTABLE_APPEND
-
-Create-only historical facts or continuity artifacts. Authorized writers MAY append a new artifact directly when the responsible protocol permits it. Existing immutable artifacts MUST NOT be rewritten merely to align history with current semantics; correction normally uses a new superseding/reinterpretation artifact.
+Create-only product/runtime history such as Evidence, execution facts, coordination events, and learning handoffs where the owning protocol permits append.
 
 ### GENERATED_OR_PROJECTION
+Rebuildable or derived runtime state. Source canonical state outranks stale projections.
 
-Rebuildable or derived state. It MAY be persisted directly when its owning protocol permits, but its source canonical state outranks a stale projection. Writers MUST preserve provenance/reconciliation semantics where defined.
-
-### MIXED / REQUIRES_SPLIT
-
-A directory containing materially different write classes, or reusable/shared content whose current runtime semantics do not cleanly fit a branch-wide protection rule. Writers MUST resolve the concrete subpath/semantic object before choosing a write path. Parent-directory classification alone is insufficient.
+### EXTERNAL_CONTROL
+State owned by Runtime-Control or Private Control rather than Core/Instance product persistence. Mutation follows that repository's own rules and applicable current execution authority.
 
 ### UNKNOWN
+No write is permitted until current canonical semantics determine the correct owner, class, and authority.
 
-No write is permitted until current canonical semantics determine the correct class and authority.
+## 3. Current split-plane inventory
 
-## 3. Current write-class inventory
+| Path / object | Plane / class | Normal mutation path | Notes |
+| --- | --- | --- | --- |
+| Core `config/**`, `protocol/**`, `scripts/**`, `tests/**`, `.github/**` | Core / CORE_PROTECTED | PR + required validation/review | reusable product/governance semantics |
+| Core `README.md`, `AGENTS.md`, `requirements-dev.txt`, public-safe `docs/**` | Core / CORE_PROTECTED | PR + required validation/review | documentation cannot assert deployment |
+| Core `domains/_template/**` | Core / CORE_PROTECTED | PR + required validation/review | reusable template |
+| Core `domains/<domain>/curriculum.yaml` | Core / CORE_PROTECTED | PR + required validation/review | reusable curriculum base |
+| Core `domains/<domain>/probes.md` when declared by `domains.optional_probe_file` | Core / CORE_PROTECTED | PR + required validation/review | optional pull-loaded reusable teaching/diagnostic asset; absence is normal |
+| Instance learner / Topic / Subtopic mutable state | Instance / INSTANCE_CAS | product-authorized fresh-read + CAS | deployment and learning-lineage guards where applicable |
+| Instance Evidence, execution facts, coordination events, learning handoffs | Instance / IMMUTABLE_APPEND | owning product protocol | real learner/private data stays out of Core |
+| Instance reports / selected execution projections | Instance / GENERATED_OR_PROJECTION | owning product protocol | reconcile against canonical sources |
+| Instance `runtime/ui/**` sequence metadata | Instance / INSTANCE_CAS | naming-policy CAS | conversation naming is not collaboration writer authority |
+| Runtime-Control `deployment.yaml` | Runtime-Control / EXTERNAL_CONTROL | narrow maintenance CAS under target rules | sole deployed Core pin / epoch / write-state authority |
+| Private Control project-design lineage, receipts, migrations, legacy collaboration history | Private Control / EXTERNAL_CONTROL | current execution authority + target rules | not ordinary Core product/runtime state |
+| unclassified new path | UNKNOWN | none until classified | fail closed |
 
-| Path / object | Class | Normal writer | Direct CAS to canonical `main`? | PR normally required? | Immutable after creation? | Current validator coverage |
-| --- | --- | --- | --- | --- | --- | --- |
-| `config/**` | CORE_PROTECTED | project-design/maintenance | no | yes | no | YAML structure for canonical config; not PR provenance |
-| `protocol/**` | CORE_PROTECTED | project-design/maintenance | no | yes | no | Markdown not mechanically schema-validated |
-| `scripts/**` | CORE_PROTECTED | project-design/maintenance | no | yes | no | exercised by CI/tests; source provenance not provable from snapshot |
-| `tests/**` | CORE_PROTECTED | project-design/maintenance | no | yes | no | executed by CI; provenance not provable from snapshot |
-| `.github/**` | CORE_PROTECTED | project-design/maintenance | no | yes | no | workflow is externally exercised by GitHub Actions |
-| `requirements-dev.txt` | CORE_PROTECTED | project-design/maintenance | no | yes | no | consumed by CI |
-| `README.md` | CORE_PROTECTED | project-design/maintenance | no | yes | no | none beyond review/CI presence |
-| `docs/acceptance/**` | CORE_PROTECTED | project-design/maintenance | no | yes | historical records should not be rewritten to fake later success | not mechanically semantic-validated |
-| `docs/handoffs/README.md` | CORE_PROTECTED | project-design/maintenance | no | yes | no | none |
-| dated project handoff packets under `docs/handoffs/**` | IMMUTABLE_APPEND | authorized project-handoff transaction | create-only direct append allowed | no for packet creation itself | yes | packet identity enforced by lineage/handoff semantics, not full content validation |
-| `domains/_template/**` | CORE_PROTECTED | project-design/maintenance | no | yes | no | curriculum structural checks when YAML is scanned |
-| reusable `domains/<domain>/curriculum.yaml` | MIXED / REQUIRES_SPLIT | curriculum/project planning authority; may be extended as teaching needs | currently possible with fresh-read/CAS when semantically justified | not globally enforceable without changing current runtime model | no | curriculum enums/refs partially covered |
-| `learner/**` | INSTANCE_CAS | authorized learner/runtime writer by semantic field | yes | no | no | selected document/enums/reference invariants |
-| Topic Goal/Plan/Progress/Deferred and mutable coordination state under `topics/**` | INSTANCE_CAS | responsible Topic/Subtopic/Hub/Branch writer | yes, with applicable generation guards | no | no | plan/progress/ref and Branch runtime invariants partially covered |
-| execution sessions / coordination events / learning handoffs under `topics/**` | IMMUTABLE_APPEND | responsible authorized runtime/continuity writer | create-only direct append allowed | no | yes | document/path and selected runtime invariants |
-| Branch/Topic reports and similar rebuildable reports under `topics/**` | GENERATED_OR_PROJECTION | responsible Branch/Hub | yes | no | no | selected structural checks when materialized |
-| `evidence/**` | IMMUTABLE_APPEND | authorized learning writer after evidence classification | create-only direct append allowed | no | yes | Evidence enums and Knowledge reference existence |
-| `execution/weekly/**` and other execution projections | GENERATED_OR_PROJECTION / INSTANCE_CAS | responsible execution owner | yes | no | no | Weekly projection provenance and selected enums/refs |
-| `runtime/lineages/**` | INSTANCE_CAS (authority-critical) | project-design handoff/claim/takeover transaction | yes, only under project-handoff transaction semantics | no | no | lineage active/pending/anchor/packet invariants |
-| `runtime/ui/**` | INSTANCE_CAS (special metadata) | conversation-sequence allocator / authorized repair | yes, under naming policy CAS rules | no | no | sequence/repair structure |
-| unclassified new path | UNKNOWN | none until classified | no | unresolved | unresolved | none |
-
-`topics/**`, `docs/**`, and `domains/**` are therefore not safely governable by directory name alone.
+A reusable Domain directory is not classified only by its parent. Current declared Core assets are `curriculum.yaml` plus the optional probe asset named by `domains.optional_probe_file`; any other new Domain path is `UNKNOWN` until explicitly classified.
 
 ## 4. Core-change rule
 
-Normal `CORE_PROTECTED` change flow:
+Before proposing Core integration:
+1. recover current explicit user instruction and applicable target-repository rules;
+2. fresh-read canonical Core `main` and decision-relevant product files;
+3. create a feature branch from the observed baseline;
+4. keep the change within product Core scope and use only synthetic/public-safe fixtures;
+5. run `python scripts/validate_learning_os.py . --core` and the full unit suite;
+6. inspect the exact PR diff and current platform checks/reviews;
+7. merge only through the repository's protected-branch path;
+8. fresh-read merged `main`.
 
-1. establish the applicable project-design writer authority;
-2. fresh-read canonical `main` and decision-relevant core files;
-3. create a fresh feature branch from the observed canonical baseline;
-4. make narrowly scoped changes on that branch using fresh target content/SHA where applicable;
-5. open a pull request;
-6. run the canonical validator and deterministic tests on a full checkout;
-7. inspect the PR diff and authority state again before merge;
-8. merge without force-pushing or rewriting history;
-9. fresh-read production `main` and changed files.
+A project/session generation is neither required nor accepted as a Core mutation credential.
 
-A project-design generation is not permission to skip these steps for ordinary core work.
+## 5. Instance runtime-state rule
 
-## 5. Runtime-state rule
+Core product protocols may authorize direct Instance persistence, but only for Instance-owned state. Deployment fencing, learning Branch generation guards, fresh-read reconciliation, semantic validation, target CAS, and create-only immutable semantics remain distinct and must not be weakened because project collaboration moved outside Core.
 
-`INSTANCE_CAS`, `IMMUTABLE_APPEND`, and `GENERATED_OR_PROJECTION` writes remain compatible with direct canonical persistence only where their responsible protocols permit it.
+## 6. Runtime-Control and Private Control
 
-All existing subsystem constraints remain in force, including:
+Runtime-Control is product deployment authority and stays minimal. Private Control is not a second deployed-state authority; it may hold private project-design/migration/receipt material according to its own target governance. Core must not import private collaboration state merely to make an Agent work surface self-contained.
 
-- session/generation authority when materialized;
-- `pending_handoff` or `pending_successor` restrictions;
-- fresh-read before mutation;
-- semantic reconciliation of relevant upstream state;
-- current blob SHA for mutable-file CAS;
-- create-only behavior for immutable artifacts;
-- read-time reconciliation for stale projections.
+## 7. Prohibited behavior
 
-A runtime writer MUST NOT include a `CORE_PROTECTED` path in an ordinary learning/runtime persistence transaction.
+- direct ordinary mutation of protected Core `main`;
+- importing real learner/private data into Core development or CI;
+- using Core configuration, a physical conversation, or a product learning generation as project/session writer authority;
+- treating a green PR as deployment or user acceptance;
+- blind overwrite / last-write-wins on mutable Instance state;
+- weakening validators, tests, or branch protections merely to obtain green status;
+- force push/history rewrite as ordinary repair.
 
-## 6. GitHub enforcement boundary
+## 8. Platform enforcement and evolution
 
-The current single repository cannot cleanly express "core paths require PR, instance paths may direct-CAS to `main`" using a branch-wide PR rule alone.
+The split architecture exists so Core can use strict protected-branch governance without blocking ordinary Instance persistence. The semantic Core contract requires pull-request mutation, no force push/deletion, and the checks declared in `config/core.yaml`. Current platform settings are runtime evidence and must be fresh-checked when they matter.
 
-A branch rule/ruleset that requires pull requests or pre-existing required checks for every update to `main` conflicts with direct runtime CAS unless a runtime actor receives bypass permission. A repository-wide bypass restores liveness but also allows that same actor to bypass protection for core paths.
-
-Path-restriction push rulesets are not an equivalent solution: they apply to pushes repository-wide rather than expressing "this path is allowed through PR but not direct `main` writes" for the same privileged actor. They also depend on GitHub plan/capability availability.
-
-Therefore current technical enforcement is explicitly bounded:
-
-- CI validates repository state and PR candidates;
-- canonical policy constrains conforming Learning OS writers;
-- GitHub history controls such as blocking force pushes/deletions are desirable when configured without blocking normal pushes;
-- clean path-level prevention requires a stronger trust boundary, most naturally Core/Instance repository separation or another architecture with distinct write identities/permissions.
-
-Do not claim that core paths are technically protected merely because this policy says they are `CORE_PROTECTED`.
-
-## 7. Threat model
-
-### Accidental stale writer
-
-Mitigation: subsystem generation fencing plus fresh target CAS. Repository governance does not replace it.
-
-### Legitimate runtime writer touching core
-
-Mitigation today: explicit write classes loaded by conforming Learning OS writers; core branch/PR flow. Technical prevention remains incomplete while the same repository credential can write both classes.
-
-### Direct push bypass
-
-CI on `push` detects deterministic invalid state after the fact but cannot reject an already accepted unprotected direct push. PR workflow provides pre-merge evidence only when the change actually uses PR flow.
-
-### Force push / history rewrite
-
-Prohibited by policy. GitHub branch/ruleset controls SHOULD block force pushes and deletion when available without breaking runtime direct writes. Until such settings are verified active, this remains a governance gap.
-
-### Validator bypass / CI corruption
-
-`scripts/**`, `tests/**`, `requirements-dev.txt`, and `.github/**` are all `CORE_PROTECTED` and should change together only through reviewed/validated PRs. A repository actor with unrestricted direct-write power can still weaken these controls; snapshot validation cannot create an independent root of trust inside the same repository.
-
-### Generated-state noise
-
-Instance/projection writes remain direct-CAS and do not require PRs, avoiding high-frequency governance friction.
-
-## 8. Prohibited behavior
-
-- ordinary runtime persistence that also changes `CORE_PROTECTED` files;
-- blind overwrite or last-write-wins on mutable canonical state;
-- force push or intentional history rewrite as normal maintenance;
-- rewriting immutable Evidence/session/event/handoff history to make current state look cleaner;
-- weakening validator/tests/workflow merely to obtain green CI;
-- treating a failed validator as permission to bypass it;
-- taking `active_generation`, `Cxx`, a title, or repository admin access as semantic Learning OS authority.
-
-## 9. Emergency repair
-
-Emergency repair exists only for a concrete failure that prevents the normal core PR/validation path, such as corrupted canonical validator source or broken CI configuration.
-
-It is not a general bypass.
-
-An emergency repair MUST:
-
-1. identify the concrete blocker and why normal PR validation cannot safely complete;
-2. retain valid Learning OS writer authority where the repair is lineage-governed;
-3. fresh-read the affected core target and current canonical state;
-4. make the minimum change necessary to restore the normal validation path;
-5. preserve provenance in commit/acceptance history;
-6. read back the repair;
-7. immediately rerun validator/tests and return subsequent core work to normal PR flow.
-
-If GitHub itself prevents the safe repair, stop and report the external blocker rather than bypassing with history rewrite.
-
-## 10. GitHub settings target
-
-Without introducing runtime breakage, the desired minimum branch-level safety is:
-
-- block force pushes to `main`;
-- block deletion of `main`;
-- keep normal direct non-force updates possible for authorized instance CAS;
-- retain `Validate Learning OS` on both `push` and `pull_request`;
-- use PR + green validation for core changes.
-
-Do **not** enable a branch-wide pull-request requirement or branch-wide required-status-check gate on `main` until runtime persistence has a compatible trust boundary.
-
-If a runtime identity later receives a bypass to a stricter branch ruleset, acceptance MUST explicitly state whether that identity can also modify core paths. A repository-wide bypass is privileged and is not path-level enforcement.
-
-## 11. Open-source preparation
-
-Repository-governance readiness is separate from public-release readiness. Before a public open-source release, the owner must explicitly choose a license. No license is selected by this policy.
-
-`CONTRIBUTING.md`, `SECURITY.md`, code-of-conduct material, and issue/PR templates should be added only when they serve an actual collaboration/governance need; V0.3.2 does not require boilerplate for its own sake.
-
-## 12. Next architectural requirement
-
-If stronger technical prevention is required—especially "runtime writer cannot modify core even if compromised or mistaken"—the current mixed repository is insufficient.
-
-The next architecture phase SHOULD evaluate Core/Instance separation (or an equivalent distinct credential/storage boundary) before enabling strict PR-only protection on the core side. That migration must separately address canonical locations, bootstrap, references, handoff semantics, validator roots, and runtime permissions.
+Add new write classes or paths only when a real product/operational need appears. Do not recreate a generic project/session workflow database inside Core. If a future collaboration mechanism has independent product/runtime value, justify it by that value rather than by continuity of a particular Agent implementation.

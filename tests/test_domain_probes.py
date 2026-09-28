@@ -33,19 +33,24 @@ class DomainProbeTests(unittest.TestCase):
         self.assertEqual("probes.md", filename)
         asset = (self.domain_dir / filename).read_text(encoding="utf-8")
 
+        anchor_id = "mlm.tokens-context.trace-and-change.v1"
+        anchor = re.search(
+            rf"(?ms)^## {re.escape(anchor_id)}\s*$\n(?P<body>.*?)(?=^## |\Z)",
+            asset,
+        )
+        self.assertIsNotNone(anchor)
+        anchor_text = anchor.group("body")
+
         def field(label):
-            values = re.findall(
+            match = re.search(
                 rf"^- {re.escape(label)}: `([^`]+)`$",
-                asset,
+                anchor_text,
                 flags=re.MULTILINE,
             )
-            self.assertEqual(1, len(values), label)
-            return values[0]
+            self.assertIsNotNone(match, label)
+            return match.group(1)
 
-        self.assertEqual(
-            "mlm.tokens-context.trace-and-change.v1",
-            field("Stable id"),
-        )
+        self.assertEqual(anchor_id, field("Stable id"))
         node_id = field("Target node")
         self.assertEqual("representation.tokens_and_context", node_id)
         self.assertIn(node_id, self.curriculum["nodes"])

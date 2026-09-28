@@ -46,6 +46,23 @@ class CollaborationBoundaryTests(unittest.TestCase):
             (ROOT / "config/core.yaml").read_text(encoding="utf-8"),
         )
 
+    def test_remaining_core_protocols_do_not_own_project_collaboration(self):
+        for relative in (
+            "protocol/persistence-policy.md",
+            "protocol/schema.md",
+            "protocol/repository-governance-policy.md",
+        ):
+            with self.subTest(relative=relative):
+                text = (ROOT / relative).read_text(encoding="utf-8")
+                self.assertNotIn("project-handoff-policy.md", text)
+
+        governance = (ROOT / "protocol/repository-governance-policy.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("domains/<domain>/probes.md", governance)
+        self.assertIn("Core / CORE_PROTECTED", governance)
+        self.assertIn("Project/session collaboration", governance)
+        self.assertIn("external to Core", governance)
 
 if __name__ == "__main__":
     unittest.main()
