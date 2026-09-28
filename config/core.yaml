@@ -206,6 +206,8 @@ bootstrap:
     load_teaching_decision_on_substantive_learning_turn: true
     load_curriculum_policy_if_orientation_prerequisite_probe_or_route_decision_relevant: true
     load_domain_curriculum_if_orientation_or_probe_selection_needs_domain_structure: true
+    load_domain_probes_if_probe_selection_relevant: true
+    load_domain_probes_by_default: false
     evaluate_weekly_activation_candidate: true
     weekly_activation_candidate_persists_while_current_week_unmaterialized: true
     load_execution_policy_if_weekly_activation_candidate: true
@@ -254,3 +256,5 @@ domains:
     - _template
     - modern-language-models
   template: domains/_template/curriculum.yaml
+  # Relative to the selected Domain directory; absence is normal.
+  optional_probe_file: probes.md
