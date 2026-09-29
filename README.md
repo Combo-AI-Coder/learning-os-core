@@ -3,9 +3,11 @@
 Release: 0.4.0
 
 This repository is the reusable Core plane for the Learning OS V0.4
-separation architecture. Core content never self-asserts deployment status:
-the public Runtime-Control contract is the sole authority that deploys an
-exact Core commit.
+separation architecture. The current product direction is a learner-owned,
+longitudinal learning system for advanced self-directed learning; see
+[`docs/product-direction.md`](docs/product-direction.md). Core content never
+self-asserts deployment status: the public Runtime-Control contract is the
+sole authority that deploys an exact Core commit.
 
 The Core plane owns reusable product semantics only: the Core contract
 (`config/core.yaml`, schema 0.4), protocol documents, the deterministic
