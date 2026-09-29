@@ -364,7 +364,9 @@ class GitCliProvider:
         )
         self.ssh_known_hosts_file = (
             None if ssh_known_hosts_file is None
-            else _nonempty(ssh_known_hosts_file, "ssh_known_hosts_file")
+            else os.path.abspath(
+                _nonempty(ssh_known_hosts_file, "ssh_known_hosts_file")
+            )
         )
         self._isolated_home = tempfile.TemporaryDirectory(
             prefix="learning-os-git-home-"

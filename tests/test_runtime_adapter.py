@@ -355,8 +355,24 @@ class GitCliProviderTests(unittest.TestCase):
         self.assertIn("PasswordAuthentication=no", command)
         self.assertIn("KbdInteractiveAuthentication=no", command)
         self.assertIn("StrictHostKeyChecking=yes", command)
-        self.assertIn("UserKnownHostsFile=/run/github_known_hosts", command)
+        self.assertIn(
+            f"UserKnownHostsFile={os.path.abspath('/run/github_known_hosts')}",
+            command,
+        )
         self.assertIn("GlobalKnownHostsFile=none", command)
+
+    def test_relative_known_hosts_path_is_resolved_at_construction(self):
+        provider = GitCliProvider(
+            [GitRepositoryBinding(self.REPO_ID, str(self.remote))],
+            ssh_known_hosts_file="relative-known-hosts",
+        )
+        self.addCleanup(provider.close)
+        expected = os.path.abspath("relative-known-hosts")
+        self.assertEqual(expected, provider.ssh_known_hosts_file)
+        self.assertIn(
+            f"UserKnownHostsFile={expected}",
+            provider._env()["GIT_SSH_COMMAND"],
+        )
 
     def test_ambient_netrc_credentials_are_not_inherited(self):
         authorizations = []
