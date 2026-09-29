@@ -27,6 +27,7 @@ import yaml
 from scripts.validate_learning_os import RepositorySnapshot, validate_deployment
 
 EXACT_COMMIT = re.compile(r"[0-9a-f]{40}")
+MAX_TEXT_BLOB_BYTES = 8 * 1024 * 1024
 
 
 class ResolutionError(RuntimeError):
@@ -386,12 +387,15 @@ class GitCliProvider:
                     raise ResolutionError(
                         "binding.ssh_known_hosts_file must not contain whitespace"
                     )
-                if any(
-                    token in known_hosts_input
-                    for token in ("%", "$", "'", '"')
+                if (
+                    chr(92) in known_hosts_input
+                    or any(
+                        token in known_hosts_input
+                        for token in ("%", "$", "'", '"')
+                    )
                 ):
                     raise ResolutionError(
-                        "binding.ssh_known_hosts_file must not contain OpenSSH tokens"
+                        "binding.ssh_known_hosts_file must not contain OpenSSH tokens or escapes"
                     )
                 ssh_known_hosts_file = os.path.abspath(known_hosts_input)
             self.bindings[repository_id] = GitRepositoryBinding(
@@ -928,6 +932,14 @@ class GitCliProvider:
             if entry is None:
                 raise ResolutionError("Git path does not exist")
             blob, _ = entry
+            size_text = self._git("cat-file", "-s", blob, cwd=repo)
+            if not size_text.isdigit():
+                raise ResolutionError("Git blob size is invalid")
+            blob_size = int(size_text)
+            if blob_size > MAX_TEXT_BLOB_BYTES:
+                raise ResolutionError(
+                    "Git text blob exceeds Runtime read limit"
+                )
             raw = self._git_bytes("cat-file", "blob", blob, cwd=repo)
             try:
                 text = raw.decode("utf-8")

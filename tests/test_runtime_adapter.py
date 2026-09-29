@@ -413,6 +413,14 @@ class GitCliProviderTests(unittest.TestCase):
         self.assertEqual(self.initial_blob, blob)
         self.assertEqual(self.initial_commit, commit)
 
+    def test_read_text_rejects_blob_above_runtime_limit_before_buffering(self):
+        provider = self.provider()
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_TEXT_BLOB_BYTES", 3
+        ):
+            with self.assertRaisesRegex(ResolutionError, "exceeds"):
+                provider.read_text(self.REPO_ID, "main", "state.txt")
+
     def test_unsafe_path_fails_closed(self):
         with self.assertRaisesRegex(ResolutionError, "unsafe"):
             self.provider().read_text(self.REPO_ID, "main", "../state.txt")
@@ -516,6 +524,7 @@ class GitCliProviderTests(unittest.TestCase):
             "$HOME/known_hosts",
             "/run/'team'/known_hosts",
             '/run/"team"/known_hosts',
+            r"/run/team\\known_hosts",
         ):
             with self.subTest(path=path):
                 with self.assertRaisesRegex(ResolutionError, "OpenSSH tokens"):
