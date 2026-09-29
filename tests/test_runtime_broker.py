@@ -346,6 +346,25 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             )
         self.assertEqual("state-v1\n", self.provider.docs[WRITE_PATH])
 
+    def test_provider_without_exact_head_cas_fails_write_closed(self):
+        session = self.open()
+        previous_head = self.provider.instance_head
+
+        def unsupported(*args, **kwargs):
+            self.assertEqual(previous_head, kwargs.get("expected_ref_sha"))
+            raise CasConflict("exact branch-head CAS is unsupported")
+
+        self.provider.update_text = unsupported
+        with self.assertRaisesRegex(CasConflict, "unsupported"):
+            self.broker.guarded_update(
+                session,
+                path=WRITE_PATH,
+                content="state-v2\n",
+                expected_blob_sha="f" * 40,
+                message="test unsupported exact head provider",
+            )
+        self.assertEqual("state-v1\n", self.provider.docs[WRITE_PATH])
+
     def test_allowed_write_uses_deployment_generation_branch_and_target_cas(self):
         session = self.open()
         previous_head = self.provider.instance_head
