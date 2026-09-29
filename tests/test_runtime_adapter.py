@@ -17,6 +17,7 @@ from scripts.runtime_adapter import (
     DeploymentResolver,
     GuardRejected,
     GitCliProvider,
+    GitHubApiProvider,
     GitRepositoryBinding,
     MaterializedRepository,
     ResolutionError,
@@ -94,8 +95,20 @@ class FakeProvider:
             raise ResolutionError("wrong read")
         return yaml.safe_dump(self.contract, sort_keys=False), "e" * 40, RC_COMMIT
 
-    def update_text(self, repository_id, branch, path, content, expected_blob_sha, message):
-        self.calls.append(("update", repository_id, branch, path, expected_blob_sha))
+    def update_text(
+        self,
+        repository_id,
+        branch,
+        path,
+        content,
+        expected_blob_sha,
+        message,
+        expected_ref_sha=None,
+    ):
+        self.calls.append((
+            "update", repository_id, branch, path,
+            expected_blob_sha, expected_ref_sha,
+        ))
         if expected_blob_sha != self.cas_sha:
             raise CasConflict("stale blob")
         return "f" * 40
@@ -320,6 +333,36 @@ class GitCliProviderTests(unittest.TestCase):
         self.assertIn("--depth=1", attempts[0])
         self.assertNotIn("--depth=1", attempts[1])
 
+    def test_transient_git_init_uses_provider_owned_empty_template(self):
+        provider = self.provider()
+        original_git = provider._git
+        init_calls = []
+
+        def recording_git(*args, cwd=None, cas=False, binding=None):
+            if args and args[0] == "init":
+                init_calls.append(args)
+            return original_git(*args, cwd=cwd, cas=cas, binding=binding)
+
+        provider._git = recording_git  # type: ignore[method-assign]
+        provider.materialize(self.REPO_ID, "main")
+        provider.update_text(
+            self.REPO_ID,
+            "main",
+            "state.txt",
+            "two\n",
+            self.initial_blob,
+            "test: empty template",
+        )
+        self.assertEqual(2, len(init_calls))
+        for args in init_calls:
+            template = next(
+                value.split("=", 1)[1]
+                for value in args
+                if value.startswith("--template=")
+            )
+            self.assertEqual(provider._empty_git_template.name, template)
+            self.assertEqual([], list(Path(template).iterdir()))
+
     def test_exact_commit_materialization_is_fetched_from_bound_remote(self):
         snapshot = self.provider().materialize(self.REPO_ID, self.initial_commit)
         self.assertEqual(self.initial_commit, snapshot.commit_sha)
@@ -406,14 +449,20 @@ class GitCliProviderTests(unittest.TestCase):
             ])
 
     def test_known_hosts_path_with_openssh_token_fails_closed(self):
-        with self.assertRaisesRegex(ResolutionError, "OpenSSH tokens"):
-            GitCliProvider([
-                GitRepositoryBinding(
-                    self.REPO_ID,
-                    str(self.remote),
-                    ssh_known_hosts_file="/run/%h_known_hosts",
-                )
-            ])
+        for path in (
+            "/run/%h_known_hosts",
+            "/run/${USER}/known_hosts",
+            "$HOME/known_hosts",
+        ):
+            with self.subTest(path=path):
+                with self.assertRaisesRegex(ResolutionError, "OpenSSH tokens"):
+                    GitCliProvider([
+                        GitRepositoryBinding(
+                            self.REPO_ID,
+                            str(self.remote),
+                            ssh_known_hosts_file=path,
+                        )
+                    ])
 
     def test_unpinned_ssh_transport_disables_ambient_known_hosts(self):
         provider = GitCliProvider([
@@ -665,6 +714,39 @@ class GitCliProviderTests(unittest.TestCase):
             self._git(
                 "--git-dir", str(self.remote),
                 "show", "refs/heads/main:café.yaml",
+            ),
+        )
+
+    def test_expected_branch_head_rejects_advance_with_same_target_blob(self):
+        (self.seed / "other.txt").write_text(
+            "advance\n", encoding="utf-8", newline="\n"
+        )
+        self._git("add", "other.txt", cwd=self.seed)
+        self._git("commit", "-q", "-m", "advance branch", cwd=self.seed)
+        self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
+        advanced = self._git("rev-parse", "HEAD", cwd=self.seed)
+        with self.assertRaisesRegex(CasConflict, "branch head"):
+            self.provider().update_text(
+                self.REPO_ID,
+                "main",
+                "state.txt",
+                "two\n",
+                self.initial_blob,
+                "test: stale authority head",
+                expected_ref_sha=self.initial_commit,
+            )
+        self.assertEqual(
+            advanced,
+            self._git(
+                "--git-dir", str(self.remote),
+                "rev-parse", "refs/heads/main",
+            ),
+        )
+        self.assertEqual(
+            "one",
+            self._git(
+                "--git-dir", str(self.remote),
+                "show", "refs/heads/main:state.txt",
             ),
         )
 
@@ -1035,6 +1117,99 @@ class GitCliProviderTests(unittest.TestCase):
         self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
         with self.assertRaisesRegex(ResolutionError, "filesystem-equivalent"):
             self.provider().materialize(self.REPO_ID, "main")
+
+
+class GitHubApiProviderTests(unittest.TestCase):
+    REPO_ID = 9000000301
+    HEAD = "1" * 40
+    TREE = "2" * 40
+    TARGET_BLOB = "3" * 40
+    NEW_BLOB = "4" * 40
+    NEW_TREE = "5" * 40
+    NEW_COMMIT = "6" * 40
+
+    def provider(self, *, current_head=None):
+        provider = GitHubApiProvider(
+            token="synthetic-token",
+            api_url="https://example.invalid",
+        )
+        self.addCleanup(provider.close)
+        provider.calls = []
+        provider._repo = lambda repository_id: {
+            "id": repository_id,
+            "full_name": "synthetic/instance",
+        }
+        head = self.HEAD if current_head is None else current_head
+
+        def request(method, path, payload=None):
+            provider.calls.append((method, path, payload))
+            if method == "GET" and "/git/ref/heads/" in path:
+                return {"object": {"sha": head}}
+            if method == "GET" and "/git/commits/" in path:
+                return {"tree": {"sha": self.TREE}}
+            if method == "GET" and "/git/trees/" in path:
+                return {
+                    "truncated": False,
+                    "tree": [{
+                        "path": "state.txt",
+                        "mode": "100644",
+                        "type": "blob",
+                        "sha": self.TARGET_BLOB,
+                    }],
+                }
+            if method == "POST" and path.endswith("/git/blobs"):
+                return {"sha": self.NEW_BLOB}
+            if method == "POST" and path.endswith("/git/trees"):
+                return {"sha": self.NEW_TREE}
+            if method == "POST" and path.endswith("/git/commits"):
+                return {"sha": self.NEW_COMMIT}
+            if method == "PATCH" and "/git/refs/heads/" in path:
+                return {"object": {"sha": self.NEW_COMMIT}}
+            raise AssertionError(f"unexpected request: {method} {path}")
+
+        provider._request = request
+        return provider
+
+    def test_branch_head_cas_uses_old_head_parent_and_nonforce_ref_update(self):
+        provider = self.provider()
+        result = provider.update_text(
+            self.REPO_ID,
+            "main",
+            "state.txt",
+            "two\n",
+            self.TARGET_BLOB,
+            "test: atomic authority write",
+            expected_ref_sha=self.HEAD,
+        )
+        self.assertEqual(self.NEW_COMMIT, result)
+        commit_call = next(
+            call for call in provider.calls
+            if call[0] == "POST" and call[1].endswith("/git/commits")
+        )
+        self.assertEqual([self.HEAD], commit_call[2]["parents"])
+        patch_call = next(
+            call for call in provider.calls
+            if call[0] == "PATCH" and "/git/refs/heads/" in call[1]
+        )
+        self.assertEqual(
+            {"sha": self.NEW_COMMIT, "force": False},
+            patch_call[2],
+        )
+
+    def test_branch_head_cas_rejects_stale_authority_before_git_objects(self):
+        provider = self.provider(current_head="7" * 40)
+        with self.assertRaisesRegex(CasConflict, "branch head"):
+            provider.update_text(
+                self.REPO_ID,
+                "main",
+                "state.txt",
+                "two\n",
+                self.TARGET_BLOB,
+                "test: stale authority",
+                expected_ref_sha=self.HEAD,
+            )
+        self.assertEqual(1, len(provider.calls))
+        self.assertEqual("GET", provider.calls[0][0])
 
 
 class DeploymentTransitionTests(unittest.TestCase):
