@@ -335,6 +335,8 @@ class GitCliProvider:
             remote = _nonempty(binding.remote, "binding.remote")
             if remote.startswith("-") or any(char in remote for char in "\x00\r\n"):
                 raise ResolutionError("Git repository remote is unsafe")
+            if re.match(r"^[A-Za-z]:[^/\\]", remote):
+                raise ResolutionError("drive-relative Git repository remote is unsafe")
             if (
                 "://" not in remote
                 and not re.match(r"^[^/\\]+:.+", remote)
@@ -509,7 +511,15 @@ class GitCliProvider:
         )
 
     @staticmethod
-    def _safe_path(path: str) -> PurePosixPath:
+    def _windows_reserved_component(part: str) -> bool:
+        normalized = part.rstrip(" .")
+        stem = normalized.split(".", 1)[0].rstrip(" ").casefold()
+        if stem in {"con", "prn", "aux", "nul", "conin$", "conout$"}:
+            return True
+        return bool(re.fullmatch(r"(?:com|lpt)[1-9\u00b9\u00b2\u00b3]", stem))
+
+    @classmethod
+    def _safe_path(cls, path: str) -> PurePosixPath:
         pure = PurePosixPath(path)
         if (
             not path
@@ -518,13 +528,7 @@ class GitCliProvider:
             or ".." in pure.parts
             or any(part.lower() == ".git" for part in pure.parts)
             or any(part.endswith((" ", ".")) for part in pure.parts)
-            or any(
-                re.match(
-                    r"(?i)^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)",
-                    part,
-                )
-                for part in pure.parts
-            )
+            or any(cls._windows_reserved_component(part) for part in pure.parts)
             or any(
                 any(ord(char) < 32 or char in '<>"|?*' for char in part)
                 for part in pure.parts
@@ -748,6 +752,10 @@ class GitCliProvider:
                 output.write_bytes(
                     self._git_bytes("cat-file", "blob", sha, cwd=repo)
                 )
+                if not output.is_file():
+                    raise ResolutionError(
+                        "materialized Git tree entry is not a regular file"
+                    )
                 try:
                     output.chmod(0o755 if mode == "100755" else 0o644)
                 except OSError:

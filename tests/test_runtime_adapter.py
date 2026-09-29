@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import threading
 import unittest
+from unittest import mock
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -406,6 +407,12 @@ class GitCliProviderTests(unittest.TestCase):
         )
         self.assertNotIn("SSH_AUTH_SOCK", control_env)
 
+    def test_windows_drive_relative_remote_fails_closed(self):
+        for remote in ("C:repo.git", "z:relative/repo.git"):
+            with self.subTest(remote=remote):
+                with self.assertRaisesRegex(ResolutionError, "drive-relative"):
+                    GitCliProvider([GitRepositoryBinding(self.REPO_ID, remote)])
+
     def test_relative_filesystem_remote_is_stabilized_at_construction(self):
         relative = os.path.relpath(self.remote, Path.cwd())
         provider = GitCliProvider([
@@ -755,7 +762,11 @@ class GitCliProviderTests(unittest.TestCase):
         blob = self._git(
             "hash-object", "-w", "--stdin", cwd=self.seed, input_text="hidden\n"
         )
-        for reserved in ("NUL.txt", "con.yaml", "COM1.md", "lpt9.log"):
+        for reserved in (
+            "NUL.txt", "NUL .txt", "con.yaml", "CONOUT$",
+            "COM1.md", "COM\u00b9.yaml", "COM\u00b2.txt", "COM\u00b3",
+            "lpt9.log", "LPT\u00b9.txt", "LPT\u00b2", "LPT\u00b3.bin",
+        ):
             with self.subTest(reserved=reserved):
                 tree_input = f"100644 blob {blob}\t{reserved}\0"
                 tree = self._git(
@@ -775,6 +786,19 @@ class GitCliProviderTests(unittest.TestCase):
                 )
                 with self.assertRaisesRegex(ResolutionError, "unsafe"):
                     self.provider().materialize(self.REPO_ID, "main")
+
+    def test_materialize_verifies_regular_output_after_write(self):
+        provider = self.provider()
+        original_is_file = Path.is_file
+
+        def fail_snapshot_file(path):
+            if "learning-os-snapshot-" in str(path):
+                return False
+            return original_is_file(path)
+
+        with mock.patch.object(Path, "is_file", fail_snapshot_file):
+            with self.assertRaisesRegex(ResolutionError, "regular file"):
+                provider.materialize(self.REPO_ID, "main")
 
     def test_materialize_rejects_win32_trailing_dot_and_space_paths(self):
         blob = self._git(
