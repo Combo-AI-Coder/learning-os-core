@@ -10,6 +10,7 @@ import json
 import os
 import re
 import shlex
+import signal
 import subprocess
 import threading
 import time
@@ -35,6 +36,9 @@ MAX_SNAPSHOT_TREE_LIST_BYTES = 16 * 1024 * 1024
 MAX_SNAPSHOT_BLOB_BYTES = 64 * 1024 * 1024
 MAX_SNAPSHOT_TOTAL_BLOB_BYTES = 256 * 1024 * 1024
 MAX_FETCH_OBJECT_BYTES = 320 * 1024 * 1024
+MAX_FETCH_STDERR_BYTES = 1024 * 1024
+MAX_GIT_METADATA_OBJECT_BYTES = 8 * 1024 * 1024
+MAX_TAG_PEEL_DEPTH = 16
 FETCH_POLL_SECONDS = 0.02
 
 
@@ -400,23 +404,9 @@ class GitCliProvider:
                     binding.ssh_known_hosts_file,
                     "binding.ssh_known_hosts_file",
                 )
-                if any(char.isspace() for char in known_hosts_input):
-                    raise ResolutionError(
-                        "binding.ssh_known_hosts_file must not contain whitespace"
-                    )
-                if (
-                    chr(92) in known_hosts_input
-                    or any(
-                        token in known_hosts_input
-                        for token in ("%", "$", "'", '"')
-                    )
-                ):
-                    raise ResolutionError(
-                        "binding.ssh_known_hosts_file must not contain OpenSSH tokens or escapes"
-                    )
-                ssh_known_hosts_file = os.path.abspath(
+                ssh_known_hosts_file = self._normalize_known_hosts_path(
                     known_hosts_input
-                ).replace(chr(92), "/")
+                )
             self.bindings[repository_id] = GitRepositoryBinding(
                 repository_id=repository_id,
                 remote=remote,
@@ -467,6 +457,71 @@ class GitCliProvider:
                 or bool(re.match(r"^[A-Za-z]:[/\\]", value))
             )
         return value.startswith("/")
+
+    @classmethod
+    def _normalize_known_hosts_path(cls, value: str) -> str:
+        def validate(candidate: str) -> None:
+            if any(char.isspace() for char in candidate):
+                raise ResolutionError(
+                    "binding.ssh_known_hosts_file must not contain whitespace"
+                )
+            if (
+                chr(92) in candidate
+                or any(token in candidate for token in ("%", "$", "'", '"'))
+            ):
+                raise ResolutionError(
+                    "binding.ssh_known_hosts_file must not contain OpenSSH "
+                    "tokens or escapes"
+                )
+
+        validate(value)
+        if not cls._absolute_host_path(value):
+            raise ResolutionError(
+                "binding.ssh_known_hosts_file must be an absolute host path"
+            )
+        normalized = os.path.abspath(value).replace(chr(92), "/")
+        if not cls._absolute_host_path(normalized):
+            raise ResolutionError(
+                "binding.ssh_known_hosts_file normalization is not absolute"
+            )
+        validate(normalized)
+        return normalized
+
+    @staticmethod
+    def _fetch_process_kwargs() -> dict[str, object]:
+        if os.name == "nt":
+            return {
+                "creationflags": getattr(
+                    subprocess, "CREATE_NEW_PROCESS_GROUP", 0
+                )
+            }
+        return {"start_new_session": True}
+
+    @staticmethod
+    def _terminate_process_tree(process: subprocess.Popen) -> None:
+        if process.poll() is not None:
+            return
+        if os.name == "nt":
+            try:
+                subprocess.run(
+                    ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=10,
+                    check=False,
+                )
+            except (OSError, subprocess.SubprocessError):
+                process.kill()
+        else:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except OSError:
+                process.kill()
+        try:
+            process.wait(timeout=10)
+        except subprocess.SubprocessError:
+            process.kill()
+            process.wait()
 
     def _binding(self, repository_id: int) -> GitRepositoryBinding:
         repository_id = _positive_id(repository_id, "repository_id")
@@ -692,65 +747,120 @@ class GitCliProvider:
             )
         return path, sha, mode
 
+    def _object_header(
+        self, repo: Path, sha: str
+    ) -> tuple[str, int]:
+        if not EXACT_COMMIT.fullmatch(sha):
+            raise ResolutionError("Git object identity is not exact")
+        raw = self._git_bytes(
+            "cat-file",
+            "--batch-check=%(objectname) %(objecttype) %(objectsize)",
+            cwd=repo,
+            input_bytes=(sha + "\n").encode("ascii"),
+            extra_env={"GIT_NO_LAZY_FETCH": "1"},
+        )
+        try:
+            line = raw.decode("ascii").strip()
+        except UnicodeDecodeError:
+            raise ResolutionError("Git object header is invalid") from None
+        parts = line.split()
+        if len(parts) != 3 or parts[0] != sha or not parts[2].isdigit():
+            raise ResolutionError("Git object header is invalid")
+        object_type, size = parts[1], int(parts[2])
+        if (
+            object_type in {"commit", "tag", "tree"}
+            and size > MAX_GIT_METADATA_OBJECT_BYTES
+        ):
+            raise ResolutionError(
+                "Git metadata object exceeds Runtime expanded-size budget"
+            )
+        return object_type, size
+
+    def _resolve_fetched_commit(self, repo: Path) -> str:
+        current = self._git(
+            "rev-parse", "--verify", "FETCH_HEAD", cwd=repo
+        )
+        for _ in range(MAX_TAG_PEEL_DEPTH):
+            object_type, _ = self._object_header(repo, current)
+            if object_type == "commit":
+                return current
+            if object_type != "tag":
+                raise ResolutionError(
+                    "fetched Git object does not resolve to a commit"
+                )
+            raw = self._git_bytes(
+                "cat-file", "tag", current,
+                cwd=repo,
+                extra_env={"GIT_NO_LAZY_FETCH": "1"},
+            )
+            first = raw.splitlines()[0] if raw else b""
+            if not first.startswith(b"object "):
+                raise ResolutionError("Git tag object is malformed")
+            try:
+                current = first.split(b" ", 1)[1].decode("ascii")
+            except (IndexError, UnicodeDecodeError):
+                raise ResolutionError("Git tag target is malformed") from None
+            if not EXACT_COMMIT.fullmatch(current):
+                raise ResolutionError("Git tag target is not exact")
+        raise ResolutionError("Git tag chain exceeds Runtime depth budget")
+
+    def _commit_tree_sha(self, repo: Path, commit: str) -> str:
+        object_type, _ = self._object_header(repo, commit)
+        if object_type != "commit":
+            raise ResolutionError("Git object is not a commit")
+        raw = self._git_bytes(
+            "cat-file", "commit", commit,
+            cwd=repo,
+            extra_env={"GIT_NO_LAZY_FETCH": "1"},
+        )
+        first = raw.splitlines()[0] if raw else b""
+        if not first.startswith(b"tree "):
+            raise ResolutionError("Git commit is missing a tree")
+        try:
+            tree_sha = first.split(b" ", 1)[1].decode("ascii")
+        except (IndexError, UnicodeDecodeError):
+            raise ResolutionError("Git commit tree is malformed") from None
+        if not EXACT_COMMIT.fullmatch(tree_sha):
+            raise ResolutionError("Git commit tree is not exact")
+        return tree_sha
+
     def _tree_objects(
         self, repo: Path, commit: str
     ) -> list[tuple[str, str, str, str]]:
-        try:
-            process = subprocess.Popen(
-                ["git", "ls-tree", "-r", "-t", "-z", commit],
-                cwd=repo,
-                env=self._env(),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-            )
-        except OSError:
-            raise ResolutionError("Git tree listing failed") from None
-
-        timer = threading.Timer(90, process.kill)
-        timer.daemon = True
-        timer.start()
+        root_tree = self._commit_tree_sha(repo, commit)
+        pending_trees: list[tuple[str, str]] = [("", root_tree)]
         objects: list[tuple[str, str, str, str]] = []
-        pending = bytearray()
         listing_bytes = 0
-        try:
-            if process.stdout is None:
-                raise ResolutionError("Git tree listing failed")
-            while True:
-                chunk = process.stdout.read(64 * 1024)
-                if not chunk:
-                    break
-                listing_bytes += len(chunk)
-                if listing_bytes > MAX_SNAPSHOT_TREE_LIST_BYTES:
+
+        while pending_trees:
+            prefix, tree_sha = pending_trees.pop()
+            object_type, _ = self._object_header(repo, tree_sha)
+            if object_type != "tree":
+                raise ResolutionError("Git tree identity is not a tree")
+            raw = self._git_bytes(
+                "ls-tree", "-z", tree_sha,
+                cwd=repo,
+                extra_env={"GIT_NO_LAZY_FETCH": "1"},
+            )
+            listing_bytes += len(raw)
+            if listing_bytes > MAX_SNAPSHOT_TREE_LIST_BYTES:
+                raise ResolutionError(
+                    "Git tree listing exceeds Runtime byte budget"
+                )
+            for record in (item for item in raw.split(b"\x00") if item):
+                path, sha, mode, kind = self._decode_tree_object_record(
+                    record
+                )
+                full_path = f"{prefix}/{path}" if prefix else path
+                self._safe_path(full_path)
+                objects.append((full_path, sha, mode, kind))
+                if len(objects) > MAX_SNAPSHOT_TREE_ENTRIES:
                     raise ResolutionError(
-                        "Git tree listing exceeds Runtime byte budget"
+                        "Git tree exceeds Runtime entry budget"
                     )
-                pending.extend(chunk)
-                while True:
-                    separator = pending.find(0)
-                    if separator < 0:
-                        break
-                    record = bytes(pending[:separator])
-                    del pending[:separator + 1]
-                    if not record:
-                        continue
-                    objects.append(self._decode_tree_object_record(record))
-                    if len(objects) > MAX_SNAPSHOT_TREE_ENTRIES:
-                        raise ResolutionError(
-                            "Git tree exceeds Runtime entry budget"
-                        )
-            if pending:
-                raise ResolutionError("Git tree returned a truncated record")
-            returncode = process.wait()
-            if returncode:
-                raise ResolutionError("Git tree listing failed")
-            return objects
-        finally:
-            timer.cancel()
-            if process.poll() is None:
-                process.kill()
-                process.wait()
-            if process.stdout is not None:
-                process.stdout.close()
+                if kind == "tree":
+                    pending_trees.append((full_path, sha))
+        return objects
 
     def _tree_entries(
         self, repo: Path, commit: str
@@ -1011,9 +1121,33 @@ class GitCliProvider:
                 env=self._env(binding),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
+                **self._fetch_process_kwargs(),
             )
         except OSError:
             raise ResolutionError("Git bounded fetch failed") from None
+
+        stderr_buffer = bytearray()
+        stderr_overflow = [False]
+
+        def drain_stderr() -> None:
+            if process.stderr is None:
+                return
+            while True:
+                chunk = process.stderr.read(64 * 1024)
+                if not chunk:
+                    break
+                remaining = MAX_FETCH_STDERR_BYTES - len(stderr_buffer)
+                if remaining > 0:
+                    stderr_buffer.extend(chunk[:remaining])
+                if len(chunk) > remaining:
+                    stderr_overflow[0] = True
+
+        stderr_thread = threading.Thread(
+            target=drain_stderr,
+            name="learning-os-git-fetch-stderr",
+            daemon=True,
+        )
+        stderr_thread.start()
 
         deadline = time.monotonic() + 90
         exceeded = False
@@ -1021,15 +1155,25 @@ class GitCliProvider:
         while process.poll() is None:
             if self._object_store_bytes(repo) > MAX_FETCH_OBJECT_BYTES:
                 exceeded = True
-                process.kill()
+                self._terminate_process_tree(process)
                 break
             if time.monotonic() > deadline:
                 timed_out = True
-                process.kill()
+                self._terminate_process_tree(process)
                 break
             time.sleep(FETCH_POLL_SECONDS)
 
-        _, stderr = process.communicate()
+        if process.poll() is None:
+            process.wait()
+        stderr_thread.join(timeout=10)
+        if stderr_thread.is_alive():
+            self._terminate_process_tree(process)
+            raise ResolutionError("Git fetch diagnostics did not drain")
+        if process.stderr is not None:
+            process.stderr.close()
+        stderr = bytes(stderr_buffer)
+        if stderr_overflow[0]:
+            raise ResolutionError("Git fetch diagnostics exceeded Runtime budget")
         if self._object_store_bytes(repo) > MAX_FETCH_OBJECT_BYTES:
             exceeded = True
         if exceeded:
@@ -1065,9 +1209,7 @@ class GitCliProvider:
             self._init_repo(repo)
             self._git("remote", "add", "origin", binding.remote, cwd=repo)
             self._fetch_ref(repo, binding, fetch_ref)
-            fetched = self._git(
-                "rev-parse", "--verify", "FETCH_HEAD^{commit}", cwd=repo
-            )
+            fetched = self._resolve_fetched_commit(repo)
             if EXACT_COMMIT.fullmatch(ref) and fetched != ref:
                 raise ResolutionError(
                     "fetched Git commit does not match requested provenance"
@@ -1094,9 +1236,7 @@ class GitCliProvider:
             self._init_repo(repo)
             self._git("remote", "add", "origin", binding.remote, cwd=repo)
             self._fetch_ref(repo, binding, branch_ref)
-            fetched = self._git(
-                "rev-parse", "--verify", "FETCH_HEAD^{commit}", cwd=repo
-            )
+            fetched = self._resolve_fetched_commit(repo)
             if not EXACT_COMMIT.fullmatch(fetched):
                 raise ResolutionError("Git did not resolve an exact branch head")
             objects = self._verify_regular_tree(repo, fetched)

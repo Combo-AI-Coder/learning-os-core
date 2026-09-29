@@ -406,6 +406,23 @@ class GitCliProviderTests(unittest.TestCase):
             provider._requires_filtered_fetch(str(self.remote))
         )
 
+    def test_metadata_object_budget_fails_before_recursive_traversal(self):
+        provider = self.provider()
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_GIT_METADATA_OBJECT_BYTES", 1
+        ):
+            with self.assertRaisesRegex(
+                ResolutionError, "metadata object"
+            ):
+                provider.materialize(self.REPO_ID, "main")
+
+    def test_fetch_process_isolated_for_tree_termination(self):
+        kwargs = GitCliProvider._fetch_process_kwargs()
+        if os.name == "nt":
+            self.assertIn("creationflags", kwargs)
+        else:
+            self.assertEqual({"start_new_session": True}, kwargs)
+
     def test_fetch_object_store_budget_fails_closed(self):
         provider = self.provider()
         with mock.patch(
@@ -497,12 +514,17 @@ class GitCliProviderTests(unittest.TestCase):
             if os.name == "nt"
             else "/run/ssh-agent.sock"
         )
+        known_hosts = (
+            "C:/run/github_known_hosts"
+            if os.name == "nt"
+            else "/run/github_known_hosts"
+        )
         provider = GitCliProvider([
             GitRepositoryBinding(
                 self.REPO_ID,
                 str(self.remote),
                 ssh_auth_sock=socket,
-                ssh_known_hosts_file="/run/github_known_hosts",
+                ssh_known_hosts_file=known_hosts,
             )
         ])
         self.addCleanup(provider.close)
@@ -519,7 +541,7 @@ class GitCliProviderTests(unittest.TestCase):
         self.assertIn("KbdInteractiveAuthentication=no", command)
         self.assertIn("StrictHostKeyChecking=yes", command)
         self.assertIn(
-            f"UserKnownHostsFile={os.path.abspath('/run/github_known_hosts')}",
+            f"UserKnownHostsFile={os.path.abspath(known_hosts).replace(chr(92), '/')}",
             command,
         )
         self.assertIn("GlobalKnownHostsFile=none", command)
@@ -622,22 +644,39 @@ class GitCliProviderTests(unittest.TestCase):
             provider._binding(self.REPO_ID).ssh_known_hosts_file,
         )
 
-    def test_relative_known_hosts_path_is_resolved_at_construction(self):
-        provider = GitCliProvider([
-            GitRepositoryBinding(
-                self.REPO_ID,
-                str(self.remote),
-                ssh_known_hosts_file="relative-known-hosts",
-            )
-        ])
-        self.addCleanup(provider.close)
-        expected = os.path.abspath("relative-known-hosts").replace(chr(92), "/")
-        binding = provider._binding(self.REPO_ID)
-        self.assertEqual(expected, binding.ssh_known_hosts_file)
-        self.assertIn(
-            f"UserKnownHostsFile={expected}",
-            provider._env(binding)["GIT_SSH_COMMAND"],
+    def test_relative_known_hosts_path_fails_closed(self):
+        with self.assertRaisesRegex(ResolutionError, "absolute host path"):
+            GitCliProvider([
+                GitRepositoryBinding(
+                    self.REPO_ID,
+                    str(self.remote),
+                    ssh_known_hosts_file="relative-known-hosts",
+                )
+            ])
+
+    def test_normalized_known_hosts_path_is_revalidated(self):
+        absolute = (
+            "C:/trusted/known_hosts"
+            if os.name == "nt"
+            else "/trusted/known_hosts"
         )
+        unsafe = (
+            "C:/unsafe dir/known_hosts"
+            if os.name == "nt"
+            else "/unsafe dir/known_hosts"
+        )
+        with mock.patch(
+            "scripts.runtime_adapter.os.path.abspath",
+            return_value=unsafe,
+        ):
+            with self.assertRaisesRegex(ResolutionError, "whitespace"):
+                GitCliProvider([
+                    GitRepositoryBinding(
+                        self.REPO_ID,
+                        str(self.remote),
+                        ssh_known_hosts_file=absolute,
+                    )
+                ])
 
     def test_ssh_agent_is_scoped_to_its_repository_binding(self):
         instance_id = self.REPO_ID
