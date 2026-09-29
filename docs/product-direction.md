@@ -60,9 +60,9 @@ A useful external capability may become an execution surface for Learning OS wit
 
 V0.4 established the split Core / Instance / Runtime-Control trust model and closed the main technical migration/validation frontier. The next phase is **learning-outcome-first** rather than infrastructure-first.
 
-The primary evidence source should now be sustained real learning. Product work should be pulled by failures or opportunities observed in that learning rather than by a desire to expand the framework for its own sake.
+The primary product evidence source should now be sustained real learning. Product work should be pulled by failures or opportunities observed in that learning rather than by a desire to expand the framework for its own sake.
 
-The current Modern Language Models learning line is the first natural product surface. Its active `tokens/context/representation` milestone can exercise the current open teaching frontiers:
+The most important open teaching/product frontiers are reusable concerns, not a copy of any one learner's current route:
 
 - proactive diagnostic targeting;
 - knowledge-anchored introduction of new concepts and prerequisites;
@@ -70,15 +70,40 @@ The current Modern Language Models learning line is the first natural product su
 - Evidence -> Knowledge integration that gradually produces useful learner capability state;
 - learner-visible orientation and route coherence during real technical learning.
 
-Do not fabricate additional Topics, Study Branches, mastery evidence, or learning sessions solely to force acceptance coverage. Multi-Branch and cross-Topic behavior should be tested when genuine learner needs create those situations.
+Real learner progress, active Topics/Subtopics, and the current milestone belong only in the private Instance and must not be copied into Core product-direction documents.
 
-## Public early-release direction
+Do not fabricate learner progress, mastery, real Evidence, or real learning sessions solely to claim product acceptance. This does **not** prohibit synthetic Core fixtures: reusable multi-Branch, cross-Topic, validator, protocol, and failure semantics should continue to receive deterministic synthetic unit/acceptance coverage where useful. Real-learning evidence and synthetic product verification are separate evidence classes.
 
-The semester-level route calls for a publicly presentable early Learning OS release. Public presentation should demonstrate the product idea above: a reusable Core plus learner-owned private state and a credible real-learning workflow.
+## Initial public-release shape
 
-Public readiness should not be equated with feature count. A small release that clearly demonstrates trustworthy longitudinal learner state, explainable next-step selection, and useful real-learning behavior is preferable to a broad generic tutor surface that duplicates mature external products.
+The initial public release should be a **reference product / technical early release**, not a standalone mass-market app and not architecture documentation alone.
 
-Packaging, onboarding, licensing, documentation, examples, and deployment ergonomics are productization concerns for the public release and may be shaped separately from the learner-state semantics.
+A credible first release should make the product direction understandable and runnable through a small, public-safe surface such as:
+
+- the reusable Core;
+- a clear quickstart;
+- synthetic/example learner and Instance material that contains no real learner data;
+- one end-to-end demonstration showing how durable learner state, Evidence/Knowledge transitions, and explainable next-step selection fit together;
+- enough deployment/setup documentation for a technical self-directed learner to understand the trust and ownership model.
+
+Public readiness should not be equated with feature count or UI polish. A small release that clearly demonstrates trustworthy longitudinal learner state and useful learning behavior is preferable to a broad generic tutor surface that duplicates mature external products.
+
+Packaging, onboarding, licensing, documentation, examples, and deployment ergonomics are productization concerns. They should support the reference product without becoming a second learner-state authority.
+
+## First post-restart product cycle
+
+The first product cycle follows this **decision order**, not an automatic mutation sequence:
+
+1. **Production-parity assessment** — inspect the complete difference between the currently deployed Core and the current accepted Core, run the applicable promotion/recovery checks, and determine whether promotion is ready.
+2. **Separate promotion decision** — changing Runtime-Control or deploying a newer Core remains an explicit deployment action with its own authority and verification. This document does not authorize it.
+3. **Sustained real learning** — once the active runtime is appropriate for dogfood, continue ordinary advanced self-directed learning and let real teaching/learning interactions exercise the product.
+4. **Evidence-driven product fixes** — prioritize changes that are supported by material real-use evidence, especially around diagnostic targeting, knowledge anchoring, concept closure, and useful capability-state formation.
+5. **Public packaging** — package the behavior that has survived real use into the reference-product early release.
+
+This order intentionally rejects two defaults:
+
+- do not package an unvalidated product surface merely because the technical Core is stable;
+- do not proactively expand learner-model mechanics, infrastructure, or framework layers merely because they can be designed.
 
 ## Boundaries and non-inferences
 
@@ -88,4 +113,5 @@ Packaging, onboarding, licensing, documentation, examples, and deployment ergono
 - This direction does not make learner modeling exhaustive. Unknown should remain unknown when evidence is insufficient.
 - This direction does not make tests, Progress completion, or a fluent tutoring response equivalent to mastery.
 - This direction does not require Learning OS to outperform every external tutor feature. The product may deliberately rely on replaceable external capabilities while owning the durable learner-state semantics.
+- Synthetic Core fixtures are valid verification evidence for reusable product semantics, but they are not real learner-outcome evidence.
 - This document is not a fixed V0.5 roadmap. Real learner outcomes and explicit user decisions determine which implementation slice comes next.
