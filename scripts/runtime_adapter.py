@@ -1098,16 +1098,20 @@ class GitHubApiProvider:
     def read_text(self, repository_id: int, ref: str, path: str) -> tuple[str, str, str]:
         repo = self._repo(repository_id)
         full_name = _nonempty(repo.get("full_name"), "repository.full_name")
+        commit = self._commit(full_name, ref)
         quoted_path = urllib.parse.quote(path, safe="/")
-        quoted_ref = urllib.parse.quote(ref, safe="")
-        data = self._request("GET", f"/repos/{full_name}/contents/{quoted_path}?ref={quoted_ref}")
+        quoted_commit = urllib.parse.quote(commit, safe="")
+        data = self._request(
+            "GET",
+            f"/repos/{full_name}/contents/{quoted_path}?ref={quoted_commit}",
+        )
         if not isinstance(data, dict) or data.get("encoding") != "base64":
             raise ResolutionError("GitHub content response is malformed")
         try:
             text = base64.b64decode(data["content"]).decode("utf-8")
         except (KeyError, TypeError, ValueError, UnicodeError):
             raise ResolutionError("GitHub content is not valid UTF-8") from None
-        return text, _nonempty(data.get("sha"), "content.sha"), self._commit(full_name, ref)
+        return text, _nonempty(data.get("sha"), "content.sha"), commit
 
     def update_text(
         self,

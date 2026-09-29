@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import os
 import subprocess
 import tempfile
@@ -1169,6 +1170,40 @@ class GitHubApiProviderTests(unittest.TestCase):
 
         provider._request = request
         return provider
+
+    def test_read_text_pins_content_to_resolved_commit(self):
+        provider = GitHubApiProvider(
+            token="synthetic-token",
+            api_url="https://example.invalid",
+        )
+        self.addCleanup(provider.close)
+        provider._repo = lambda repository_id: {
+            "id": repository_id,
+            "full_name": "synthetic/instance",
+        }
+        calls = []
+
+        def request(method, path, payload=None):
+            calls.append((method, path, payload))
+            if method == "GET" and path.endswith("/commits/main"):
+                return {"sha": self.HEAD}
+            expected = f"/contents/state.txt?ref={self.HEAD}"
+            if method == "GET" and expected in path:
+                return {
+                    "encoding": "base64",
+                    "content": base64.b64encode(b"state-v1\n").decode("ascii"),
+                    "sha": self.TARGET_BLOB,
+                }
+            raise AssertionError(f"unexpected request: {method} {path}")
+
+        provider._request = request
+        text_value, blob, commit = provider.read_text(
+            self.REPO_ID, "main", "state.txt"
+        )
+        self.assertEqual("state-v1\n", text_value)
+        self.assertEqual(self.TARGET_BLOB, blob)
+        self.assertEqual(self.HEAD, commit)
+        self.assertFalse(any("?ref=main" in call[1] for call in calls))
 
     def test_branch_head_cas_uses_old_head_parent_and_nonforce_ref_update(self):
         provider = self.provider()
