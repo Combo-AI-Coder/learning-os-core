@@ -332,6 +332,22 @@ class GitCliProviderTests(unittest.TestCase):
         self.assertEqual("one\n", (snapshot.root / "state.txt").read_text(encoding="utf-8"))
         self.assertFalse((snapshot.root / ".git").exists())
 
+    def test_materialize_streams_blob_content_instead_of_buffering_it(self):
+        provider = self.provider()
+        original_git_bytes = provider._git_bytes
+
+        def reject_buffered_blob(*args, **kwargs):
+            if len(args) >= 2 and args[0] == "cat-file" and args[1] == "blob":
+                raise AssertionError("materialize must stream blob content")
+            return original_git_bytes(*args, **kwargs)
+
+        provider._git_bytes = reject_buffered_blob  # type: ignore[method-assign]
+        snapshot = provider.materialize(self.REPO_ID, "main")
+        self.assertEqual(
+            "one\n",
+            (snapshot.root / "state.txt").read_text(encoding="utf-8"),
+        )
+
     def test_fetch_retries_without_depth_after_shallow_failure(self):
         provider = self.provider()
         original_git = provider._git
@@ -419,18 +435,23 @@ class GitCliProviderTests(unittest.TestCase):
                     )
 
     def test_explicit_ssh_transport_disables_user_config_and_disk_identities(self):
+        socket = (
+            "C:/run/ssh-agent.sock"
+            if os.name == "nt"
+            else "/run/ssh-agent.sock"
+        )
         provider = GitCliProvider([
             GitRepositoryBinding(
                 self.REPO_ID,
                 str(self.remote),
-                ssh_auth_sock="/run/ssh-agent.sock",
+                ssh_auth_sock=socket,
                 ssh_known_hosts_file="/run/github_known_hosts",
             )
         ])
         self.addCleanup(provider.close)
         binding = provider._binding(self.REPO_ID)
         env = provider._env(binding)
-        self.assertEqual("/run/ssh-agent.sock", env["SSH_AUTH_SOCK"])
+        self.assertEqual(socket, env["SSH_AUTH_SOCK"])
         self.assertNotIn("SSH_AGENT_PID", env)
         command = env["GIT_SSH_COMMAND"]
         self.assertIn("-F", command)
@@ -455,6 +476,28 @@ class GitCliProviderTests(unittest.TestCase):
                     ssh_auth_sock="agent.sock",
                 )
             ])
+
+    def test_host_path_semantics_reject_windows_root_relative_socket(self):
+        self.assertFalse(
+            GitCliProvider._absolute_host_path(
+                "/agent.sock", windows_host=True
+            )
+        )
+        self.assertTrue(
+            GitCliProvider._absolute_host_path(
+                "C:/agent.sock", windows_host=True
+            )
+        )
+        self.assertTrue(
+            GitCliProvider._absolute_host_path(
+                "//server/share/agent.sock", windows_host=True
+            )
+        )
+        self.assertTrue(
+            GitCliProvider._absolute_host_path(
+                "/agent.sock", windows_host=False
+            )
+        )
 
     def test_known_hosts_path_with_whitespace_fails_closed(self):
         with self.assertRaisesRegex(ResolutionError, "whitespace"):
@@ -519,12 +562,17 @@ class GitCliProviderTests(unittest.TestCase):
     def test_ssh_agent_is_scoped_to_its_repository_binding(self):
         instance_id = self.REPO_ID
         control_id = self.REPO_ID + 1
+        socket = (
+            "C:/run/instance-agent.sock"
+            if os.name == "nt"
+            else "/run/instance-agent.sock"
+        )
         provider = GitCliProvider([
             GitRepositoryBinding(
                 instance_id,
                 "ssh://git@example.invalid/instance.git",
                 writable=True,
-                ssh_auth_sock="/run/instance-agent.sock",
+                ssh_auth_sock=socket,
             ),
             GitRepositoryBinding(
                 control_id,
@@ -535,9 +583,7 @@ class GitCliProviderTests(unittest.TestCase):
         self.addCleanup(provider.close)
         instance_env = provider._env(provider._binding(instance_id))
         control_env = provider._env(provider._binding(control_id))
-        self.assertEqual(
-            "/run/instance-agent.sock", instance_env["SSH_AUTH_SOCK"]
-        )
+        self.assertEqual(socket, instance_env["SSH_AUTH_SOCK"])
         self.assertNotIn("SSH_AUTH_SOCK", control_env)
 
     def test_windows_drive_relative_remote_fails_closed(self):

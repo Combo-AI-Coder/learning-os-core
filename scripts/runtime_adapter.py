@@ -372,12 +372,7 @@ class GitCliProvider:
                 ssh_auth_sock = _nonempty(
                     binding.ssh_auth_sock, "binding.ssh_auth_sock"
                 )
-                absolute_socket = (
-                    ssh_auth_sock.startswith("/")
-                    or ssh_auth_sock.startswith("\\\\")
-                    or bool(re.match(r"^[A-Za-z]:[/\\]", ssh_auth_sock))
-                )
-                if not absolute_socket:
+                if not self._absolute_host_path(ssh_auth_sock):
                     raise ResolutionError(
                         "binding.ssh_auth_sock must be an absolute host path"
                     )
@@ -435,6 +430,20 @@ class GitCliProvider:
             self._tempdirs.pop().cleanup()
         self._empty_git_template.cleanup()
         self._isolated_home.cleanup()
+
+    @staticmethod
+    def _absolute_host_path(
+        value: str, *, windows_host: bool | None = None
+    ) -> bool:
+        if windows_host is None:
+            windows_host = os.name == "nt"
+        if windows_host:
+            return (
+                value.startswith("\\\\")
+                or value.startswith("//")
+                or bool(re.match(r"^[A-Za-z]:[/\\]", value))
+            )
+        return value.startswith("/")
 
     def _binding(self, repository_id: int) -> GitRepositoryBinding:
         repository_id = _positive_id(repository_id, "repository_id")
@@ -557,6 +566,31 @@ class GitCliProvider:
             tuple(args), cwd=cwd, cas=cas, input_bytes=input_bytes,
             binding=binding,
         )
+
+    def _git_blob_to_file(
+        self, repo: Path, sha: str, output: Path
+    ) -> None:
+        try:
+            with output.open("xb") as handle:
+                result = subprocess.run(
+                    ["git", "cat-file", "blob", sha],
+                    cwd=repo,
+                    env=self._env(),
+                    stdout=handle,
+                    stderr=subprocess.PIPE,
+                    timeout=90,
+                    check=False,
+                )
+        except FileExistsError:
+            raise ResolutionError(
+                "materialized Git path aliases an existing snapshot entry"
+            ) from None
+        except (OSError, subprocess.SubprocessError):
+            output.unlink(missing_ok=True)
+            raise ResolutionError("Git blob materialization failed") from None
+        if result.returncode:
+            output.unlink(missing_ok=True)
+            raise ResolutionError("Git blob materialization failed")
 
     @staticmethod
     def _windows_reserved_component(part: str) -> bool:
@@ -861,9 +895,7 @@ class GitCliProvider:
                     raise ResolutionError(
                         "materialized Git path aliases an existing snapshot entry"
                     )
-                output.write_bytes(
-                    self._git_bytes("cat-file", "blob", sha, cwd=repo)
-                )
+                self._git_blob_to_file(repo, sha, output)
                 if not output.is_file():
                     raise ResolutionError(
                         "materialized Git tree entry is not a regular file"
