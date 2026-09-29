@@ -154,6 +154,13 @@ class BrokerProvider:
             )
         raise ResolutionError("unknown repository")
 
+    def release_materialization(self, snapshot):
+        self.calls.append((
+            "release",
+            snapshot.repository_id,
+            snapshot.commit_sha,
+        ))
+
     def read_text(self, repository_id, ref, path):
         self.calls.append(("read", repository_id, ref, path))
         if repository_id == RC_ID and ref == "main" and path == "deployment.yaml":
@@ -229,6 +236,16 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         self.assertEqual("synthetic", session.binding.topic)
         self.assertEqual("main", session.binding.branch_id)
         self.assertEqual("synthetic-main-lineage", session.binding.lineage_id)
+
+    def test_open_session_releases_bootstrap_materializations(self):
+        self.provider.calls.clear()
+        self.open(expected_generation=3)
+        released = [
+            call[1]
+            for call in self.provider.calls
+            if call[0] == "release"
+        ]
+        self.assertEqual([INSTANCE_ID, CORE_ID, RC_ID], released)
 
     def test_broker_copies_host_trusted_locator_at_construction(self):
         source = locator()
@@ -475,6 +492,28 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                         message="must not overwrite history",
                     )
 
+    def test_generic_update_rejects_protocol_governed_sequence_registry(self):
+        path = "runtime/ui/conversation-sequences.yaml"
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("runtime/ui",),
+            writable_roots=(path,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        with self.assertRaisesRegex(
+            GuardRejected, "dedicated transition"
+        ):
+            self.broker.guarded_update(
+                session,
+                path=path,
+                content="x",
+                expected_blob_sha="4" * 40,
+                message="must use allocation transaction",
+            )
+
     def test_generic_update_rejects_unclassified_paths(self):
         policy = RuntimeCapabilityPolicy(
             readable_roots=("scratch",),
@@ -584,6 +623,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
 
     def test_candidate_validation_timeout_fails_before_provider_update(self):
         session = self.open()
+        self.provider.calls.clear()
         with mock.patch(
             "scripts.runtime_broker.subprocess.run",
             side_effect=subprocess.TimeoutExpired(
@@ -601,6 +641,12 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         self.assertFalse(
             any(call[0] == "update" for call in self.provider.calls)
         )
+        released = [
+            call[1]
+            for call in self.provider.calls
+            if call[0] == "release"
+        ]
+        self.assertEqual([CORE_ID, INSTANCE_ID], released)
 
     def test_invalid_candidate_state_is_rejected_before_provider_update(self):
         session = self.open()
@@ -644,6 +690,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
 
     def test_allowed_write_uses_deployment_generation_branch_and_target_cas(self):
         session = self.open()
+        self.provider.calls.clear()
         previous_head = self.provider.instance_head
         result = self.broker.guarded_update(
             session,
@@ -662,6 +709,12 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         self.assertEqual(previous_head, update[5])
         names = [call[0] for call in self.provider.calls]
         self.assertLess(names.index("read"), names.index("update"))
+        released = [
+            call[1]
+            for call in self.provider.calls
+            if call[0] == "release"
+        ]
+        self.assertEqual([CORE_ID, INSTANCE_ID], released)
 
 
 if __name__ == "__main__":

@@ -1074,6 +1074,187 @@ LOCATOR_TOP_KEYS={"schema_version","document_type","runtime_control","instance"}
 LOCATOR_RC_KEYS={"repository_id","repository","canonical_ref","contract_path"}
 LOCATOR_INSTANCE_KEYS={"repository_id","repository","canonical_ref"}
 
+def validate_deployment_contract_document(
+    contract,
+    *,
+    path="<deployment-contract>",
+    raw_text=None,
+    structure=True,
+    trust_boundary=True,
+):
+    """Validate one Runtime-Control contract document without snapshot lookup."""
+    findings = []
+
+    def error(code, where, message):
+        findings.append(Finding("error", code, where, message))
+
+    if structure:
+        if not isinstance(contract, dict):
+            error(
+                "yaml.mapping",
+                path,
+                "deployment contract must be a mapping",
+            )
+            return findings
+        if contract.get("schema_version") != DEPLOYMENT_SCHEMA:
+            error(
+                "deployment.schema_version",
+                path,
+                f"deployment contract schema_version must be {DEPLOYMENT_SCHEMA!r}",
+            )
+        if contract.get("document_type") != DEPLOYMENT_DOC_TYPE:
+            error(
+                "deployment.document_type",
+                path,
+                "deployment contract document_type must be "
+                f"{DEPLOYMENT_DOC_TYPE!r}",
+            )
+        unknown = sorted(set(contract) - DEPLOYMENT_TOP_KEYS)
+        if unknown:
+            error(
+                "deployment.forbidden_field",
+                path,
+                "unknown top-level contract fields "
+                f"{unknown}; the public contract is allowlist-only",
+            )
+        deployment = contract.get("deployment")
+        core = contract.get("core")
+        if not isinstance(deployment, dict):
+            error(
+                "deployment.section",
+                path,
+                "deployment section must be a mapping",
+            )
+            deployment = {}
+        if not isinstance(core, dict):
+            error(
+                "deployment.section",
+                path,
+                "core section must be a mapping",
+            )
+            core = {}
+        for section, value in (
+            ("deployment", deployment),
+            ("core", core),
+        ):
+            extra = sorted(set(value) - DEPLOYMENT_SECTION_KEYS[section])
+            if extra:
+                error(
+                    "deployment.forbidden_field",
+                    f"{path}:{section}",
+                    f"unknown {section} fields {extra}; "
+                    "the public contract is allowlist-only",
+                )
+            for field in DEPLOYMENT_REQUIRED[section]:
+                if field not in value:
+                    error(
+                        "deployment.required_field",
+                        f"{path}:{section}.{field}",
+                        f"missing required field {section}.{field}",
+                    )
+
+        deployment_id = deployment.get("id")
+        if not (
+            isinstance(deployment_id, str)
+            and deployment_id.strip()
+        ):
+            error(
+                "deployment.id",
+                f"{path}:deployment.id",
+                "must be a non-empty string",
+            )
+        if deployment.get("topology") not in DEPLOYMENT_TOPOLOGIES:
+            error(
+                "deployment.topology",
+                f"{path}:deployment.topology",
+                f"must be one of {sorted(DEPLOYMENT_TOPOLOGIES)}",
+            )
+        epoch = deployment.get("epoch")
+        if (
+            not isinstance(epoch, int)
+            or isinstance(epoch, bool)
+            or epoch < 1
+        ):
+            error(
+                "deployment.epoch",
+                f"{path}:deployment.epoch",
+                "must be a positive integer (monotonic fencing token)",
+            )
+        if deployment.get("write_state") not in DEPLOYMENT_WRITE_STATES:
+            error(
+                "deployment.write_state",
+                f"{path}:deployment.write_state",
+                f"must be one of {sorted(DEPLOYMENT_WRITE_STATES)}",
+            )
+
+        repository_id = core.get("repository_id")
+        if (
+            not isinstance(repository_id, int)
+            or isinstance(repository_id, bool)
+            or repository_id <= 0
+        ):
+            error(
+                "deployment.core_repository_id",
+                f"{path}:core.repository_id",
+                "must be a positive integer repository ID "
+                "(security identity; owner/name is navigation only)",
+            )
+        commit = core.get("commit")
+        if not (
+            isinstance(commit, str)
+            and re.fullmatch(r"[0-9a-f]{40}", commit)
+        ):
+            error(
+                "deployment.core_commit",
+                f"{path}:core.commit",
+                "must be the exact 40-hex deployed commit; abbreviated "
+                "SHA and branch/tag/ref names are not valid pins",
+            )
+        full_name = core.get("repository_full_name")
+        if full_name is not None and not (
+            isinstance(full_name, str) and full_name.strip()
+        ):
+            error(
+                "deployment.core_navigation",
+                f"{path}:core.repository_full_name",
+                "optional navigation metadata must be a non-empty string",
+            )
+
+    if trust_boundary and isinstance(contract, dict):
+        def walk(value, current_path):
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    key_path = (
+                        f"{current_path}.{key}"
+                        if current_path else str(key)
+                    )
+                    if key in DEPLOYMENT_TRUST_BOUNDARY_KEYS:
+                        error(
+                            "deployment.trust_boundary",
+                            f"{path}:{key_path}",
+                            DEPLOYMENT_TRUST_BOUNDARY_KEYS[key],
+                        )
+                    walk(child, key_path)
+            elif isinstance(value, list):
+                for index, child in enumerate(value):
+                    walk(child, f"{current_path}[{index}]")
+            elif isinstance(value, str) and CORE_TOKEN_RE.search(value):
+                error(
+                    "deployment.credential_value",
+                    f"{path}:{current_path}",
+                    "structurally detected credential/token value",
+                )
+
+        walk(contract, "")
+        if isinstance(raw_text, str) and CORE_TOKEN_RE.search(raw_text):
+            error(
+                "deployment.credential_value",
+                path,
+                "structurally detected credential/token value in contract text",
+            )
+    return findings
+
+
 class DeploymentValidator:
     """Deterministic validate_deployment(control_snapshot, deployed_core,
     instance_snapshot, trusted_locator) surface for the V0.4 split planes.
@@ -1151,53 +1332,31 @@ class DeploymentValidator:
             else: self.error(f"deployment.contract_path_{reason}",where,f"invalid Runtime-Control contract_path {cp!r}: {message}")
             return
         self.contract_path=p
-        try:d=yaml.safe_load(p.read_text(encoding="utf-8"))
+        try:
+            self.contract_text=p.read_text(encoding="utf-8")
+            d=yaml.safe_load(self.contract_text)
         except Exception as e:self.error("yaml.parse",p.as_posix(),str(e)); return
         if not isinstance(d,dict): self.error("yaml.mapping",p.as_posix(),"deployment contract must be a mapping"); return
         self.contract=d
     def check_contract_structure(self):
-        p=self.contract_path.as_posix(); d=self.contract
-        if d.get("schema_version")!=DEPLOYMENT_SCHEMA: self.error("deployment.schema_version",p,f"deployment contract schema_version must be {DEPLOYMENT_SCHEMA!r}")
-        if d.get("document_type")!=DEPLOYMENT_DOC_TYPE: self.error("deployment.document_type",p,f"deployment contract document_type must be {DEPLOYMENT_DOC_TYPE!r}")
-        unknown=sorted(set(d)-DEPLOYMENT_TOP_KEYS)
-        if unknown: self.error("deployment.forbidden_field",p,f"unknown top-level contract fields {unknown}; the public contract is allowlist-only")
-        dep=d.get("deployment") or {}; core=d.get("core") or {}
-        if not isinstance(dep,dict): self.error("deployment.section",p,"deployment section must be a mapping"); dep={}
-        if not isinstance(core,dict): self.error("deployment.section",p,"core section must be a mapping"); core={}
-        for sec,obj in (("deployment",dep),("core",core)):
-            u=sorted(set(obj)-DEPLOYMENT_SECTION_KEYS[sec])
-            if u: self.error("deployment.forbidden_field",f"{p}:{sec}",f"unknown {sec} fields {u}; the public contract is allowlist-only")
-            for k in DEPLOYMENT_REQUIRED[sec]:
-                if k not in obj: self.error("deployment.required_field",f"{p}:{sec}.{k}",f"missing required field {sec}.{k}")
-        i=dep.get("id")
-        if not (isinstance(i,str) and i.strip()): self.error("deployment.id",f"{p}:deployment.id","must be a non-empty string")
-        if dep.get("topology") not in DEPLOYMENT_TOPOLOGIES: self.error("deployment.topology",f"{p}:deployment.topology",f"must be one of {sorted(DEPLOYMENT_TOPOLOGIES)}")
-        ep=dep.get("epoch")
-        if not isinstance(ep,int) or isinstance(ep,bool) or ep<1: self.error("deployment.epoch",f"{p}:deployment.epoch","must be a positive integer (monotonic fencing token)")
-        if dep.get("write_state") not in DEPLOYMENT_WRITE_STATES: self.error("deployment.write_state",f"{p}:deployment.write_state",f"must be one of {sorted(DEPLOYMENT_WRITE_STATES)}")
-        rid=core.get("repository_id")
-        if not isinstance(rid,int) or isinstance(rid,bool) or rid<=0: self.error("deployment.core_repository_id",f"{p}:core.repository_id","must be a positive integer repository ID (security identity; owner/name is navigation only)")
-        cc=core.get("commit")
-        if not (isinstance(cc,str) and re.fullmatch(r"[0-9a-f]{40}",cc)):
-            self.error("deployment.core_commit",f"{p}:core.commit","must be the exact 40-hex deployed commit; abbreviated SHA and branch/tag/ref names are not valid pins")
-        fn=core.get("repository_full_name")
-        if fn is not None and not (isinstance(fn,str) and fn.strip()): self.error("deployment.core_navigation",f"{p}:core.repository_full_name","optional navigation metadata must be a non-empty string")
+        self.findings.extend(
+            validate_deployment_contract_document(
+                self.contract,
+                path=self.contract_path.as_posix(),
+                structure=True,
+                trust_boundary=False,
+            )
+        )
     def check_trust_boundary(self):
-        # 公开 contract 的信任边界：递归扫描禁键 + 结构化 token 值检测
-        p=self.contract_path.as_posix()
-        def walk(x,path):
-            if isinstance(x,dict):
-                for k,v in x.items():
-                    kp=f"{path}.{k}" if path else str(k)
-                    if k in DEPLOYMENT_TRUST_BOUNDARY_KEYS: self.error("deployment.trust_boundary",f"{p}:{kp}",DEPLOYMENT_TRUST_BOUNDARY_KEYS[k])
-                    walk(v,kp)
-            elif isinstance(x,list):
-                for i,v in enumerate(x): walk(v,f"{path}[{i}]")
-            elif isinstance(x,str) and CORE_TOKEN_RE.search(x):
-                self.error("deployment.credential_value",f"{p}:{path}","structurally detected credential/token value")
-        walk(self.contract,"")
-        if CORE_TOKEN_RE.search(self.contract_path.read_text(encoding="utf-8")):
-            self.error("deployment.credential_value",p,"structurally detected credential/token value in contract text")
+        self.findings.extend(
+            validate_deployment_contract_document(
+                self.contract,
+                path=self.contract_path.as_posix(),
+                raw_text=self.contract_text,
+                structure=False,
+                trust_boundary=True,
+            )
+        )
     def check_identity(self):
         # 身份相等性：locator（TRUST ROOT）与 snapshot provenance（trusted
         # resolver output）双向核对；owner/name 永不参与判断。

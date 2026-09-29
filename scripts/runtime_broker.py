@@ -72,6 +72,9 @@ IMMUTABLE_UPDATE_TYPES = frozenset({
     "coordination_event",
     "learning_handoff",
 })
+PROTOCOL_GOVERNED_UPDATE_TYPES = frozenset({
+    "conversation_sequence_registry",
+})
 
 
 def _relative_path(value: object, where: str) -> str:
@@ -312,6 +315,15 @@ class RuntimeSessionBroker:
         expected_generation: int | None = None,
     ) -> LearningRuntimeSession:
         resolved = DeploymentResolver(self.provider).resolve(self.locator)
+        try:
+            deployment = resolved.context
+        finally:
+            for snapshot in (
+                resolved.instance,
+                resolved.core,
+                resolved.control,
+            ):
+                self.provider.release_materialization(snapshot)
         instance_ref = self.locator["instance"]["canonical_ref"]
         runtime_path = _relative_path(branch_runtime_path, "branch_runtime_path")
         if policy.writable_roots and expected_generation is None:
@@ -319,7 +331,7 @@ class RuntimeSessionBroker:
                 "writable learning session requires an established generation"
             )
         runtime, _ = self._read_branch_runtime(
-            instance_repository_id=resolved.context.instance_repository_id,
+            instance_repository_id=deployment.instance_repository_id,
             instance_ref=instance_ref,
             runtime_path=runtime_path,
         )
@@ -327,7 +339,7 @@ class RuntimeSessionBroker:
         if expected_generation is not None and generation != expected_generation:
             raise GuardRejected("requested learning generation is not active")
         return LearningRuntimeSession(
-            deployment=resolved.context,
+            deployment=deployment,
             binding=LearningSessionBinding(
                 instance_ref=instance_ref,
                 branch_runtime_path=runtime_path,
@@ -378,70 +390,85 @@ class RuntimeSessionBroker:
         contract: dict,
     ) -> None:
         _preflight_candidate_yaml(content)
-        instance = self.provider.materialize(
-            session.deployment.instance_repository_id,
-            authority_head,
-        )
-        core = self.provider.materialize(
-            session.deployment.core_repository_id,
-            session.deployment.core_commit,
-        )
-        binding = DeploymentBinding.from_contract(contract, self.locator)
-        if not isinstance(binding.fields, dict):
-            raise GuardRejected("candidate deployment binding is unavailable")
-
-        with tempfile.TemporaryDirectory(
-            prefix="learning-os-candidate-"
-        ) as candidate_dir:
-            temp_root = Path(candidate_dir)
-            root = temp_root / "instance"
-            shutil.copytree(instance.root, root)
-            candidate_path = root.joinpath(*PurePosixPath(path).parts)
-            candidate_path.parent.mkdir(parents=True, exist_ok=True)
-            candidate_path.write_text(
-                content, encoding="utf-8", newline="\n"
+        snapshots: list = []
+        try:
+            instance = self.provider.materialize(
+                session.deployment.instance_repository_id,
+                authority_head,
             )
-            binding_path = temp_root / "deployment-binding.yaml"
-            binding_path.write_text(
-                yaml.safe_dump(
-                    {"context_type": "synthetic", **binding.fields},
-                    sort_keys=False,
-                ),
-                encoding="utf-8",
-                newline="\n",
+            snapshots.append(instance)
+            core = self.provider.materialize(
+                session.deployment.core_repository_id,
+                session.deployment.core_commit,
             )
-            command = [
-                sys.executable,
-                str(Path(__file__).with_name("validate_learning_os.py")),
-                str(root),
-                "--instance",
-                "--core-snapshot",
-                str(core.root),
-                "--deployment-binding",
-                str(binding_path),
-            ]
-            try:
-                result = subprocess.run(
-                    command,
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
-                    timeout=CANDIDATE_VALIDATION_TIMEOUT_SECONDS,
-                    check=False,
+            snapshots.append(core)
+            binding = DeploymentBinding.from_contract(
+                contract, self.locator
+            )
+            if not isinstance(binding.fields, dict):
+                raise GuardRejected(
+                    "candidate deployment binding is unavailable"
                 )
-            except subprocess.TimeoutExpired:
+
+            with tempfile.TemporaryDirectory(
+                prefix="learning-os-candidate-"
+            ) as candidate_dir:
+                temp_root = Path(candidate_dir)
+                root = temp_root / "instance"
+                shutil.copytree(instance.root, root)
+                candidate_path = root.joinpath(
+                    *PurePosixPath(path).parts
+                )
+                candidate_path.parent.mkdir(
+                    parents=True, exist_ok=True
+                )
+                candidate_path.write_text(
+                    content, encoding="utf-8", newline="\n"
+                )
+                binding_path = temp_root / "deployment-binding.yaml"
+                binding_path.write_text(
+                    yaml.safe_dump(
+                        {"context_type": "synthetic", **binding.fields},
+                        sort_keys=False,
+                    ),
+                    encoding="utf-8",
+                    newline="\n",
+                )
+                command = [
+                    sys.executable,
+                    str(Path(__file__).with_name("validate_learning_os.py")),
+                    str(root),
+                    "--instance",
+                    "--core-snapshot",
+                    str(core.root),
+                    "--deployment-binding",
+                    str(binding_path),
+                ]
+                try:
+                    result = subprocess.run(
+                        command,
+                        capture_output=True,
+                        text=True,
+                        encoding="utf-8",
+                        errors="replace",
+                        timeout=CANDIDATE_VALIDATION_TIMEOUT_SECONDS,
+                        check=False,
+                    )
+                except subprocess.TimeoutExpired:
+                    raise GuardRejected(
+                        "candidate Instance validation timed out"
+                    ) from None
+                except OSError:
+                    raise GuardRejected(
+                        "candidate Instance validation failed to start"
+                    ) from None
+            if result.returncode != 0:
                 raise GuardRejected(
-                    "candidate Instance validation timed out"
-                ) from None
-            except OSError:
-                raise GuardRejected(
-                    "candidate Instance validation failed to start"
-                ) from None
-        if result.returncode != 0:
-            raise GuardRejected(
-                "candidate Instance state failed canonical validation"
-            )
+                    "candidate Instance state failed canonical validation"
+                )
+        finally:
+            for snapshot in reversed(snapshots):
+                self.provider.release_materialization(snapshot)
 
     def read_instance_text(
         self, session: LearningRuntimeSession, path: str
@@ -481,6 +508,11 @@ class RuntimeSessionBroker:
             raise GuardRejected(
                 "ordinary learning session cannot overwrite immutable/create-only "
                 f"{document_type} records"
+            )
+        if document_type in PROTOCOL_GOVERNED_UPDATE_TYPES:
+            raise GuardRejected(
+                "ordinary learning session must use the dedicated transition "
+                f"operation for {document_type}"
             )
         if not session.policy.may_write(path):
             raise GuardRejected("Instance write is outside the session capability policy")

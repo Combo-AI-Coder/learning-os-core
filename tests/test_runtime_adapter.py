@@ -188,6 +188,41 @@ class RuntimeAdapterTests(unittest.TestCase):
         with self.assertRaises(ResolutionError):
             DeploymentResolver(self.provider).resolve(locator())
 
+    def test_fresh_guard_rejects_complete_contract_schema_drift(self):
+        session = self.session()
+        cases = []
+
+        wrong_schema = contract()
+        wrong_schema["schema_version"] = "9.9"
+        cases.append(wrong_schema)
+
+        wrong_type = contract()
+        wrong_type["document_type"] = "not_deployment_binding"
+        cases.append(wrong_type)
+
+        wrong_topology = contract()
+        wrong_topology["deployment"]["topology"] = "legacy"
+        cases.append(wrong_topology)
+
+        extra_field = contract()
+        extra_field["unexpected"] = True
+        cases.append(extra_field)
+
+        forbidden_identity = contract()
+        forbidden_identity["instance_repository_id"] = INSTANCE_ID
+        cases.append(forbidden_identity)
+
+        for candidate in cases:
+            with self.subTest(candidate=candidate):
+                self.provider.contract = candidate
+                with self.assertRaisesRegex(
+                    GuardRejected, "canonical validation"
+                ):
+                    DeploymentGuard(self.provider).check(
+                        session, require_active=False
+                    )
+        self.provider.contract = contract()
+
     def test_active_fresh_session_guard_passes(self):
         DeploymentGuard(self.provider).check(self.session())
 
@@ -392,6 +427,16 @@ class GitCliProviderTests(unittest.TestCase):
         self.assertEqual("synthetic/instance", snapshot.full_name)
         self.assertEqual("one\n", (snapshot.root / "state.txt").read_text(encoding="utf-8"))
         self.assertFalse((snapshot.root / ".git").exists())
+
+    def test_materialized_snapshot_can_be_released_without_closing_provider(self):
+        provider = self.provider()
+        snapshot = provider.materialize(self.REPO_ID, "main")
+        root = snapshot.root
+        self.assertTrue(root.is_dir())
+        provider.release_materialization(snapshot)
+        self.assertFalse(root.exists())
+        replacement = provider.materialize(self.REPO_ID, "main")
+        self.assertTrue(replacement.root.is_dir())
 
     def test_materialize_streams_blob_content_instead_of_buffering_it(self):
         provider = self.provider()
@@ -1763,6 +1808,24 @@ class GitHubApiProviderTests(unittest.TestCase):
 
         provider._request = request
         return provider
+
+    def test_release_materialization_cleans_owned_snapshot(self):
+        provider = self.provider()
+        tempdir = tempfile.TemporaryDirectory(
+            prefix="synthetic-github-snapshot-"
+        )
+        provider._tempdirs.append(tempdir)
+        snapshot = MaterializedRepository(
+            Path(tempdir.name),
+            self.REPO_ID,
+            self.HEAD,
+            "synthetic/instance",
+        )
+        root = snapshot.root
+        self.assertTrue(root.is_dir())
+        provider.release_materialization(snapshot)
+        self.assertFalse(root.exists())
+        self.assertEqual([], provider._tempdirs)
 
     def test_read_text_pins_content_to_resolved_commit(self):
         provider = GitHubApiProvider(

@@ -27,7 +27,11 @@ from typing import Callable, Protocol
 
 import yaml
 
-from scripts.validate_learning_os import RepositorySnapshot, validate_deployment
+from scripts.validate_learning_os import (
+    RepositorySnapshot,
+    validate_deployment,
+    validate_deployment_contract_document,
+)
 
 EXACT_COMMIT = re.compile(r"[0-9a-f]{40}")
 MAX_TEXT_BLOB_BYTES = 8 * 1024 * 1024
@@ -105,6 +109,9 @@ class RepositoryProvider(Protocol):
         message: str,
         expected_ref_sha: str | None = None,
     ) -> str: ...
+    def release_materialization(
+        self, snapshot: MaterializedRepository
+    ) -> None: ...
 
 
 def _positive_id(value: object, where: str) -> int:
@@ -295,10 +302,25 @@ class DeploymentGuard:
             contract = _load_contract(text)
         except (ResolutionError, OSError, RuntimeError) as exc:
             raise GuardRejected(f"Runtime-Control fresh-read failed closed: {exc}") from None
+        findings = validate_deployment_contract_document(
+            contract,
+            path=session.contract_path,
+            raw_text=text,
+        )
+        errors = [
+            finding for finding in findings
+            if finding.severity == "error"
+        ]
+        if errors:
+            codes = ", ".join(
+                sorted({finding.code for finding in errors})
+            )
+            raise GuardRejected(
+                "Runtime-Control contract failed canonical validation: "
+                + codes
+            )
         dep, core = contract["deployment"], contract["core"]
-        write_state = dep.get("write_state")
-        if write_state not in {"active", "frozen"}:
-            raise GuardRejected("deployment write_state is invalid")
+        write_state = dep["write_state"]
         if require_active and write_state != "active":
             raise GuardRejected("deployment is not active")
         for ok, message in (
@@ -474,6 +496,15 @@ class GitCliProvider:
             self._tempdirs.pop().cleanup()
         self._empty_git_template.cleanup()
         self._isolated_home.cleanup()
+
+    def release_materialization(
+        self, snapshot: MaterializedRepository
+    ) -> None:
+        target = snapshot.root.resolve()
+        for index, tempdir in enumerate(tuple(self._tempdirs)):
+            if Path(tempdir.name).resolve() == target:
+                self._tempdirs.pop(index).cleanup()
+                return
 
     @staticmethod
     def _absolute_host_path(
@@ -1876,6 +1907,15 @@ class GitHubApiProvider:
     def close(self) -> None:
         while self._tempdirs:
             self._tempdirs.pop().cleanup()
+
+    def release_materialization(
+        self, snapshot: MaterializedRepository
+    ) -> None:
+        target = snapshot.root.resolve()
+        for index, tempdir in enumerate(tuple(self._tempdirs)):
+            if Path(tempdir.name).resolve() == target:
+                self._tempdirs.pop(index).cleanup()
+                return
 
     def _request(self, method: str, path: str, payload: dict | None = None) -> object:
         body = json.dumps(payload).encode() if payload is not None else None
