@@ -1010,6 +1010,60 @@ class GitCliProviderTests(unittest.TestCase):
         with self.assertRaisesRegex(ResolutionError, "unsafe"):
             self.provider().materialize(self.REPO_ID, "main")
 
+    def test_tree_rejects_win32_uppercase_directory_aliases(self):
+        provider = self.provider()
+        objects = [
+            ("scripts", "1" * 40, "040000", "tree"),
+            ("scripts/a", "2" * 40, "100644", "blob"),
+            ("scr\u0131pts", "3" * 40, "040000", "tree"),
+            ("scr\u0131pts/b", "4" * 40, "100644", "blob"),
+        ]
+        first = provider._portable_snapshot_keys("scripts")
+        second = provider._portable_snapshot_keys("scr\u0131pts")
+        self.assertNotEqual(first[0], second[0])
+        self.assertEqual(first[1], second[1])
+        with mock.patch.object(
+            provider, "_tree_objects", return_value=objects
+        ):
+            with self.assertRaisesRegex(
+                ResolutionError, "filesystem-equivalent"
+            ):
+                provider._verify_regular_tree(
+                    self.seed, self.initial_commit
+                )
+
+    def test_tree_listing_byte_budget_fails_before_materialization(self):
+        provider = self.provider()
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_TREE_LIST_BYTES", 1
+        ):
+            with self.assertRaisesRegex(ResolutionError, "byte budget"):
+                provider.materialize(self.REPO_ID, "main")
+
+    def test_tree_entry_budget_fails_before_materialization(self):
+        provider = self.provider()
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_TREE_ENTRIES", 0
+        ):
+            with self.assertRaisesRegex(ResolutionError, "entry budget"):
+                provider.materialize(self.REPO_ID, "main")
+
+    def test_snapshot_total_blob_budget_fails_before_materialization(self):
+        provider = self.provider()
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_TOTAL_BLOB_BYTES", 1
+        ):
+            with self.assertRaisesRegex(ResolutionError, "total-size budget"):
+                provider.materialize(self.REPO_ID, "main")
+
+    def test_snapshot_single_blob_budget_fails_before_materialization(self):
+        provider = self.provider()
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_BLOB_BYTES", 1
+        ):
+            with self.assertRaisesRegex(ResolutionError, "blob exceeds"):
+                provider.materialize(self.REPO_ID, "main")
+
     def test_empty_tree_check_does_not_scan_all_blobs_per_tree(self):
         provider = self.provider()
         objects = []

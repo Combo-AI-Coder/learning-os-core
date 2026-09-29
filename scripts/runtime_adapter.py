@@ -11,6 +11,7 @@ import os
 import re
 import shlex
 import subprocess
+import threading
 import unicodedata
 import tempfile
 import urllib.error
@@ -28,6 +29,10 @@ from scripts.validate_learning_os import RepositorySnapshot, validate_deployment
 
 EXACT_COMMIT = re.compile(r"[0-9a-f]{40}")
 MAX_TEXT_BLOB_BYTES = 8 * 1024 * 1024
+MAX_SNAPSHOT_TREE_ENTRIES = 50_000
+MAX_SNAPSHOT_TREE_LIST_BYTES = 16 * 1024 * 1024
+MAX_SNAPSHOT_BLOB_BYTES = 64 * 1024 * 1024
+MAX_SNAPSHOT_TOTAL_BLOB_BYTES = 256 * 1024 * 1024
 
 
 class ResolutionError(RuntimeError):
@@ -671,12 +676,62 @@ class GitCliProvider:
     def _tree_objects(
         self, repo: Path, commit: str
     ) -> list[tuple[str, str, str, str]]:
-        raw = self._git_bytes("ls-tree", "-r", "-t", "-z", commit, cwd=repo)
-        return [
-            self._decode_tree_object_record(record)
-            for record in raw.split(b"\x00")
-            if record
-        ]
+        try:
+            process = subprocess.Popen(
+                ["git", "ls-tree", "-r", "-t", "-z", commit],
+                cwd=repo,
+                env=self._env(),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+            )
+        except OSError:
+            raise ResolutionError("Git tree listing failed") from None
+
+        timer = threading.Timer(90, process.kill)
+        timer.daemon = True
+        timer.start()
+        objects: list[tuple[str, str, str, str]] = []
+        pending = bytearray()
+        listing_bytes = 0
+        try:
+            if process.stdout is None:
+                raise ResolutionError("Git tree listing failed")
+            while True:
+                chunk = process.stdout.read(64 * 1024)
+                if not chunk:
+                    break
+                listing_bytes += len(chunk)
+                if listing_bytes > MAX_SNAPSHOT_TREE_LIST_BYTES:
+                    raise ResolutionError(
+                        "Git tree listing exceeds Runtime byte budget"
+                    )
+                pending.extend(chunk)
+                while True:
+                    separator = pending.find(0)
+                    if separator < 0:
+                        break
+                    record = bytes(pending[:separator])
+                    del pending[:separator + 1]
+                    if not record:
+                        continue
+                    objects.append(self._decode_tree_object_record(record))
+                    if len(objects) > MAX_SNAPSHOT_TREE_ENTRIES:
+                        raise ResolutionError(
+                            "Git tree exceeds Runtime entry budget"
+                        )
+            if pending:
+                raise ResolutionError("Git tree returned a truncated record")
+            returncode = process.wait()
+            if returncode:
+                raise ResolutionError("Git tree listing failed")
+            return objects
+        finally:
+            timer.cancel()
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+            if process.stdout is not None:
+                process.stdout.close()
 
     def _tree_entries(
         self, repo: Path, commit: str
@@ -688,12 +743,78 @@ class GitCliProvider:
         ]
 
     @staticmethod
-    def _portable_snapshot_key(path: str) -> str:
-        return unicodedata.normalize("NFC", path).casefold()
+    def _portable_snapshot_keys(path: str) -> tuple[str, str]:
+        normalized = [
+            unicodedata.normalize("NFC", part)
+            for part in PurePosixPath(path).parts
+        ]
+        casefold_key = "/".join(
+            unicodedata.normalize("NFC", part.casefold())
+            for part in normalized
+        )
+        win32_upper_key = "/".join(
+            unicodedata.normalize("NFC", part.upper())
+            for part in normalized
+        )
+        return casefold_key, win32_upper_key
 
-    def _verify_regular_tree(self, repo: Path, commit: str) -> None:
+    def _validate_snapshot_budget(
+        self,
+        repo: Path,
+        objects: list[tuple[str, str, str, str]],
+    ) -> None:
+        blob_shas = [
+            sha for _, sha, _, kind in objects if kind == "blob"
+        ]
+        if not blob_shas:
+            return
+        unique_shas = list(dict.fromkeys(blob_shas))
+        query = ("\n".join(unique_shas) + "\n").encode("ascii")
+        raw = self._git_bytes(
+            "cat-file",
+            "--batch-check=%(objectname) %(objecttype) %(objectsize)",
+            cwd=repo,
+            input_bytes=query,
+        )
+        sizes: dict[str, int] = {}
+        try:
+            lines = raw.decode("ascii").splitlines()
+        except UnicodeDecodeError:
+            raise ResolutionError("Git object-size response is invalid") from None
+        for line in lines:
+            parts = line.split()
+            if len(parts) != 3:
+                raise ResolutionError("Git object-size response is invalid")
+            sha, object_type, size_text = parts
+            if (
+                not EXACT_COMMIT.fullmatch(sha)
+                or object_type != "blob"
+                or not size_text.isdigit()
+            ):
+                raise ResolutionError("Git object-size response is invalid")
+            sizes[sha] = int(size_text)
+        if set(sizes) != set(unique_shas):
+            raise ResolutionError("Git object-size response is incomplete")
+
+        total = 0
+        for sha in blob_shas:
+            size = sizes[sha]
+            if size > MAX_SNAPSHOT_BLOB_BYTES:
+                raise ResolutionError(
+                    "Git snapshot blob exceeds Runtime size budget"
+                )
+            total += size
+            if total > MAX_SNAPSHOT_TOTAL_BLOB_BYTES:
+                raise ResolutionError(
+                    "Git snapshot exceeds Runtime total-size budget"
+                )
+
+    def _verify_regular_tree(
+        self, repo: Path, commit: str
+    ) -> list[tuple[str, str, str, str]]:
         objects = self._tree_objects(repo, commit)
-        seen: dict[str, str] = {}
+        seen_casefold: dict[str, str] = {}
+        seen_win32_upper: dict[str, str] = {}
         nonempty_directories: set[str] = set()
         for path, _, _, kind in objects:
             if kind != "blob":
@@ -702,15 +823,21 @@ class GitCliProvider:
             for index in range(1, len(parts)):
                 nonempty_directories.add("/".join(parts[:index]))
         for path, _, _, kind in objects:
-            key = self._portable_snapshot_key(path)
-            previous = seen.get(key)
-            if previous is not None:
-                raise ResolutionError(
-                    "Git tree contains duplicate or filesystem-equivalent path aliases"
-                )
-            seen[key] = path
+            casefold_key, win32_upper_key = self._portable_snapshot_keys(path)
+            for seen, key in (
+                (seen_casefold, casefold_key),
+                (seen_win32_upper, win32_upper_key),
+            ):
+                previous = seen.get(key)
+                if previous is not None:
+                    raise ResolutionError(
+                        "Git tree contains duplicate or "
+                        "filesystem-equivalent path aliases"
+                    )
+                seen[key] = path
             if kind == "tree" and path not in nonempty_directories:
                 raise ResolutionError("Git tree contains an empty directory")
+        return objects
 
     def _regular_blob(
         self,
@@ -853,7 +980,8 @@ class GitCliProvider:
                 )
             if not EXACT_COMMIT.fullmatch(fetched):
                 raise ResolutionError("Git did not resolve an exact commit")
-            self._verify_regular_tree(repo, fetched)
+            objects = self._verify_regular_tree(repo, fetched)
+            self._validate_snapshot_budget(repo, objects)
             return td, repo, fetched
         except Exception:
             td.cleanup()
@@ -877,7 +1005,8 @@ class GitCliProvider:
             )
             if not EXACT_COMMIT.fullmatch(fetched):
                 raise ResolutionError("Git did not resolve an exact branch head")
-            self._verify_regular_tree(repo, fetched)
+            objects = self._verify_regular_tree(repo, fetched)
+            self._validate_snapshot_budget(repo, objects)
             self._git("reset", "-q", "--mixed", fetched, cwd=repo)
             return td, repo, fetched, branch_ref
         except Exception:
