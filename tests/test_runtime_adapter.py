@@ -323,13 +323,36 @@ class GitCliProviderTests(unittest.TestCase):
             self.provider().read_text(self.REPO_ID, "main", "./state.txt")
 
     def test_unsafe_git_environment_override_fails_closed(self):
-        for key in ("GIT_DIR", "GIT_CONFIG_COUNT"):
+        for key in (
+            "GIT_DIR", "GIT_CONFIG_COUNT", "GIT_SSH_COMMAND",
+            "SSH_AUTH_SOCK",
+        ):
             with self.subTest(key=key):
                 with self.assertRaisesRegex(ResolutionError, "environment"):
                     GitCliProvider(
                         [GitRepositoryBinding(self.REPO_ID, str(self.remote))],
                         git_env={key: "1"},
                     )
+
+    def test_explicit_ssh_transport_disables_user_config_and_disk_identities(self):
+        provider = GitCliProvider(
+            [GitRepositoryBinding(self.REPO_ID, str(self.remote))],
+            ssh_auth_sock="/run/ssh-agent.sock",
+            ssh_known_hosts_file="/run/github_known_hosts",
+        )
+        self.addCleanup(provider.close)
+        env = provider._env()
+        self.assertEqual("/run/ssh-agent.sock", env["SSH_AUTH_SOCK"])
+        self.assertNotIn("SSH_AGENT_PID", env)
+        command = env["GIT_SSH_COMMAND"]
+        self.assertIn("-F", command)
+        self.assertIn(os.devnull, command)
+        self.assertIn("IdentityFile=none", command)
+        self.assertIn("BatchMode=yes", command)
+        self.assertIn("PasswordAuthentication=no", command)
+        self.assertIn("KbdInteractiveAuthentication=no", command)
+        self.assertIn("StrictHostKeyChecking=yes", command)
+        self.assertIn("UserKnownHostsFile=/run/github_known_hosts", command)
 
     def test_ambient_ssh_agent_is_not_inherited(self):
         old = os.environ.get("SSH_AUTH_SOCK")
@@ -498,6 +521,10 @@ class GitCliProviderTests(unittest.TestCase):
         short_tag_snapshot = provider.materialize(self.REPO_ID, "v1")
         self.assertEqual(self.initial_commit, short_tag_snapshot.commit_sha)
 
+    def test_unsupported_fully_qualified_ref_fails_closed(self):
+        with self.assertRaisesRegex(ResolutionError, "unsupported fully qualified"):
+            self.provider().materialize(self.REPO_ID, "refs/pull/1/head")
+
     def test_read_only_binding_cannot_update(self):
         provider = self.provider(writable=False)
         with self.assertRaisesRegex(CasConflict, "read-only"):
@@ -597,6 +624,49 @@ class GitCliProviderTests(unittest.TestCase):
         self._git("commit", "-q", "-m", "add synthetic symlink entry", cwd=self.seed)
         self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
         with self.assertRaisesRegex(ResolutionError, "non-regular"):
+            self.provider().materialize(self.REPO_ID, "main")
+
+    def test_materialize_rejects_casefold_path_aliases(self):
+        self._git("config", "core.ignorecase", "false", cwd=self.seed)
+        upper = self._git(
+            "hash-object", "-w", "--stdin", cwd=self.seed, input_text="upper\n"
+        )
+        lower = self._git(
+            "hash-object", "-w", "--stdin", cwd=self.seed, input_text="lower\n"
+        )
+        self._git(
+            "update-index", "--add", "--cacheinfo",
+            "100644", upper, "README.md", cwd=self.seed,
+        )
+        self._git(
+            "update-index", "--add", "--cacheinfo",
+            "100644", lower, "readme.md", cwd=self.seed,
+        )
+        self._git("commit", "-q", "-m", "add case aliases", cwd=self.seed)
+        self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
+        with self.assertRaisesRegex(ResolutionError, "filesystem-equivalent"):
+            self.provider().materialize(self.REPO_ID, "main")
+
+    def test_materialize_rejects_unicode_normalization_aliases(self):
+        composed = "caf\u00e9.txt"
+        decomposed = "cafe\u0301.txt"
+        first = self._git(
+            "hash-object", "-w", "--stdin", cwd=self.seed, input_text="first\n"
+        )
+        second = self._git(
+            "hash-object", "-w", "--stdin", cwd=self.seed, input_text="second\n"
+        )
+        self._git(
+            "update-index", "--add", "--cacheinfo",
+            "100644", first, composed, cwd=self.seed,
+        )
+        self._git(
+            "update-index", "--add", "--cacheinfo",
+            "100644", second, decomposed, cwd=self.seed,
+        )
+        self._git("commit", "-q", "-m", "add unicode aliases", cwd=self.seed)
+        self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
+        with self.assertRaisesRegex(ResolutionError, "filesystem-equivalent"):
             self.provider().materialize(self.REPO_ID, "main")
 
 

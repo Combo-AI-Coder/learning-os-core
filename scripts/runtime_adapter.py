@@ -9,7 +9,9 @@ import base64
 import json
 import os
 import re
+import shlex
 import subprocess
+import unicodedata
 import tempfile
 import urllib.error
 import urllib.parse
@@ -322,6 +324,8 @@ class GitCliProvider:
         bindings: list[GitRepositoryBinding] | tuple[GitRepositoryBinding, ...],
         *,
         git_env: dict[str, str] | None = None,
+        ssh_auth_sock: str | None = None,
+        ssh_known_hosts_file: str | None = None,
     ):
         self.bindings: dict[int, GitRepositoryBinding] = {}
         for binding in bindings:
@@ -342,14 +346,24 @@ class GitCliProvider:
         if not self.bindings:
             raise ResolutionError("at least one Git repository binding is required")
         self.git_env = dict(git_env or {})
-        allowed_git_env = {"GIT_SSH", "GIT_SSH_COMMAND", "GIT_SSH_VARIANT"}
-        if any(
-            key.startswith("GIT_") and key not in allowed_git_env
-            for key in self.git_env
+        blocked_transport_env = {
+            "GIT_SSH", "GIT_SSH_COMMAND", "GIT_SSH_VARIANT",
+            "SSH_AUTH_SOCK", "SSH_AGENT_PID", "SSH_ASKPASS",
+        }
+        if blocked_transport_env.intersection(self.git_env) or any(
+            key.startswith("GIT_") for key in self.git_env
         ):
             raise ResolutionError(
-                "Git environment attempts to override repository/config isolation"
+                "Git environment attempts to override repository/config/SSH isolation"
             )
+        self.ssh_auth_sock = (
+            None if ssh_auth_sock is None
+            else _nonempty(ssh_auth_sock, "ssh_auth_sock")
+        )
+        self.ssh_known_hosts_file = (
+            None if ssh_known_hosts_file is None
+            else _nonempty(ssh_known_hosts_file, "ssh_known_hosts_file")
+        )
         self._tempdirs: list[tempfile.TemporaryDirectory] = []
 
     def close(self) -> None:
@@ -365,6 +379,24 @@ class GitCliProvider:
                 "repository ID is absent from host-trusted Git bindings"
             ) from None
 
+    def _isolated_ssh_command(self) -> str:
+        args = [
+            "ssh",
+            "-F", os.devnull,
+            "-o", "BatchMode=yes",
+            "-o", "IdentityFile=none",
+            "-o", "IdentitiesOnly=no",
+            "-o", "PreferredAuthentications=publickey",
+            "-o", "PasswordAuthentication=no",
+            "-o", "KbdInteractiveAuthentication=no",
+        ]
+        if self.ssh_known_hosts_file is not None:
+            args.extend([
+                "-o", "StrictHostKeyChecking=yes",
+                "-o", f"UserKnownHostsFile={self.ssh_known_hosts_file}",
+            ])
+        return " ".join(shlex.quote(arg) for arg in args)
+
     def _env(self) -> dict[str, str]:
         blocked_ambient = {
             "SSH_AUTH_SOCK", "SSH_AGENT_PID", "SSH_ASKPASS",
@@ -374,10 +406,15 @@ class GitCliProvider:
             if not key.startswith("GIT_") and key not in blocked_ambient
         }
         env.update(self.git_env)
+        if self.ssh_auth_sock is not None:
+            env["SSH_AUTH_SOCK"] = self.ssh_auth_sock
         env.update({
             "GIT_CONFIG_NOSYSTEM": "1",
             "GIT_CONFIG_GLOBAL": os.devnull,
             "GIT_TERMINAL_PROMPT": "0",
+            "GIT_SSH_VARIANT": "ssh",
+            "GIT_SSH_COMMAND": self._isolated_ssh_command(),
+            "SSH_ASKPASS_REQUIRE": "never",
         })
         return env
 
@@ -478,8 +515,20 @@ class GitCliProvider:
             if record
         ]
 
+    @staticmethod
+    def _portable_snapshot_key(path: str) -> str:
+        return unicodedata.normalize("NFC", path).casefold()
+
     def _verify_regular_tree(self, repo: Path, commit: str) -> None:
-        self._tree_entries(repo, commit)
+        seen: dict[str, str] = {}
+        for path, _, _ in self._tree_entries(repo, commit):
+            key = self._portable_snapshot_key(path)
+            previous = seen.get(key)
+            if previous is not None and previous != path:
+                raise ResolutionError(
+                    "Git tree contains filesystem-equivalent path aliases"
+                )
+            seen[key] = path
 
     def _regular_blob(
         self,
@@ -543,7 +592,7 @@ class GitCliProvider:
                 return ref, ref
             if ref.startswith("refs/tags/"):
                 return ref, None
-            return ref, None
+            raise ResolutionError("unsupported fully qualified Git ref")
         self._git("check-ref-format", "--branch", ref)
         branch_ref = f"refs/heads/{ref}"
         tag_ref = f"refs/tags/{ref}"
