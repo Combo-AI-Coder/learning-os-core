@@ -323,11 +323,32 @@ class GitCliProviderTests(unittest.TestCase):
             self.provider().read_text(self.REPO_ID, "main", "./state.txt")
 
     def test_unsafe_git_environment_override_fails_closed(self):
-        with self.assertRaisesRegex(ResolutionError, "environment"):
-            GitCliProvider(
-                [GitRepositoryBinding(self.REPO_ID, str(self.remote))],
-                git_env={"GIT_DIR": "elsewhere"},
-            )
+        for key in ("GIT_DIR", "GIT_CONFIG_COUNT"):
+            with self.subTest(key=key):
+                with self.assertRaisesRegex(ResolutionError, "environment"):
+                    GitCliProvider(
+                        [GitRepositoryBinding(self.REPO_ID, str(self.remote))],
+                        git_env={key: "1"},
+                    )
+
+    def test_ambient_ssh_agent_is_not_inherited(self):
+        old = os.environ.get("SSH_AUTH_SOCK")
+        os.environ["SSH_AUTH_SOCK"] = "ambient-agent-must-not-leak"
+        try:
+            provider = self.provider()
+            self.assertNotIn("SSH_AUTH_SOCK", provider._env())
+        finally:
+            if old is None:
+                os.environ.pop("SSH_AUTH_SOCK", None)
+            else:
+                os.environ["SSH_AUTH_SOCK"] = old
+
+    def test_case_variant_git_and_colon_paths_fail_closed(self):
+        provider = self.provider()
+        for path in (".GIT/config", "C:state.txt"):
+            with self.subTest(path=path):
+                with self.assertRaisesRegex(ResolutionError, "unsafe"):
+                    provider.read_text(self.REPO_ID, "main", path)
 
     def test_read_only_binding_cannot_update(self):
         provider = self.provider(writable=False)

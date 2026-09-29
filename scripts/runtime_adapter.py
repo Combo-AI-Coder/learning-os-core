@@ -340,13 +340,11 @@ class GitCliProvider:
         if not self.bindings:
             raise ResolutionError("at least one Git repository binding is required")
         self.git_env = dict(git_env or {})
-        blocked_env = {
-            "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE",
-            "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-            "GIT_CONFIG", "GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM",
-            "GIT_CONFIG_NOSYSTEM",
-        }
-        if blocked_env.intersection(self.git_env):
+        allowed_git_env = {"GIT_SSH", "GIT_SSH_COMMAND", "GIT_SSH_VARIANT"}
+        if any(
+            key.startswith("GIT_") and key not in allowed_git_env
+            for key in self.git_env
+        ):
             raise ResolutionError("Git environment attempts to override repository/config isolation")
         self._tempdirs: list[tempfile.TemporaryDirectory] = []
 
@@ -362,9 +360,12 @@ class GitCliProvider:
             raise ResolutionError("repository ID is absent from host-trusted Git bindings") from None
 
     def _env(self) -> dict[str, str]:
+        blocked_ambient = {
+            "SSH_AUTH_SOCK", "SSH_AGENT_PID", "SSH_ASKPASS",
+        }
         env = {
             key: value for key, value in os.environ.items()
-            if not key.startswith("GIT_")
+            if not key.startswith("GIT_") and key not in blocked_ambient
         }
         env.update(self.git_env)
         env.update({
@@ -435,7 +436,8 @@ class GitCliProvider:
             or "\\" in path
             or pure.is_absolute()
             or ".." in pure.parts
-            or ".git" in pure.parts
+            or any(part.lower() == ".git" for part in pure.parts)
+            or ":" in path
             or pure.as_posix() != path
         ):
             raise ResolutionError("repository path is unsafe")
