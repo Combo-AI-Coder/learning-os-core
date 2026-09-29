@@ -104,8 +104,13 @@ class LearningRuntimeSession:
 class RuntimeSessionBroker:
     """Bind a replaceable conversation surface to narrow Learning OS authority."""
 
-    def __init__(self, provider: RepositoryProvider):
+    def __init__(
+        self,
+        provider: RepositoryProvider,
+        locator_source: str | dict,
+    ):
         self.provider = provider
+        self.locator = load_locator(locator_source)
         self.guard = DeploymentGuard(provider)
 
     @staticmethod
@@ -148,15 +153,13 @@ class RuntimeSessionBroker:
 
     def open_session(
         self,
-        locator_source: str | dict,
         *,
         branch_runtime_path: str,
         policy: RuntimeCapabilityPolicy,
         expected_generation: int | None = None,
     ) -> LearningRuntimeSession:
-        locator = load_locator(locator_source)
-        resolved = DeploymentResolver(self.provider).resolve(locator_source)
-        instance_ref = locator["instance"]["canonical_ref"]
+        resolved = DeploymentResolver(self.provider).resolve(self.locator)
+        instance_ref = self.locator["instance"]["canonical_ref"]
         runtime_path = _relative_path(branch_runtime_path, "branch_runtime_path")
         runtime = self._read_branch_runtime(
             instance_repository_id=resolved.context.instance_repository_id,
@@ -180,11 +183,16 @@ class RuntimeSessionBroker:
         )
 
     def _fresh_generation(self, session: LearningRuntimeSession) -> int:
-        runtime = self._read_branch_runtime(
-            instance_repository_id=session.deployment.instance_repository_id,
-            instance_ref=session.binding.instance_ref,
-            runtime_path=session.binding.branch_runtime_path,
-        )
+        try:
+            runtime = self._read_branch_runtime(
+                instance_repository_id=session.deployment.instance_repository_id,
+                instance_ref=session.binding.instance_ref,
+                runtime_path=session.binding.branch_runtime_path,
+            )
+        except ResolutionError as exc:
+            raise GuardRejected(
+                f"Branch runtime fresh-read failed closed: {exc}"
+            ) from None
         for field, expected in (
             ("topic", session.binding.topic),
             ("branch_id", session.binding.branch_id),

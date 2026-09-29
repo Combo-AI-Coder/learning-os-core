@@ -157,7 +157,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         self.addCleanup(rc.cleanup)
         self.addCleanup(inst.cleanup)
         self.provider = BrokerProvider(Path(rc.name), Path(inst.name))
-        self.broker = RuntimeSessionBroker(self.provider)
+        self.broker = RuntimeSessionBroker(self.provider, locator())
         self.policy = RuntimeCapabilityPolicy(
             readable_roots=("scratch",),
             writable_roots=("scratch/state.txt",),
@@ -165,7 +165,6 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
 
     def open(self, **kwargs):
         return self.broker.open_session(
-            locator(),
             branch_runtime_path=RUNTIME_PATH,
             policy=self.policy,
             **kwargs,
@@ -177,6 +176,16 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         self.assertEqual("synthetic", session.binding.topic)
         self.assertEqual("main", session.binding.branch_id)
         self.assertEqual("synthetic-main-lineage", session.binding.lineage_id)
+
+    def test_broker_copies_host_trusted_locator_at_construction(self):
+        source = locator()
+        broker = RuntimeSessionBroker(self.provider, source)
+        source["instance"]["repository_id"] = INSTANCE_ID + 99
+        session = broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=self.policy,
+        )
+        self.assertEqual(INSTANCE_ID, session.deployment.instance_repository_id)
 
     def test_open_session_rejects_wrong_expected_generation(self):
         with self.assertRaisesRegex(GuardRejected, "not active"):
@@ -204,6 +213,17 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         with self.assertRaisesRegex(GuardRejected, "generation"):
             self.broker.read_instance_text(session, READ_PATH)
 
+    def test_branch_runtime_handoff_state_blocks_subsequent_read(self):
+        session = self.open()
+        runtime = branch_runtime()
+        runtime["generations"][3]["lifecycle"] = "handoff_pending"
+        runtime["pending_successor"] = {"generation": 4}
+        self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(
+            runtime, sort_keys=False
+        )
+        with self.assertRaisesRegex(GuardRejected, "fresh-read failed closed"):
+            self.broker.read_instance_text(session, READ_PATH)
+
     def test_deployment_change_blocks_subsequent_read(self):
         session = self.open()
         self.provider.contract = contract(epoch=2)
@@ -216,7 +236,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             writable_roots=("topics/synthetic",),
         )
         session = self.broker.open_session(
-            locator(), branch_runtime_path=RUNTIME_PATH, policy=policy
+            branch_runtime_path=RUNTIME_PATH, policy=policy
         )
         with self.assertRaisesRegex(GuardRejected, "Branch runtime"):
             self.broker.guarded_update(
