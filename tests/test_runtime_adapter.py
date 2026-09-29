@@ -247,6 +247,23 @@ class RuntimeAdapterTests(unittest.TestCase):
         names = [call[0] for call in self.provider.calls]
         self.assertLess(names.index("read"), names.index("update"))
 
+    def test_guarded_update_forwards_exact_branch_head_precondition(self):
+        session = self.session()
+        authority_head = "a" * 40
+        DeploymentGuard(self.provider).guarded_update(
+            session,
+            branch="main",
+            path="learner/model.yaml",
+            content="x",
+            expected_blob_sha=self.provider.cas_sha,
+            message="test branch-head fence",
+            expected_ref_sha=authority_head,
+        )
+        update = next(
+            call for call in self.provider.calls if call[0] == "update"
+        )
+        self.assertEqual(authority_head, update[5])
+
 
 class GitCliProviderTests(unittest.TestCase):
     REPO_ID = 9000000201
@@ -1166,6 +1183,8 @@ class GitHubApiProviderTests(unittest.TestCase):
                 return {"sha": self.NEW_COMMIT}
             if method == "PATCH" and "/git/refs/heads/" in path:
                 return {"object": {"sha": self.NEW_COMMIT}}
+            if method == "PUT" and "/contents/" in path:
+                return {"commit": {"sha": self.NEW_COMMIT}}
             raise AssertionError(f"unexpected request: {method} {path}")
 
         provider._request = request
@@ -1205,7 +1224,21 @@ class GitHubApiProviderTests(unittest.TestCase):
         self.assertEqual(self.HEAD, commit)
         self.assertFalse(any("?ref=main" in call[1] for call in calls))
 
-    def test_branch_head_cas_uses_old_head_parent_and_nonforce_ref_update(self):
+    def test_exact_branch_head_cas_is_rejected_before_requests(self):
+        provider = self.provider()
+        with self.assertRaisesRegex(CasConflict, "unsupported"):
+            provider.update_text(
+                self.REPO_ID,
+                "main",
+                "state.txt",
+                "two\n",
+                self.TARGET_BLOB,
+                "test: exact authority write",
+                expected_ref_sha=self.HEAD,
+            )
+        self.assertEqual([], provider.calls)
+
+    def test_legacy_contents_update_remains_available_without_head_cas(self):
         provider = self.provider()
         result = provider.update_text(
             self.REPO_ID,
@@ -1213,38 +1246,15 @@ class GitHubApiProviderTests(unittest.TestCase):
             "state.txt",
             "two\n",
             self.TARGET_BLOB,
-            "test: atomic authority write",
-            expected_ref_sha=self.HEAD,
+            "test: legacy contents update",
         )
         self.assertEqual(self.NEW_COMMIT, result)
-        commit_call = next(
-            call for call in provider.calls
-            if call[0] == "POST" and call[1].endswith("/git/commits")
-        )
-        self.assertEqual([self.HEAD], commit_call[2]["parents"])
-        patch_call = next(
-            call for call in provider.calls
-            if call[0] == "PATCH" and "/git/refs/heads/" in call[1]
-        )
-        self.assertEqual(
-            {"sha": self.NEW_COMMIT, "force": False},
-            patch_call[2],
-        )
-
-    def test_branch_head_cas_rejects_stale_authority_before_git_objects(self):
-        provider = self.provider(current_head="7" * 40)
-        with self.assertRaisesRegex(CasConflict, "branch head"):
-            provider.update_text(
-                self.REPO_ID,
-                "main",
-                "state.txt",
-                "two\n",
-                self.TARGET_BLOB,
-                "test: stale authority",
-                expected_ref_sha=self.HEAD,
-            )
         self.assertEqual(1, len(provider.calls))
-        self.assertEqual("GET", provider.calls[0][0])
+        method, path, payload = provider.calls[0]
+        self.assertEqual("PUT", method)
+        self.assertIn("/contents/state.txt", path)
+        self.assertEqual(self.TARGET_BLOB, payload["sha"])
+        self.assertEqual("main", payload["branch"])
 
 
 class DeploymentTransitionTests(unittest.TestCase):

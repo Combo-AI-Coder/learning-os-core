@@ -290,6 +290,7 @@ class DeploymentGuard:
         message: str,
         expected_generation: int | None = None,
         generation_reader: Callable[[], int] | None = None,
+        expected_ref_sha: str | None = None,
     ) -> str:
         self.check(session)
         if expected_generation is not None:
@@ -301,6 +302,7 @@ class DeploymentGuard:
             return self.provider.update_text(
                 session.instance_repository_id, branch, path, content,
                 expected_blob_sha, message,
+                expected_ref_sha=expected_ref_sha,
             )
         except CasConflict:
             raise
@@ -1127,144 +1129,26 @@ class GitHubApiProvider:
         full_name = _nonempty(repo.get("full_name"), "repository.full_name")
         if not EXACT_COMMIT.fullmatch(str(expected_blob_sha)):
             raise CasConflict("expected blob SHA must be exact")
-
-        if expected_ref_sha is None:
-            quoted_path = urllib.parse.quote(path, safe="/")
-            data = self._request(
-                "PUT",
-                f"/repos/{full_name}/contents/{quoted_path}",
-                {
-                    "message": message,
-                    "content": base64.b64encode(
-                        content.encode("utf-8")
-                    ).decode("ascii"),
-                    "sha": expected_blob_sha,
-                    "branch": branch,
-                },
+        if expected_ref_sha is not None:
+            raise CasConflict(
+                "exact branch-head CAS is unsupported by GitHub REST provider"
             )
-            commit = data.get("commit") if isinstance(data, dict) else None
-            sha = commit.get("sha") if isinstance(commit, dict) else None
-            if not isinstance(sha, str) or not EXACT_COMMIT.fullmatch(sha):
-                raise CasConflict("GitHub update returned no exact commit")
-            return sha
 
-        if not EXACT_COMMIT.fullmatch(str(expected_ref_sha)):
-            raise CasConflict("expected branch head SHA must be exact")
-        branch_name = _nonempty(branch, "branch")
-        if branch_name.startswith("refs/heads/"):
-            branch_name = branch_name[len("refs/heads/"):]
-        elif branch_name.startswith("refs/") or EXACT_COMMIT.fullmatch(branch_name):
-            raise CasConflict("target branch is unsupported")
-        if not branch_name or any(char in branch_name for char in "\x00\r\n"):
-            raise CasConflict("target branch is unsupported")
-        quoted_branch = urllib.parse.quote(branch_name, safe="")
-
-        ref_data = self._request(
-            "GET", f"/repos/{full_name}/git/ref/heads/{quoted_branch}"
-        )
-        ref_object = (
-            ref_data.get("object") if isinstance(ref_data, dict) else None
-        )
-        current_head = (
-            ref_object.get("sha") if isinstance(ref_object, dict) else None
-        )
-        if current_head != expected_ref_sha:
-            raise CasConflict("branch head compare-and-swap mismatch")
-
-        commit_data = self._request(
-            "GET", f"/repos/{full_name}/git/commits/{expected_ref_sha}"
-        )
-        tree = commit_data.get("tree") if isinstance(commit_data, dict) else None
-        tree_sha = tree.get("sha") if isinstance(tree, dict) else None
-        if not isinstance(tree_sha, str) or not EXACT_COMMIT.fullmatch(tree_sha):
-            raise CasConflict("GitHub branch head returned no exact tree")
-
-        tree_data = self._request(
-            "GET", f"/repos/{full_name}/git/trees/{tree_sha}?recursive=1"
-        )
-        if not isinstance(tree_data, dict) or tree_data.get("truncated") is True:
-            raise CasConflict("GitHub tree cannot prove target compare-and-swap")
-        entries = tree_data.get("tree")
-        matches = [
-            entry for entry in entries
-            if isinstance(entries, list)
-            and isinstance(entry, dict)
-            and entry.get("path") == path
-        ] if isinstance(entries, list) else []
-        if len(matches) != 1:
-            raise CasConflict("target path is missing or ambiguous")
-        target = matches[0]
-        if (
-            target.get("type") != "blob"
-            or target.get("mode") not in {"100644", "100755"}
-            or target.get("sha") != expected_blob_sha
-        ):
-            raise CasConflict("target blob compare-and-swap mismatch")
-
-        blob_data = self._request(
-            "POST",
-            f"/repos/{full_name}/git/blobs",
-            {"content": content, "encoding": "utf-8"},
-        )
-        new_blob = blob_data.get("sha") if isinstance(blob_data, dict) else None
-        if not isinstance(new_blob, str) or not EXACT_COMMIT.fullmatch(new_blob):
-            raise CasConflict("GitHub blob creation returned no exact identity")
-
-        new_tree_data = self._request(
-            "POST",
-            f"/repos/{full_name}/git/trees",
-            {
-                "base_tree": tree_sha,
-                "tree": [{
-                    "path": path,
-                    "mode": target["mode"],
-                    "type": "blob",
-                    "sha": new_blob,
-                }],
-            },
-        )
-        new_tree = (
-            new_tree_data.get("sha")
-            if isinstance(new_tree_data, dict)
-            else None
-        )
-        if not isinstance(new_tree, str) or not EXACT_COMMIT.fullmatch(new_tree):
-            raise CasConflict("GitHub tree creation returned no exact identity")
-
-        new_commit_data = self._request(
-            "POST",
-            f"/repos/{full_name}/git/commits",
+        quoted_path = urllib.parse.quote(path, safe="/")
+        data = self._request(
+            "PUT",
+            f"/repos/{full_name}/contents/{quoted_path}",
             {
                 "message": message,
-                "tree": new_tree,
-                "parents": [expected_ref_sha],
+                "content": base64.b64encode(
+                    content.encode("utf-8")
+                ).decode("ascii"),
+                "sha": expected_blob_sha,
+                "branch": branch,
             },
         )
-        new_commit = (
-            new_commit_data.get("sha")
-            if isinstance(new_commit_data, dict)
-            else None
-        )
-        if not isinstance(new_commit, str) or not EXACT_COMMIT.fullmatch(
-            new_commit
-        ):
-            raise CasConflict("GitHub commit creation returned no exact identity")
-
-        updated_ref = self._request(
-            "PATCH",
-            f"/repos/{full_name}/git/refs/heads/{quoted_branch}",
-            {"sha": new_commit, "force": False},
-        )
-        updated_object = (
-            updated_ref.get("object")
-            if isinstance(updated_ref, dict)
-            else None
-        )
-        updated_sha = (
-            updated_object.get("sha")
-            if isinstance(updated_object, dict)
-            else None
-        )
-        if updated_sha != new_commit:
-            raise CasConflict("GitHub branch update returned unexpected identity")
-        return new_commit
+        commit = data.get("commit") if isinstance(data, dict) else None
+        sha = commit.get("sha") if isinstance(commit, dict) else None
+        if not isinstance(sha, str) or not EXACT_COMMIT.fullmatch(sha):
+            raise CasConflict("GitHub update returned no exact commit")
+        return sha
