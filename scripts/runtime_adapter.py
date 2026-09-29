@@ -391,7 +391,10 @@ class GitCliProvider:
                     raise ResolutionError(
                         "binding.ssh_known_hosts_file must not contain whitespace"
                     )
-                if "%" in known_hosts_input or "$" in known_hosts_input:
+                if any(
+                    token in known_hosts_input
+                    for token in ("%", "$", "'", '"')
+                ):
                     raise ResolutionError(
                         "binding.ssh_known_hosts_file must not contain OpenSSH tokens"
                     )

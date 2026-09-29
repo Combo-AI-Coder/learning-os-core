@@ -471,6 +471,8 @@ class GitCliProviderTests(unittest.TestCase):
             "/run/%h_known_hosts",
             "/run/${USER}/known_hosts",
             "$HOME/known_hosts",
+            "/run/'team'/known_hosts",
+            '/run/"team"/known_hosts',
         ):
             with self.subTest(path=path):
                 with self.assertRaisesRegex(ResolutionError, "OpenSSH tokens"):
