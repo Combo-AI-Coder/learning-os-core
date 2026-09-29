@@ -101,8 +101,8 @@ resolution, permissions, epoch enforcement, and write-state routing belong to
 future resolver/runtime surfaces. Validation here is deterministic, offline,
 and structural; it is not complete secret detection.
 
-## 7. Current status
+## 7. Deployment-status boundary
 
-All planes remain NONCANONICAL and NOT DEPLOYED. Production remains
-`learning-os` release 0.3.2 (topology LEGACY). Nothing in this protocol
-authorizes migration, activation, promotion, freeze, rehearsal, or cutover.
+This protocol does not own or assert live deployment status. Whether Learning OS is currently deployed, the active topology, deployment epoch, write state, and exact Core pin must be read from the current Runtime-Control deployment contract through the trusted locator.
+
+A historical or development copy of this protocol MUST NOT be used to infer current deployment state. Nothing in this protocol authorizes migration, activation, promotion, freeze, rehearsal, or cutover.
