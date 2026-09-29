@@ -338,13 +338,17 @@ class GitCliProviderTests(unittest.TestCase):
                     )
 
     def test_explicit_ssh_transport_disables_user_config_and_disk_identities(self):
-        provider = GitCliProvider(
-            [GitRepositoryBinding(self.REPO_ID, str(self.remote))],
-            ssh_auth_sock="/run/ssh-agent.sock",
-            ssh_known_hosts_file="/run/github_known_hosts",
-        )
+        provider = GitCliProvider([
+            GitRepositoryBinding(
+                self.REPO_ID,
+                str(self.remote),
+                ssh_auth_sock="/run/ssh-agent.sock",
+                ssh_known_hosts_file="/run/github_known_hosts",
+            )
+        ])
         self.addCleanup(provider.close)
-        env = provider._env()
+        binding = provider._binding(self.REPO_ID)
+        env = provider._env(binding)
         self.assertEqual("/run/ssh-agent.sock", env["SSH_AUTH_SOCK"])
         self.assertNotIn("SSH_AGENT_PID", env)
         command = env["GIT_SSH_COMMAND"]
@@ -362,17 +366,57 @@ class GitCliProviderTests(unittest.TestCase):
         self.assertIn("GlobalKnownHostsFile=none", command)
 
     def test_relative_known_hosts_path_is_resolved_at_construction(self):
-        provider = GitCliProvider(
-            [GitRepositoryBinding(self.REPO_ID, str(self.remote))],
-            ssh_known_hosts_file="relative-known-hosts",
-        )
+        provider = GitCliProvider([
+            GitRepositoryBinding(
+                self.REPO_ID,
+                str(self.remote),
+                ssh_known_hosts_file="relative-known-hosts",
+            )
+        ])
         self.addCleanup(provider.close)
         expected = os.path.abspath("relative-known-hosts")
-        self.assertEqual(expected, provider.ssh_known_hosts_file)
+        binding = provider._binding(self.REPO_ID)
+        self.assertEqual(expected, binding.ssh_known_hosts_file)
         self.assertIn(
             f"UserKnownHostsFile={expected}",
-            provider._env()["GIT_SSH_COMMAND"],
+            provider._env(binding)["GIT_SSH_COMMAND"],
         )
+
+    def test_ssh_agent_is_scoped_to_its_repository_binding(self):
+        instance_id = self.REPO_ID
+        control_id = self.REPO_ID + 1
+        provider = GitCliProvider([
+            GitRepositoryBinding(
+                instance_id,
+                "ssh://git@example.invalid/instance.git",
+                writable=True,
+                ssh_auth_sock="/run/instance-agent.sock",
+            ),
+            GitRepositoryBinding(
+                control_id,
+                "ssh://git@example.invalid/runtime-control.git",
+                writable=False,
+            ),
+        ])
+        self.addCleanup(provider.close)
+        instance_env = provider._env(provider._binding(instance_id))
+        control_env = provider._env(provider._binding(control_id))
+        self.assertEqual(
+            "/run/instance-agent.sock", instance_env["SSH_AUTH_SOCK"]
+        )
+        self.assertNotIn("SSH_AUTH_SOCK", control_env)
+
+    def test_relative_filesystem_remote_is_stabilized_at_construction(self):
+        relative = os.path.relpath(self.remote, Path.cwd())
+        provider = GitCliProvider([
+            GitRepositoryBinding(self.REPO_ID, relative)
+        ])
+        self.addCleanup(provider.close)
+        binding = provider._binding(self.REPO_ID)
+        self.assertTrue(os.path.isabs(binding.remote))
+        self.assertEqual(os.path.abspath(relative), binding.remote)
+        snapshot = provider.materialize(self.REPO_ID, "main")
+        self.assertEqual(self.initial_commit, snapshot.commit_sha)
 
     def test_ambient_netrc_credentials_are_not_inherited(self):
         authorizations = []
@@ -555,14 +599,16 @@ class GitCliProviderTests(unittest.TestCase):
         class ResettingProvider(GitCliProvider):
             reset = False
 
-            def _git(self, *args, cwd=None, cas=False):
+            def _git(self, *args, cwd=None, cas=False, binding=None):
                 if args and args[0] == "push" and cas and not self.reset:
                     self.reset = True
                     test._git(
                         "--git-dir", str(test.remote),
                         "update-ref", "refs/heads/main", test.initial_commit,
                     )
-                return super()._git(*args, cwd=cwd, cas=cas)
+                return super()._git(
+                    *args, cwd=cwd, cas=cas, binding=binding
+                )
 
         provider = ResettingProvider([
             GitRepositoryBinding(
@@ -655,14 +701,16 @@ class GitCliProviderTests(unittest.TestCase):
         class RacingProvider(GitCliProvider):
             raced = False
 
-            def _git(self, *args, cwd=None, cas=False):
+            def _git(self, *args, cwd=None, cas=False, binding=None):
                 if args and args[0] == "push" and cas and not self.raced:
                     self.raced = True
                     (test.seed / "other.txt").write_text("race\n", encoding="utf-8")
                     test._git("add", "other.txt", cwd=test.seed)
                     test._git("commit", "-q", "-m", "concurrent advance", cwd=test.seed)
                     test._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=test.seed)
-                return super()._git(*args, cwd=cwd, cas=cas)
+                return super()._git(
+                    *args, cwd=cwd, cas=cas, binding=binding
+                )
 
         provider = RacingProvider([
             GitRepositoryBinding(
@@ -702,6 +750,31 @@ class GitCliProviderTests(unittest.TestCase):
         self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
         with self.assertRaisesRegex(ResolutionError, "non-regular"):
             self.provider().materialize(self.REPO_ID, "main")
+
+    def test_materialize_rejects_windows_reserved_device_paths(self):
+        blob = self._git(
+            "hash-object", "-w", "--stdin", cwd=self.seed, input_text="hidden\n"
+        )
+        for reserved in ("NUL.txt", "con.yaml", "COM1.md", "lpt9.log"):
+            with self.subTest(reserved=reserved):
+                tree_input = f"100644 blob {blob}\t{reserved}\0"
+                tree = self._git(
+                    "mktree", "-z", cwd=self.seed, input_text=tree_input
+                )
+                commit = self._git(
+                    "-c", "user.name=Synthetic Runtime Test",
+                    "-c", "user.email=runtime-test@invalid.local",
+                    "commit-tree", tree, "-p", self.initial_commit,
+                    "-m", "reserved device path tree",
+                    cwd=self.seed,
+                )
+                self._git(
+                    "push", "-q", "--force", "origin",
+                    f"{commit}:refs/heads/main",
+                    cwd=self.seed,
+                )
+                with self.assertRaisesRegex(ResolutionError, "unsafe"):
+                    self.provider().materialize(self.REPO_ID, "main")
 
     def test_materialize_rejects_win32_trailing_dot_and_space_paths(self):
         blob = self._git(

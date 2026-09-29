@@ -309,6 +309,8 @@ class GitRepositoryBinding:
     remote: str
     full_name: str = ""
     writable: bool = False
+    ssh_auth_sock: str | None = None
+    ssh_known_hosts_file: str | None = None
 
 
 class GitCliProvider:
@@ -324,8 +326,6 @@ class GitCliProvider:
         bindings: list[GitRepositoryBinding] | tuple[GitRepositoryBinding, ...],
         *,
         git_env: dict[str, str] | None = None,
-        ssh_auth_sock: str | None = None,
-        ssh_known_hosts_file: str | None = None,
     ):
         self.bindings: dict[int, GitRepositoryBinding] = {}
         for binding in bindings:
@@ -335,13 +335,34 @@ class GitCliProvider:
             remote = _nonempty(binding.remote, "binding.remote")
             if remote.startswith("-") or any(char in remote for char in "\x00\r\n"):
                 raise ResolutionError("Git repository remote is unsafe")
+            if (
+                "://" not in remote
+                and not re.match(r"^[^/\\]+:.+", remote)
+                and not os.path.isabs(remote)
+            ):
+                remote = os.path.abspath(remote)
             if not isinstance(binding.writable, bool):
                 raise ResolutionError("binding.writable must be a boolean")
+            ssh_auth_sock = (
+                None if binding.ssh_auth_sock is None
+                else _nonempty(binding.ssh_auth_sock, "binding.ssh_auth_sock")
+            )
+            ssh_known_hosts_file = (
+                None if binding.ssh_known_hosts_file is None
+                else os.path.abspath(
+                    _nonempty(
+                        binding.ssh_known_hosts_file,
+                        "binding.ssh_known_hosts_file",
+                    )
+                )
+            )
             self.bindings[repository_id] = GitRepositoryBinding(
                 repository_id=repository_id,
                 remote=remote,
                 full_name=str(binding.full_name or ""),
                 writable=binding.writable is True,
+                ssh_auth_sock=ssh_auth_sock,
+                ssh_known_hosts_file=ssh_known_hosts_file,
             )
         if not self.bindings:
             raise ResolutionError("at least one Git repository binding is required")
@@ -358,16 +379,6 @@ class GitCliProvider:
             raise ResolutionError(
                 "Git environment attempts to override repository/config/SSH isolation"
             )
-        self.ssh_auth_sock = (
-            None if ssh_auth_sock is None
-            else _nonempty(ssh_auth_sock, "ssh_auth_sock")
-        )
-        self.ssh_known_hosts_file = (
-            None if ssh_known_hosts_file is None
-            else os.path.abspath(
-                _nonempty(ssh_known_hosts_file, "ssh_known_hosts_file")
-            )
-        )
         self._isolated_home = tempfile.TemporaryDirectory(
             prefix="learning-os-git-home-"
         )
@@ -387,7 +398,9 @@ class GitCliProvider:
                 "repository ID is absent from host-trusted Git bindings"
             ) from None
 
-    def _isolated_ssh_command(self) -> str:
+    def _isolated_ssh_command(
+        self, binding: GitRepositoryBinding | None = None
+    ) -> str:
         args = [
             "ssh",
             "-F", os.devnull,
@@ -398,15 +411,20 @@ class GitCliProvider:
             "-o", "PasswordAuthentication=no",
             "-o", "KbdInteractiveAuthentication=no",
         ]
-        if self.ssh_known_hosts_file is not None:
+        known_hosts = (
+            None if binding is None else binding.ssh_known_hosts_file
+        )
+        if known_hosts is not None:
             args.extend([
                 "-o", "StrictHostKeyChecking=yes",
-                "-o", f"UserKnownHostsFile={self.ssh_known_hosts_file}",
+                "-o", f"UserKnownHostsFile={known_hosts}",
                 "-o", "GlobalKnownHostsFile=none",
             ])
         return " ".join(shlex.quote(arg) for arg in args)
 
-    def _env(self) -> dict[str, str]:
+    def _env(
+        self, binding: GitRepositoryBinding | None = None
+    ) -> dict[str, str]:
         blocked_ambient = {
             "SSH_AUTH_SOCK", "SSH_AGENT_PID", "SSH_ASKPASS",
             "HOME", "USERPROFILE", "XDG_CONFIG_HOME", "CURL_HOME",
@@ -417,8 +435,8 @@ class GitCliProvider:
             and key.upper() not in blocked_ambient
         }
         env.update(self.git_env)
-        if self.ssh_auth_sock is not None:
-            env["SSH_AUTH_SOCK"] = self.ssh_auth_sock
+        if binding is not None and binding.ssh_auth_sock is not None:
+            env["SSH_AUTH_SOCK"] = binding.ssh_auth_sock
         isolated_home = self._isolated_home.name
         env.update({
             "HOME": isolated_home,
@@ -429,7 +447,7 @@ class GitCliProvider:
             "GIT_CONFIG_GLOBAL": os.devnull,
             "GIT_TERMINAL_PROMPT": "0",
             "GIT_SSH_VARIANT": "ssh",
-            "GIT_SSH_COMMAND": self._isolated_ssh_command(),
+            "GIT_SSH_COMMAND": self._isolated_ssh_command(binding),
             "SSH_ASKPASS_REQUIRE": "never",
         })
         return env
@@ -442,12 +460,13 @@ class GitCliProvider:
         input_bytes: bytes | None = None,
         cas: bool = False,
         timeout: int = 90,
+        binding: GitRepositoryBinding | None = None,
     ) -> bytes:
         try:
             result = subprocess.run(
                 ["git", *args],
                 cwd=cwd,
-                env=self._env(),
+                env=self._env(binding),
                 input=input_bytes,
                 capture_output=True,
                 timeout=timeout,
@@ -470,9 +489,10 @@ class GitCliProvider:
         *args: str,
         cwd: Path | None = None,
         cas: bool = False,
+        binding: GitRepositoryBinding | None = None,
     ) -> str:
         return self._run_git(
-            tuple(args), cwd=cwd, cas=cas
+            tuple(args), cwd=cwd, cas=cas, binding=binding
         ).decode("utf-8", errors="replace").strip()
 
     def _git_bytes(
@@ -481,9 +501,11 @@ class GitCliProvider:
         cwd: Path | None = None,
         cas: bool = False,
         input_bytes: bytes | None = None,
+        binding: GitRepositoryBinding | None = None,
     ) -> bytes:
         return self._run_git(
-            tuple(args), cwd=cwd, cas=cas, input_bytes=input_bytes
+            tuple(args), cwd=cwd, cas=cas, input_bytes=input_bytes,
+            binding=binding,
         )
 
     @staticmethod
@@ -496,6 +518,17 @@ class GitCliProvider:
             or ".." in pure.parts
             or any(part.lower() == ".git" for part in pure.parts)
             or any(part.endswith((" ", ".")) for part in pure.parts)
+            or any(
+                re.match(
+                    r"(?i)^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)",
+                    part,
+                )
+                for part in pure.parts
+            )
+            or any(
+                any(ord(char) < 32 or char in '<>"|?*' for char in part)
+                for part in pure.parts
+            )
             or ":" in path
             or pure.as_posix() != path
         ):
@@ -616,6 +649,7 @@ class GitCliProvider:
         output = self._git(
             "ls-remote", binding.remote,
             branch_ref, tag_ref, f"{tag_ref}^{{}}",
+            binding=binding,
         )
         rows = self._parse_ls_remote(output)
         has_branch = branch_ref in rows
@@ -653,7 +687,10 @@ class GitCliProvider:
         try:
             self._git("init", "-q", cwd=repo)
             self._git("remote", "add", "origin", binding.remote, cwd=repo)
-            self._git("fetch", "-q", "--depth=1", "origin", fetch_ref, cwd=repo)
+            self._git(
+                "fetch", "-q", "--depth=1", "origin", fetch_ref,
+                cwd=repo, binding=binding,
+            )
             fetched = self._git(
                 "rev-parse", "--verify", "FETCH_HEAD^{commit}", cwd=repo
             )
@@ -681,7 +718,10 @@ class GitCliProvider:
         try:
             self._git("init", "-q", cwd=repo)
             self._git("remote", "add", "origin", binding.remote, cwd=repo)
-            self._git("fetch", "-q", "--depth=1", "origin", branch_ref, cwd=repo)
+            self._git(
+                "fetch", "-q", "--depth=1", "origin", branch_ref,
+                cwd=repo, binding=binding,
+            )
             fetched = self._git(
                 "rev-parse", "--verify", "FETCH_HEAD^{commit}", cwd=repo
             )
@@ -829,7 +869,7 @@ class GitCliProvider:
                 "push", "-q",
                 f"--force-with-lease={branch_ref}:{commit}",
                 "origin", f"HEAD:{branch_ref}",
-                cwd=repo, cas=True,
+                cwd=repo, cas=True, binding=binding,
             )
             return new_commit
         finally:
