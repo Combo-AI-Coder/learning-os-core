@@ -40,7 +40,7 @@ from scripts.runtime_adapter import (
 )
 from scripts.validate_learning_os import (
     DeploymentBinding,
-    expected_types_for_path,
+    instance_expected_types,
 )
 
 BRANCH_RUNTIME_SCHEMA_VERSION = "0.3"
@@ -288,7 +288,7 @@ class RuntimeSessionBroker:
         instance_ref: str,
         runtime_path: str,
     ) -> tuple[dict, str]:
-        types = expected_types_for_path(runtime_path)
+        types = instance_expected_types(runtime_path)
         if types != ("branch_runtime",):
             raise ResolutionError(
                 "Branch runtime authority path is not canonical"
@@ -467,7 +467,7 @@ class RuntimeSessionBroker:
         message: str,
     ) -> InstanceWriteAck:
         path = _relative_path(path, "path")
-        types = expected_types_for_path(path)
+        types = instance_expected_types(path)
         if len(types) != 1:
             raise GuardRejected(
                 "Instance update path is unclassified or ambiguous"

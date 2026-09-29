@@ -494,6 +494,55 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 message="must fail closed",
             )
 
+    def test_generic_update_uses_split_instance_path_registry(self):
+        path = "config/instance.yaml"
+        content = yaml.safe_dump({
+            "schema_version": "0.4",
+            "document_type": "instance_config",
+            "product": {"id": "learning-os"},
+            "instance": {"display_timezone": "UTC"},
+        }, sort_keys=False)
+        self.provider.docs[path] = content
+        self.provider.blobs[path] = "4" * 40
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("config",),
+            writable_roots=(path,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        with mock.patch.object(
+            self.broker, "_validate_candidate", return_value=None
+        ):
+            result = self.broker.guarded_update(
+                session,
+                path=path,
+                content=content,
+                expected_blob_sha="4" * 40,
+                message="test split registry",
+            )
+        self.assertTrue(result.applied)
+
+        legacy_policy = RuntimeCapabilityPolicy(
+            readable_roots=("config",),
+            writable_roots=("config/project.yaml",),
+        )
+        legacy_session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=legacy_policy,
+            expected_generation=3,
+        )
+        with self.assertRaisesRegex(GuardRejected, "unclassified"):
+            self.broker.guarded_update(
+                legacy_session,
+                path="config/project.yaml",
+                content="x",
+                expected_blob_sha="5" * 40,
+                message="legacy path must fail closed",
+            )
+
     def test_branch_head_advance_after_generation_check_blocks_write(self):
         session = self.open()
         self.provider.advance_on_update = True
