@@ -10,9 +10,23 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import shutil
+import subprocess
+import sys
 import tempfile
 
 import yaml
+from yaml.tokens import (
+    AliasToken,
+    AnchorToken,
+    BlockEndToken,
+    BlockMappingStartToken,
+    BlockSequenceStartToken,
+    FlowMappingEndToken,
+    FlowMappingStartToken,
+    FlowSequenceEndToken,
+    FlowSequenceStartToken,
+    ScalarToken,
+)
 
 from scripts.runtime_adapter import (
     CasConflict,
@@ -27,10 +41,20 @@ from scripts.runtime_adapter import (
 from scripts.validate_learning_os import (
     DeploymentBinding,
     expected_types_for_path,
-    validate_instance,
 )
 
 BRANCH_RUNTIME_SCHEMA_VERSION = "0.3"
+BRANCH_GENERATION_LIFECYCLES = frozenset({
+    "active",
+    "idle",
+    "handoff_pending",
+    "archived",
+    "deprecated",
+})
+CANDIDATE_YAML_MAX_BYTES = 1024 * 1024
+CANDIDATE_YAML_MAX_NODES = 20000
+CANDIDATE_YAML_MAX_DEPTH = 64
+CANDIDATE_VALIDATION_TIMEOUT_SECONDS = 10
 BRANCH_RUNTIME_REQUIRED_FIELDS = frozenset({
     "schema_version",
     "document_type",
@@ -78,6 +102,48 @@ def _under(path: str, root: str) -> bool:
     candidate = PurePosixPath(path)
     base = PurePosixPath(root)
     return candidate == base or base in candidate.parents
+
+
+def _preflight_candidate_yaml(content: str) -> None:
+    try:
+        encoded = content.encode("utf-8")
+    except UnicodeEncodeError:
+        raise GuardRejected("candidate YAML is not valid UTF-8 text") from None
+    if len(encoded) > CANDIDATE_YAML_MAX_BYTES:
+        raise GuardRejected("candidate YAML exceeds the byte limit")
+
+    depth = 0
+    nodes = 0
+    starts = (
+        BlockMappingStartToken,
+        BlockSequenceStartToken,
+        FlowMappingStartToken,
+        FlowSequenceStartToken,
+    )
+    ends = (BlockEndToken, FlowMappingEndToken, FlowSequenceEndToken)
+    try:
+        for token in yaml.scan(content):
+            if isinstance(token, (AliasToken, AnchorToken)):
+                raise GuardRejected(
+                    "candidate YAML aliases and anchors are not allowed"
+                )
+            if isinstance(token, starts):
+                depth += 1
+                nodes += 1
+                if depth > CANDIDATE_YAML_MAX_DEPTH:
+                    raise GuardRejected(
+                        "candidate YAML exceeds the nesting-depth limit"
+                    )
+            elif isinstance(token, ScalarToken):
+                nodes += 1
+            elif isinstance(token, ends):
+                depth = max(0, depth - 1)
+            if nodes > CANDIDATE_YAML_MAX_NODES:
+                raise GuardRejected("candidate YAML exceeds the node limit")
+    except yaml.YAMLError as exc:
+        raise GuardRejected(
+            f"candidate YAML preflight failed: {exc.__class__.__name__}"
+        ) from None
 
 
 @dataclass(frozen=True)
@@ -190,7 +256,16 @@ class RuntimeSessionBroker:
             raise ResolutionError("Branch runtime is handing off")
         active_generations: list[int] = []
         for key, value in generations.items():
-            if not isinstance(value, dict) or value.get("lifecycle") != "active":
+            if not isinstance(value, dict):
+                raise ResolutionError(
+                    "Branch runtime generation record is invalid"
+                )
+            lifecycle = value.get("lifecycle")
+            if lifecycle not in BRANCH_GENERATION_LIFECYCLES:
+                raise ResolutionError(
+                    "Branch runtime generation lifecycle is invalid"
+                )
+            if lifecycle != "active":
                 continue
             if isinstance(key, int) and not isinstance(key, bool) and key >= 1:
                 active_generations.append(key)
@@ -302,6 +377,7 @@ class RuntimeSessionBroker:
         content: str,
         contract: dict,
     ) -> None:
+        _preflight_candidate_yaml(content)
         instance = self.provider.materialize(
             session.deployment.instance_repository_id,
             authority_head,
@@ -311,16 +387,58 @@ class RuntimeSessionBroker:
             session.deployment.core_commit,
         )
         binding = DeploymentBinding.from_contract(contract, self.locator)
+        if not isinstance(binding.fields, dict):
+            raise GuardRejected("candidate deployment binding is unavailable")
+
         with tempfile.TemporaryDirectory(
             prefix="learning-os-candidate-"
         ) as candidate_dir:
-            root = Path(candidate_dir)
-            shutil.copytree(instance.root, root, dirs_exist_ok=True)
+            temp_root = Path(candidate_dir)
+            root = temp_root / "instance"
+            shutil.copytree(instance.root, root)
             candidate_path = root.joinpath(*PurePosixPath(path).parts)
             candidate_path.parent.mkdir(parents=True, exist_ok=True)
-            candidate_path.write_bytes(content.encode("utf-8"))
-            findings = validate_instance(root, core.root, binding)
-        if any(finding.severity == "error" for finding in findings):
+            candidate_path.write_text(
+                content, encoding="utf-8", newline="\n"
+            )
+            binding_path = temp_root / "deployment-binding.yaml"
+            binding_path.write_text(
+                yaml.safe_dump(
+                    {"context_type": "synthetic", **binding.fields},
+                    sort_keys=False,
+                ),
+                encoding="utf-8",
+                newline="\n",
+            )
+            command = [
+                sys.executable,
+                str(Path(__file__).with_name("validate_learning_os.py")),
+                str(root),
+                "--instance",
+                "--core-snapshot",
+                str(core.root),
+                "--deployment-binding",
+                str(binding_path),
+            ]
+            try:
+                result = subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=CANDIDATE_VALIDATION_TIMEOUT_SECONDS,
+                    check=False,
+                )
+            except subprocess.TimeoutExpired:
+                raise GuardRejected(
+                    "candidate Instance validation timed out"
+                ) from None
+            except OSError:
+                raise GuardRejected(
+                    "candidate Instance validation failed to start"
+                ) from None
+        if result.returncode != 0:
             raise GuardRejected(
                 "candidate Instance state failed canonical validation"
             )

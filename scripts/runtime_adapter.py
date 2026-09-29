@@ -296,7 +296,10 @@ class DeploymentGuard:
         except (ResolutionError, OSError, RuntimeError) as exc:
             raise GuardRejected(f"Runtime-Control fresh-read failed closed: {exc}") from None
         dep, core = contract["deployment"], contract["core"]
-        if require_active and dep.get("write_state") != "active":
+        write_state = dep.get("write_state")
+        if write_state not in {"active", "frozen"}:
+            raise GuardRejected("deployment write_state is invalid")
+        if require_active and write_state != "active":
             raise GuardRejected("deployment is not active")
         for ok, message in (
             (dep.get("id") == session.deployment_id, "deployment id changed"),

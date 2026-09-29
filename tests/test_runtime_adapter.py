@@ -191,6 +191,18 @@ class RuntimeAdapterTests(unittest.TestCase):
     def test_active_fresh_session_guard_passes(self):
         DeploymentGuard(self.provider).check(self.session())
 
+    def test_read_guard_allows_frozen_but_rejects_invalid_write_state(self):
+        session = self.session()
+        self.provider.contract = contract(write_state="frozen")
+        DeploymentGuard(self.provider).check(session, require_active=False)
+        for state in (None, "corrupt"):
+            with self.subTest(state=state):
+                self.provider.contract = contract(write_state=state)
+                with self.assertRaisesRegex(GuardRejected, "write_state"):
+                    DeploymentGuard(self.provider).check(
+                        session, require_active=False
+                    )
+
     def test_frozen_guard_blocks_before_mutation(self):
         session = self.session()
         self.provider.contract = contract(write_state="frozen")

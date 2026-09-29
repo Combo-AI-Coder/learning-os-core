@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import yaml
 
@@ -13,8 +15,12 @@ from scripts.runtime_adapter import (
     ResolutionError,
 )
 from scripts.runtime_broker import (
+    CANDIDATE_YAML_MAX_BYTES,
+    CANDIDATE_YAML_MAX_DEPTH,
+    CANDIDATE_YAML_MAX_NODES,
     RuntimeCapabilityPolicy,
     RuntimeSessionBroker,
+    _preflight_candidate_yaml,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -374,6 +380,16 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         with self.assertRaisesRegex(GuardRejected, "exactly one active"):
             self.broker.read_instance_text(session, READ_PATH)
 
+    def test_unsupported_generation_lifecycle_fails_closed(self):
+        session = self.open()
+        runtime = branch_runtime()
+        runtime["generations"][1]["lifecycle"] = "corrupt"
+        self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(
+            runtime, sort_keys=False
+        )
+        with self.assertRaisesRegex(GuardRejected, "lifecycle"):
+            self.broker.read_instance_text(session, READ_PATH)
+
     def test_deployment_change_blocks_subsequent_read(self):
         session = self.open()
         self.provider.contract = contract(epoch=2)
@@ -490,6 +506,52 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 message="test concurrent handoff",
             )
         self.assertEqual(WRITE_V1, self.provider.docs[WRITE_PATH])
+
+    def test_candidate_yaml_preflight_rejects_aliases_and_anchors(self):
+        with self.assertRaisesRegex(GuardRejected, "aliases and anchors"):
+            _preflight_candidate_yaml(
+                "root: &root [value]\ncopy: *root\n"
+            )
+
+    def test_candidate_yaml_preflight_enforces_resource_limits(self):
+        with self.assertRaisesRegex(GuardRejected, "byte limit"):
+            _preflight_candidate_yaml(
+                "value: " + ("x" * CANDIDATE_YAML_MAX_BYTES)
+            )
+        deep = (
+            "value: "
+            + ("[" * (CANDIDATE_YAML_MAX_DEPTH + 1))
+            + "0"
+            + ("]" * (CANDIDATE_YAML_MAX_DEPTH + 1))
+        )
+        with self.assertRaisesRegex(GuardRejected, "nesting-depth"):
+            _preflight_candidate_yaml(deep)
+        many_nodes = "\n".join(
+            f"k{index}: v"
+            for index in range(CANDIDATE_YAML_MAX_NODES + 1)
+        )
+        with self.assertRaisesRegex(GuardRejected, "node limit"):
+            _preflight_candidate_yaml(many_nodes)
+
+    def test_candidate_validation_timeout_fails_before_provider_update(self):
+        session = self.open()
+        with mock.patch(
+            "scripts.runtime_broker.subprocess.run",
+            side_effect=subprocess.TimeoutExpired(
+                cmd=["validator"], timeout=10
+            ),
+        ):
+            with self.assertRaisesRegex(GuardRejected, "timed out"):
+                self.broker.guarded_update(
+                    session,
+                    path=WRITE_PATH,
+                    content=WRITE_V2,
+                    expected_blob_sha="f" * 40,
+                    message="must time out safely",
+                )
+        self.assertFalse(
+            any(call[0] == "update" for call in self.provider.calls)
+        )
 
     def test_invalid_candidate_state_is_rejected_before_provider_update(self):
         session = self.open()
