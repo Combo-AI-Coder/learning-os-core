@@ -351,8 +351,9 @@ class GitCliProvider:
             "SSH_AUTH_SOCK", "SSH_AGENT_PID", "SSH_ASKPASS",
             "HOME", "USERPROFILE", "XDG_CONFIG_HOME", "CURL_HOME",
         }
-        if blocked_transport_env.intersection(self.git_env) or any(
-            key.startswith("GIT_") for key in self.git_env
+        git_env_keys = {key.upper() for key in self.git_env}
+        if blocked_transport_env.intersection(git_env_keys) or any(
+            key.startswith("GIT_") for key in git_env_keys
         ):
             raise ResolutionError(
                 "Git environment attempts to override repository/config/SSH isolation"
@@ -410,7 +411,8 @@ class GitCliProvider:
         }
         env = {
             key: value for key, value in os.environ.items()
-            if not key.startswith("GIT_") and key not in blocked_ambient
+            if not key.upper().startswith("GIT_")
+            and key.upper() not in blocked_ambient
         }
         env.update(self.git_env)
         if self.ssh_auth_sock is not None:
@@ -491,6 +493,7 @@ class GitCliProvider:
             or pure.is_absolute()
             or ".." in pure.parts
             or any(part.lower() == ".git" for part in pure.parts)
+            or any(part.endswith((" ", ".")) for part in pure.parts)
             or ":" in path
             or pure.as_posix() != path
         ):

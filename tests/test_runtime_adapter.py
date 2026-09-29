@@ -328,6 +328,7 @@ class GitCliProviderTests(unittest.TestCase):
         for key in (
             "GIT_DIR", "GIT_CONFIG_COUNT", "GIT_SSH_COMMAND",
             "SSH_AUTH_SOCK", "HOME", "USERPROFILE",
+            "git_config_count", "git_ssh_command", "home", "userprofile",
         ):
             with self.subTest(key=key):
                 with self.assertRaisesRegex(ResolutionError, "environment"):
@@ -685,6 +686,34 @@ class GitCliProviderTests(unittest.TestCase):
         self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
         with self.assertRaisesRegex(ResolutionError, "non-regular"):
             self.provider().materialize(self.REPO_ID, "main")
+
+    def test_materialize_rejects_win32_trailing_dot_and_space_paths(self):
+        blob = self._git(
+            "hash-object", "-w", "--stdin", cwd=self.seed, input_text="hidden\n"
+        )
+        for alias in ("README.md.", "README.md "):
+            with self.subTest(alias=alias):
+                tree_input = (
+                    f"100644 blob {blob}\tREADME.md\0"
+                    f"100644 blob {blob}\t{alias}\0"
+                )
+                alias_tree = self._git(
+                    "mktree", "-z", cwd=self.seed, input_text=tree_input
+                )
+                alias_commit = self._git(
+                    "-c", "user.name=Synthetic Runtime Test",
+                    "-c", "user.email=runtime-test@invalid.local",
+                    "commit-tree", alias_tree, "-p", self.initial_commit,
+                    "-m", "win32 path alias tree",
+                    cwd=self.seed,
+                )
+                self._git(
+                    "push", "-q", "--force", "origin",
+                    f"{alias_commit}:refs/heads/main",
+                    cwd=self.seed,
+                )
+                with self.assertRaisesRegex(ResolutionError, "unsafe"):
+                    self.provider().materialize(self.REPO_ID, "main")
 
     def test_materialize_rejects_exact_duplicate_tree_paths(self):
         first = self._git(
