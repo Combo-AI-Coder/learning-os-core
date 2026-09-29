@@ -256,7 +256,11 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
 
     def test_broker_copies_host_trusted_locator_at_construction(self):
         source = locator()
-        broker = RuntimeSessionBroker(self.provider, source)
+        broker = RuntimeSessionBroker(
+            self.provider,
+            source,
+            write_admission=self.write_gate,
+        )
         source["instance"]["repository_id"] = INSTANCE_ID + 99
         session = broker.open_session(
             branch_runtime_path=RUNTIME_PATH,
