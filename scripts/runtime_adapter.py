@@ -331,11 +331,13 @@ class GitCliProvider:
             remote = _nonempty(binding.remote, "binding.remote")
             if remote.startswith("-") or any(char in remote for char in "\x00\r\n"):
                 raise ResolutionError("Git repository remote is unsafe")
+            if not isinstance(binding.writable, bool):
+                raise ResolutionError("binding.writable must be a boolean")
             self.bindings[repository_id] = GitRepositoryBinding(
                 repository_id=repository_id,
                 remote=remote,
                 full_name=str(binding.full_name or ""),
-                writable=bool(binding.writable),
+                writable=binding.writable is True,
             )
         if not self.bindings:
             raise ResolutionError("at least one Git repository binding is required")
@@ -345,7 +347,9 @@ class GitCliProvider:
             key.startswith("GIT_") and key not in allowed_git_env
             for key in self.git_env
         ):
-            raise ResolutionError("Git environment attempts to override repository/config isolation")
+            raise ResolutionError(
+                "Git environment attempts to override repository/config isolation"
+            )
         self._tempdirs: list[tempfile.TemporaryDirectory] = []
 
     def close(self) -> None:
@@ -357,7 +361,9 @@ class GitCliProvider:
         try:
             return self.bindings[repository_id]
         except KeyError:
-            raise ResolutionError("repository ID is absent from host-trusted Git bindings") from None
+            raise ResolutionError(
+                "repository ID is absent from host-trusted Git bindings"
+            ) from None
 
     def _env(self) -> dict[str, str]:
         blocked_ambient = {
@@ -375,58 +381,57 @@ class GitCliProvider:
         })
         return env
 
-    def _git(
+    def _run_git(
         self,
-        *args: str,
+        args: tuple[str, ...],
+        *,
         cwd: Path | None = None,
+        input_bytes: bytes | None = None,
         cas: bool = False,
-    ) -> str:
-        try:
-            result = subprocess.run(
-                ["git", *args],
-                cwd=cwd,
-                env=self._env(),
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=90,
-                check=False,
-            )
-        except (OSError, subprocess.SubprocessError):
-            if cas:
-                raise CasConflict("Git transport failed during compare-and-swap") from None
-            raise ResolutionError("Git transport failed") from None
-        if result.returncode:
-            if cas:
-                raise CasConflict("Git rejected compare-and-swap update") from None
-            raise ResolutionError("Git transport or ref resolution failed")
-        return result.stdout.strip()
-
-    def _git_bytes(
-        self,
-        *args: str,
-        cwd: Path | None = None,
-        cas: bool = False,
+        timeout: int = 90,
     ) -> bytes:
         try:
             result = subprocess.run(
                 ["git", *args],
                 cwd=cwd,
                 env=self._env(),
+                input=input_bytes,
                 capture_output=True,
-                timeout=90,
+                timeout=timeout,
                 check=False,
             )
         except (OSError, subprocess.SubprocessError):
             if cas:
-                raise CasConflict("Git transport failed during compare-and-swap") from None
+                raise CasConflict(
+                    "Git transport failed during compare-and-swap"
+                ) from None
             raise ResolutionError("Git transport failed") from None
         if result.returncode:
             if cas:
                 raise CasConflict("Git rejected compare-and-swap update") from None
             raise ResolutionError("Git transport or ref resolution failed")
         return result.stdout
+
+    def _git(
+        self,
+        *args: str,
+        cwd: Path | None = None,
+        cas: bool = False,
+    ) -> str:
+        return self._run_git(
+            tuple(args), cwd=cwd, cas=cas
+        ).decode("utf-8", errors="replace").strip()
+
+    def _git_bytes(
+        self,
+        *args: str,
+        cwd: Path | None = None,
+        cas: bool = False,
+        input_bytes: bytes | None = None,
+    ) -> bytes:
+        return self._run_git(
+            tuple(args), cwd=cwd, cas=cas, input_bytes=input_bytes
+        )
 
     @staticmethod
     def _safe_path(path: str) -> PurePosixPath:
@@ -444,9 +449,9 @@ class GitCliProvider:
         return pure
 
     @classmethod
-    def _decode_tree_record(cls, record: bytes) -> tuple[str, str]:
+    def _decode_tree_record(cls, record: bytes) -> tuple[str, str, str]:
         try:
-            header, raw_path = record.split(b"	", 1)
+            header, raw_path = record.split(b"\t", 1)
             mode_raw, type_raw, sha_raw = header.split(b" ", 2)
             mode = mode_raw.decode("ascii")
             object_type = type_raw.decode("ascii")
@@ -455,17 +460,26 @@ class GitCliProvider:
         except (ValueError, UnicodeDecodeError):
             raise ResolutionError("Git tree contains an undecodable entry") from None
         if mode not in {"100644", "100755"} or object_type != "blob":
-            raise ResolutionError("Git tree contains an unsupported non-regular entry")
+            raise ResolutionError(
+                "Git tree contains an unsupported non-regular entry"
+            )
         if not EXACT_COMMIT.fullmatch(sha):
             raise ResolutionError("Git tree returned a non-exact blob identity")
         cls._safe_path(path)
-        return path, sha
+        return path, sha, mode
+
+    def _tree_entries(
+        self, repo: Path, commit: str
+    ) -> list[tuple[str, str, str]]:
+        raw = self._git_bytes("ls-tree", "-r", "-z", commit, cwd=repo)
+        return [
+            self._decode_tree_record(record)
+            for record in raw.split(b"\x00")
+            if record
+        ]
 
     def _verify_regular_tree(self, repo: Path, commit: str) -> None:
-        raw = self._git_bytes("ls-tree", "-r", "-z", commit, cwd=repo)
-        for record in raw.split(b"\x00"):
-            if record:
-                self._decode_tree_record(record)
+        self._tree_entries(repo, commit)
 
     def _regular_blob(
         self,
@@ -474,7 +488,7 @@ class GitCliProvider:
         path: PurePosixPath,
         *,
         cas: bool = False,
-    ) -> str | None:
+    ) -> tuple[str, str] | None:
         raw = self._git_bytes(
             "ls-tree", "-z", commit, "--", path.as_posix(),
             cwd=repo, cas=cas,
@@ -487,7 +501,7 @@ class GitCliProvider:
                 raise CasConflict("target path resolved ambiguously")
             raise ResolutionError("Git path resolved ambiguously")
         try:
-            resolved_path, sha = self._decode_tree_record(records[0])
+            resolved_path, sha, mode = self._decode_tree_record(records[0])
         except ResolutionError as exc:
             if cas:
                 raise CasConflict(str(exc)) from None
@@ -496,61 +510,148 @@ class GitCliProvider:
             if cas:
                 raise CasConflict("target path did not resolve exactly")
             raise ResolutionError("Git path did not resolve exactly")
-        return sha
+        return sha, mode
 
-    def _remote_commit(self, binding: GitRepositoryBinding, ref: str) -> str:
+    @staticmethod
+    def _parse_ls_remote(output: str) -> dict[str, str]:
+        rows: dict[str, str] = {}
+        for line in output.splitlines():
+            if not line.strip():
+                continue
+            try:
+                sha, ref = line.split("\t", 1)
+            except ValueError:
+                raise ResolutionError("Git remote returned malformed ref data") from None
+            if not EXACT_COMMIT.fullmatch(sha):
+                raise ResolutionError("Git remote returned a non-exact object")
+            rows[ref] = sha
+        return rows
+
+    def _resolve_fetch_ref(
+        self,
+        binding: GitRepositoryBinding,
+        ref: str,
+    ) -> tuple[str, str | None]:
         ref = _nonempty(ref, "ref")
+        if any(char in ref for char in "\x00\r\n") or ref.startswith("-"):
+            raise ResolutionError("Git ref is unsafe")
         if EXACT_COMMIT.fullmatch(ref):
-            # Exact commits are still fetched from the bound remote below; the
-            # caller may not substitute a local object with the same SHA text.
-            return ref
+            return ref, None
+        if ref.startswith("refs/"):
+            self._git("check-ref-format", ref)
+            if ref.startswith("refs/heads/"):
+                return ref, ref
+            if ref.startswith("refs/tags/"):
+                return ref, None
+            return ref, None
         self._git("check-ref-format", "--branch", ref)
-        output = self._git("ls-remote", "--heads", binding.remote, f"refs/heads/{ref}")
-        rows = [row for row in output.splitlines() if row.strip()]
-        if len(rows) != 1:
-            raise ResolutionError("Git remote did not resolve one exact branch head")
-        sha = rows[0].split()[0]
-        if not EXACT_COMMIT.fullmatch(sha):
-            raise ResolutionError("Git remote returned a non-exact commit")
-        return sha
+        branch_ref = f"refs/heads/{ref}"
+        tag_ref = f"refs/tags/{ref}"
+        output = self._git(
+            "ls-remote", binding.remote,
+            branch_ref, tag_ref, f"{tag_ref}^{{}}",
+        )
+        rows = self._parse_ls_remote(output)
+        has_branch = branch_ref in rows
+        has_tag = tag_ref in rows or f"{tag_ref}^{{}}" in rows
+        if has_branch and has_tag:
+            raise ResolutionError("Git short ref is ambiguous between branch and tag")
+        if has_branch:
+            return branch_ref, branch_ref
+        if has_tag:
+            return tag_ref, None
+        raise ResolutionError("Git remote did not resolve the requested ref")
 
-    def _checkout(self, binding: GitRepositoryBinding, ref: str) -> tuple[Path, str]:
-        commit = self._remote_commit(binding, ref)
+    def _branch_ref(self, branch: str) -> str:
+        branch = _nonempty(branch, "branch")
+        if branch.startswith("refs/heads/"):
+            self._git("check-ref-format", branch, cas=True)
+            return branch
+        if branch.startswith("refs/") or EXACT_COMMIT.fullmatch(branch):
+            raise CasConflict("target branch is unsupported")
+        try:
+            self._git("check-ref-format", "--branch", branch, cas=True)
+        except CasConflict:
+            raise CasConflict("target branch is unsupported") from None
+        return f"refs/heads/{branch}"
+
+    def _checkout(
+        self,
+        binding: GitRepositoryBinding,
+        ref: str,
+    ) -> tuple[tempfile.TemporaryDirectory, Path, str]:
+        fetch_ref, _ = self._resolve_fetch_ref(binding, ref)
         td = tempfile.TemporaryDirectory(prefix="learning-os-git-")
-        self._tempdirs.append(td)
         repo = Path(td.name) / "repo"
         repo.mkdir()
-        self._git("init", "-q", cwd=repo)
-        self._git("remote", "add", "origin", binding.remote, cwd=repo)
-        self._git("fetch", "-q", "--depth=1", "origin", commit, cwd=repo)
-        fetched = self._git("rev-parse", "--verify", "FETCH_HEAD^{commit}", cwd=repo)
-        if fetched != commit:
-            raise ResolutionError("fetched Git commit does not match requested provenance")
-        self._verify_regular_tree(repo, commit)
-        self._git("checkout", "-q", "--detach", commit, cwd=repo)
-        return repo, commit
-
-    def materialize(self, repository_id: int, ref: str) -> MaterializedRepository:
-        binding = self._binding(repository_id)
-        repo, commit = self._checkout(binding, ref)
-        snapshot = repo.parent / "snapshot"
-        snapshot.mkdir()
-        archive = repo.parent / "snapshot.zip"
-        self._git(
-            "archive", "--format=zip", "-o", str(archive), commit,
-            cwd=repo,
-        )
         try:
-            with zipfile.ZipFile(archive) as bundle:
-                for entry in bundle.infolist():
-                    if entry.is_dir():
-                        continue
-                    pure = self._safe_path(entry.filename)
-                    output = snapshot.joinpath(*pure.parts)
-                    output.parent.mkdir(parents=True, exist_ok=True)
-                    output.write_bytes(bundle.read(entry))
-        except zipfile.BadZipFile:
-            raise ResolutionError("Git archive is not a valid ZIP") from None
+            self._git("init", "-q", cwd=repo)
+            self._git("remote", "add", "origin", binding.remote, cwd=repo)
+            self._git("fetch", "-q", "--depth=1", "origin", fetch_ref, cwd=repo)
+            fetched = self._git(
+                "rev-parse", "--verify", "FETCH_HEAD^{commit}", cwd=repo
+            )
+            if EXACT_COMMIT.fullmatch(ref) and fetched != ref:
+                raise ResolutionError(
+                    "fetched Git commit does not match requested provenance"
+                )
+            if not EXACT_COMMIT.fullmatch(fetched):
+                raise ResolutionError("Git did not resolve an exact commit")
+            self._verify_regular_tree(repo, fetched)
+            return td, repo, fetched
+        except Exception:
+            td.cleanup()
+            raise
+
+    def _checkout_branch(
+        self,
+        binding: GitRepositoryBinding,
+        branch: str,
+    ) -> tuple[tempfile.TemporaryDirectory, Path, str, str]:
+        branch_ref = self._branch_ref(branch)
+        td = tempfile.TemporaryDirectory(prefix="learning-os-git-")
+        repo = Path(td.name) / "repo"
+        repo.mkdir()
+        try:
+            self._git("init", "-q", cwd=repo)
+            self._git("remote", "add", "origin", binding.remote, cwd=repo)
+            self._git("fetch", "-q", "--depth=1", "origin", branch_ref, cwd=repo)
+            fetched = self._git(
+                "rev-parse", "--verify", "FETCH_HEAD^{commit}", cwd=repo
+            )
+            if not EXACT_COMMIT.fullmatch(fetched):
+                raise ResolutionError("Git did not resolve an exact branch head")
+            self._verify_regular_tree(repo, fetched)
+            self._git("reset", "-q", "--mixed", fetched, cwd=repo)
+            return td, repo, fetched, branch_ref
+        except Exception:
+            td.cleanup()
+            raise
+
+    def materialize(
+        self, repository_id: int, ref: str
+    ) -> MaterializedRepository:
+        binding = self._binding(repository_id)
+        checkout_td, repo, commit = self._checkout(binding, ref)
+        snapshot_td = tempfile.TemporaryDirectory(prefix="learning-os-snapshot-")
+        snapshot = Path(snapshot_td.name)
+        try:
+            for path, sha, mode in self._tree_entries(repo, commit):
+                output = snapshot.joinpath(*PurePosixPath(path).parts)
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_bytes(
+                    self._git_bytes("cat-file", "blob", sha, cwd=repo)
+                )
+                try:
+                    output.chmod(0o755 if mode == "100755" else 0o644)
+                except OSError:
+                    pass
+        except Exception:
+            snapshot_td.cleanup()
+            raise
+        finally:
+            checkout_td.cleanup()
+        self._tempdirs.append(snapshot_td)
         return MaterializedRepository(
             snapshot,
             binding.repository_id,
@@ -558,32 +659,25 @@ class GitCliProvider:
             binding.full_name,
         )
 
-    def read_text(self, repository_id: int, ref: str, path: str) -> tuple[str, str, str]:
+    def read_text(
+        self, repository_id: int, ref: str, path: str
+    ) -> tuple[str, str, str]:
         binding = self._binding(repository_id)
         pure = self._safe_path(path)
-        repo, commit = self._checkout(binding, ref)
-        blob = self._regular_blob(repo, commit, pure)
-        if blob is None:
-            raise ResolutionError("Git path does not exist")
-        spec = f"{commit}:{pure.as_posix()}"
+        td, repo, commit = self._checkout(binding, ref)
         try:
-            raw = subprocess.run(
-                ["git", "show", spec],
-                cwd=repo,
-                env=self._env(),
-                capture_output=True,
-                timeout=30,
-                check=False,
-            )
-        except (OSError, subprocess.SubprocessError):
-            raise ResolutionError("Git content read failed") from None
-        if raw.returncode:
-            raise ResolutionError("Git content read failed")
-        try:
-            text = raw.stdout.decode("utf-8")
-        except UnicodeDecodeError:
-            raise ResolutionError("Git content is not valid UTF-8") from None
-        return text, blob, commit
+            entry = self._regular_blob(repo, commit, pure)
+            if entry is None:
+                raise ResolutionError("Git path does not exist")
+            blob, _ = entry
+            raw = self._git_bytes("cat-file", "blob", blob, cwd=repo)
+            try:
+                text = raw.decode("utf-8")
+            except UnicodeDecodeError:
+                raise ResolutionError("Git content is not valid UTF-8") from None
+            return text, blob, commit
+        finally:
+            td.cleanup()
 
     def update_text(
         self,
@@ -595,54 +689,85 @@ class GitCliProvider:
         message: str,
     ) -> str:
         binding = self._binding(repository_id)
-        if not binding.writable:
+        if binding.writable is not True:
             raise CasConflict("repository is read-only in this Runtime binding")
         if not EXACT_COMMIT.fullmatch(str(expected_blob_sha)):
             raise CasConflict("expected blob SHA must be exact")
-        branch = _nonempty(branch, "branch")
-        try:
-            self._git("check-ref-format", "--branch", branch, cas=True)
-        except CasConflict:
-            raise CasConflict("target branch is unsupported") from None
         pure = self._safe_path(path)
-        repo, commit = self._checkout(binding, branch)
+        td, repo, commit, branch_ref = self._checkout_branch(binding, branch)
         try:
-            current_blob = self._regular_blob(repo, commit, pure, cas=True)
-        except CasConflict:
-            raise CasConflict("target path is unsafe, missing, or stale") from None
-        if current_blob is None:
-            raise CasConflict("target path is missing or stale")
-        if current_blob != expected_blob_sha:
-            raise CasConflict("target blob compare-and-swap mismatch")
+            try:
+                entry = self._regular_blob(repo, commit, pure, cas=True)
+            except CasConflict:
+                raise CasConflict(
+                    "target path is unsafe, missing, or stale"
+                ) from None
+            if entry is None:
+                raise CasConflict("target path is missing or stale")
+            current_blob, mode = entry
+            if current_blob != expected_blob_sha:
+                raise CasConflict("target blob compare-and-swap mismatch")
 
-        output = repo.joinpath(*pure.parts)
-        if not output.exists() or not output.is_file():
-            raise CasConflict("target path is not a regular tracked file")
-        output.write_text(content, encoding="utf-8", newline="\n")
-        self._git("add", "--", pure.as_posix(), cwd=repo, cas=True)
-        status = self._git("diff", "--cached", "--name-only", "--", pure.as_posix(), cwd=repo, cas=True)
-        if status != pure.as_posix():
-            raise CasConflict("target update produced no single-file change")
-        self._git(
-            "-c", "user.name=Learning OS Runtime",
-            "-c", "user.email=runtime@learning-os.invalid",
-            "commit", "-q", "-m", message, "--", pure.as_posix(),
-            cwd=repo,
-            cas=True,
-        )
-        new_commit = self._git("rev-parse", "--verify", "HEAD^{commit}", cwd=repo, cas=True)
-        if not EXACT_COMMIT.fullmatch(new_commit):
-            raise CasConflict("Git update returned no exact commit")
+            content_bytes = content.encode("utf-8")
+            new_blob = self._git_bytes(
+                "hash-object", "-w", "--stdin",
+                cwd=repo, cas=True, input_bytes=content_bytes,
+            ).decode("ascii").strip()
+            if not EXACT_COMMIT.fullmatch(new_blob):
+                raise CasConflict("Git did not return an exact staged blob")
 
-        # A normal non-force push is intentionally stricter than target-file
-        # CAS: any concurrent branch advance rejects this attempt instead of
-        # overwriting unrelated work.
-        self._git(
-            "push", "-q", "origin", f"HEAD:refs/heads/{branch}",
-            cwd=repo,
-            cas=True,
-        )
-        return new_commit
+            index_record = (
+                f"{mode} {new_blob}\t".encode("ascii")
+                + pure.as_posix().encode("utf-8")
+                + b"\x00"
+            )
+            self._git_bytes(
+                "update-index", "-z", "--index-info",
+                cwd=repo, cas=True, input_bytes=index_record,
+            )
+            staged = self._git_bytes(
+                "diff", "--cached", "--name-only", "-z",
+                cwd=repo, cas=True,
+            )
+            staged_paths = [
+                item for item in staged.split(b"\x00") if item
+            ]
+            expected_path = pure.as_posix().encode("utf-8")
+            if staged_paths != [expected_path]:
+                raise CasConflict(
+                    "target update did not produce exactly one staged path"
+                )
+            staged_blob = self._git(
+                "rev-parse", "--verify", f":{pure.as_posix()}",
+                cwd=repo, cas=True,
+            )
+            if staged_blob != new_blob:
+                raise CasConflict("staged blob does not match requested content")
+            if self._git_bytes("cat-file", "blob", staged_blob, cwd=repo) != content_bytes:
+                raise CasConflict("staged blob bytes do not match requested UTF-8")
+
+            self._git(
+                "-c", "user.name=Learning OS Runtime",
+                "-c", "user.email=runtime@learning-os.invalid",
+                "commit", "-q", "-m", message,
+                cwd=repo, cas=True,
+            )
+            new_commit = self._git(
+                "rev-parse", "--verify", "HEAD^{commit}",
+                cwd=repo, cas=True,
+            )
+            if not EXACT_COMMIT.fullmatch(new_commit):
+                raise CasConflict("Git update returned no exact commit")
+
+            self._git(
+                "push", "-q",
+                f"--force-with-lease={branch_ref}:{commit}",
+                "origin", f"HEAD:{branch_ref}",
+                cwd=repo, cas=True,
+            )
+            return new_commit
+        finally:
+            td.cleanup()
 
 
 class GitHubApiProvider:

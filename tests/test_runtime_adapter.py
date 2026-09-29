@@ -350,6 +350,154 @@ class GitCliProviderTests(unittest.TestCase):
                 with self.assertRaisesRegex(ResolutionError, "unsafe"):
                     provider.read_text(self.REPO_ID, "main", path)
 
+    def test_non_boolean_writable_binding_fails_closed(self):
+        with self.assertRaisesRegex(ResolutionError, "boolean"):
+            GitCliProvider([
+                GitRepositoryBinding(
+                    self.REPO_ID,
+                    str(self.remote),
+                    writable="false",  # type: ignore[arg-type]
+                )
+            ])
+
+    def test_transient_read_and_update_checkouts_are_cleaned_immediately(self):
+        provider = self.provider()
+        provider.read_text(self.REPO_ID, "main", "state.txt")
+        self.assertEqual([], provider._tempdirs)
+        provider.update_text(
+            self.REPO_ID,
+            "main",
+            "state.txt",
+            "two\n",
+            self.initial_blob,
+            "test: transient cleanup",
+        )
+        self.assertEqual([], provider._tempdirs)
+
+    def test_materialize_does_not_honor_export_ignore(self):
+        (self.seed / ".gitattributes").write_text(
+            "hidden.txt export-ignore\n", encoding="utf-8", newline="\n"
+        )
+        (self.seed / "hidden.txt").write_text(
+            "must remain visible\n", encoding="utf-8", newline="\n"
+        )
+        self._git("add", ".gitattributes", "hidden.txt", cwd=self.seed)
+        self._git("commit", "-q", "-m", "add export-ignore fixture", cwd=self.seed)
+        self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
+        snapshot = self.provider().materialize(self.REPO_ID, "main")
+        self.assertTrue((snapshot.root / ".gitattributes").is_file())
+        self.assertEqual(
+            "must remain visible\n",
+            (snapshot.root / "hidden.txt").read_text(encoding="utf-8"),
+        )
+
+    def test_update_bypasses_working_tree_encoding_attributes(self):
+        (self.seed / ".gitattributes").write_text(
+            "state.txt working-tree-encoding=UTF-16LE\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+        self._git("add", ".gitattributes", cwd=self.seed)
+        self._git("commit", "-q", "-m", "declare working-tree encoding", cwd=self.seed)
+        self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
+        expected_blob = self._git("rev-parse", "HEAD:state.txt", cwd=self.seed)
+        self.provider().update_text(
+            self.REPO_ID,
+            "main",
+            "state.txt",
+            "two\n",
+            expected_blob,
+            "test: preserve requested UTF-8 bytes",
+        )
+        raw = subprocess.run(
+            [
+                "git", "--git-dir", str(self.remote),
+                "cat-file", "blob", "refs/heads/main:state.txt",
+            ],
+            capture_output=True,
+            check=True,
+        ).stdout
+        self.assertEqual(b"two\n", raw)
+
+    def test_unicode_path_update_uses_unquoted_nul_safe_comparison(self):
+        target = self.seed / "café.yaml"
+        target.write_text("one\n", encoding="utf-8", newline="\n")
+        self._git("add", "café.yaml", cwd=self.seed)
+        self._git("commit", "-q", "-m", "add unicode path", cwd=self.seed)
+        self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
+        blob = self._git("rev-parse", "HEAD:café.yaml", cwd=self.seed)
+        self.provider().update_text(
+            self.REPO_ID,
+            "main",
+            "café.yaml",
+            "two\n",
+            blob,
+            "test: update unicode path",
+        )
+        self.assertEqual(
+            "two",
+            self._git(
+                "--git-dir", str(self.remote),
+                "show", "refs/heads/main:café.yaml",
+            ),
+        )
+
+    def test_exact_lease_rejects_remote_force_reset_to_ancestor(self):
+        (self.seed / "second.txt").write_text(
+            "second\n", encoding="utf-8", newline="\n"
+        )
+        self._git("add", "second.txt", cwd=self.seed)
+        self._git("commit", "-q", "-m", "second commit", cwd=self.seed)
+        self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
+        expected_blob = self._git("rev-parse", "HEAD:state.txt", cwd=self.seed)
+        test = self
+
+        class ResettingProvider(GitCliProvider):
+            reset = False
+
+            def _git(self, *args, cwd=None, cas=False):
+                if args and args[0] == "push" and cas and not self.reset:
+                    self.reset = True
+                    test._git(
+                        "--git-dir", str(test.remote),
+                        "update-ref", "refs/heads/main", test.initial_commit,
+                    )
+                return super()._git(*args, cwd=cwd, cas=cas)
+
+        provider = ResettingProvider([
+            GitRepositoryBinding(
+                self.REPO_ID,
+                str(self.remote),
+                "synthetic/instance",
+                writable=True,
+            )
+        ])
+        self.addCleanup(provider.close)
+        with self.assertRaisesRegex(CasConflict, "compare-and-swap"):
+            provider.update_text(
+                self.REPO_ID,
+                "main",
+                "state.txt",
+                "two\n",
+                expected_blob,
+                "test: exact lease",
+            )
+        self.assertEqual(
+            self.initial_commit,
+            self._git("--git-dir", str(self.remote), "rev-parse", "refs/heads/main"),
+        )
+
+    def test_fully_qualified_branch_and_tag_refs_resolve(self):
+        provider = self.provider()
+        branch_snapshot = provider.materialize(self.REPO_ID, "refs/heads/main")
+        self.assertEqual(self.initial_commit, branch_snapshot.commit_sha)
+        self._git("tag", "v1", self.initial_commit, cwd=self.seed)
+        self._git("push", "-q", "origin", "refs/tags/v1", cwd=self.seed)
+        tag_snapshot = provider.materialize(self.REPO_ID, "refs/tags/v1")
+        self.assertEqual(self.initial_commit, tag_snapshot.commit_sha)
+        short_tag_snapshot = provider.materialize(self.REPO_ID, "v1")
+        self.assertEqual(self.initial_commit, short_tag_snapshot.commit_sha)
+
     def test_read_only_binding_cannot_update(self):
         provider = self.provider(writable=False)
         with self.assertRaisesRegex(CasConflict, "read-only"):
