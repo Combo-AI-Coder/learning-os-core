@@ -349,6 +349,7 @@ class GitCliProvider:
         blocked_transport_env = {
             "GIT_SSH", "GIT_SSH_COMMAND", "GIT_SSH_VARIANT",
             "SSH_AUTH_SOCK", "SSH_AGENT_PID", "SSH_ASKPASS",
+            "HOME", "USERPROFILE", "XDG_CONFIG_HOME", "CURL_HOME",
         }
         if blocked_transport_env.intersection(self.git_env) or any(
             key.startswith("GIT_") for key in self.git_env
@@ -364,11 +365,15 @@ class GitCliProvider:
             None if ssh_known_hosts_file is None
             else _nonempty(ssh_known_hosts_file, "ssh_known_hosts_file")
         )
+        self._isolated_home = tempfile.TemporaryDirectory(
+            prefix="learning-os-git-home-"
+        )
         self._tempdirs: list[tempfile.TemporaryDirectory] = []
 
     def close(self) -> None:
         while self._tempdirs:
             self._tempdirs.pop().cleanup()
+        self._isolated_home.cleanup()
 
     def _binding(self, repository_id: int) -> GitRepositoryBinding:
         repository_id = _positive_id(repository_id, "repository_id")
@@ -394,12 +399,14 @@ class GitCliProvider:
             args.extend([
                 "-o", "StrictHostKeyChecking=yes",
                 "-o", f"UserKnownHostsFile={self.ssh_known_hosts_file}",
+                "-o", "GlobalKnownHostsFile=none",
             ])
         return " ".join(shlex.quote(arg) for arg in args)
 
     def _env(self) -> dict[str, str]:
         blocked_ambient = {
             "SSH_AUTH_SOCK", "SSH_AGENT_PID", "SSH_ASKPASS",
+            "HOME", "USERPROFILE", "XDG_CONFIG_HOME", "CURL_HOME",
         }
         env = {
             key: value for key, value in os.environ.items()
@@ -408,7 +415,12 @@ class GitCliProvider:
         env.update(self.git_env)
         if self.ssh_auth_sock is not None:
             env["SSH_AUTH_SOCK"] = self.ssh_auth_sock
+        isolated_home = self._isolated_home.name
         env.update({
+            "HOME": isolated_home,
+            "USERPROFILE": isolated_home,
+            "XDG_CONFIG_HOME": isolated_home,
+            "CURL_HOME": isolated_home,
             "GIT_CONFIG_NOSYSTEM": "1",
             "GIT_CONFIG_GLOBAL": os.devnull,
             "GIT_TERMINAL_PROMPT": "0",
@@ -524,9 +536,9 @@ class GitCliProvider:
         for path, _, _ in self._tree_entries(repo, commit):
             key = self._portable_snapshot_key(path)
             previous = seen.get(key)
-            if previous is not None and previous != path:
+            if previous is not None:
                 raise ResolutionError(
-                    "Git tree contains filesystem-equivalent path aliases"
+                    "Git tree contains duplicate or filesystem-equivalent path aliases"
                 )
             seen[key] = path
 

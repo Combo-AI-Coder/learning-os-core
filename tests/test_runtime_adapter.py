@@ -3,7 +3,9 @@ from __future__ import annotations
 import os
 import subprocess
 import tempfile
+import threading
 import unittest
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import yaml
@@ -325,7 +327,7 @@ class GitCliProviderTests(unittest.TestCase):
     def test_unsafe_git_environment_override_fails_closed(self):
         for key in (
             "GIT_DIR", "GIT_CONFIG_COUNT", "GIT_SSH_COMMAND",
-            "SSH_AUTH_SOCK",
+            "SSH_AUTH_SOCK", "HOME", "USERPROFILE",
         ):
             with self.subTest(key=key):
                 with self.assertRaisesRegex(ResolutionError, "environment"):
@@ -353,6 +355,64 @@ class GitCliProviderTests(unittest.TestCase):
         self.assertIn("KbdInteractiveAuthentication=no", command)
         self.assertIn("StrictHostKeyChecking=yes", command)
         self.assertIn("UserKnownHostsFile=/run/github_known_hosts", command)
+        self.assertIn("GlobalKnownHostsFile=none", command)
+
+    def test_ambient_netrc_credentials_are_not_inherited(self):
+        authorizations = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                authorizations.append(self.headers.get("Authorization"))
+                self.send_response(401)
+                self.send_header("WWW-Authenticate", 'Basic realm="runtime-test"')
+                self.end_headers()
+
+            def log_message(self, format, *args):
+                pass
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        ambient_home = self.root / "ambient-home"
+        ambient_home.mkdir()
+        netrc = ambient_home / ".netrc"
+        netrc.write_text(
+            "machine 127.0.0.1 login ambient password secret\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+        try:
+            netrc.chmod(0o600)
+        except OSError:
+            pass
+        old_home = os.environ.get("HOME")
+        os.environ["HOME"] = str(ambient_home)
+        provider = GitCliProvider([
+            GitRepositoryBinding(
+                self.REPO_ID,
+                f"http://127.0.0.1:{server.server_port}/repo.git",
+            )
+        ])
+        try:
+            isolated_home = provider._env()["HOME"]
+            self.assertNotEqual(str(ambient_home), isolated_home)
+            self.assertFalse((Path(isolated_home) / ".netrc").exists())
+            with self.assertRaises(ResolutionError):
+                provider._git(
+                    "ls-remote",
+                    f"http://127.0.0.1:{server.server_port}/repo.git",
+                )
+            self.assertTrue(authorizations)
+            self.assertTrue(all(value is None for value in authorizations))
+        finally:
+            provider.close()
+            if old_home is None:
+                os.environ.pop("HOME", None)
+            else:
+                os.environ["HOME"] = old_home
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
 
     def test_ambient_ssh_agent_is_not_inherited(self):
         old = os.environ.get("SSH_AUTH_SOCK")
@@ -624,6 +684,35 @@ class GitCliProviderTests(unittest.TestCase):
         self._git("commit", "-q", "-m", "add synthetic symlink entry", cwd=self.seed)
         self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
         with self.assertRaisesRegex(ResolutionError, "non-regular"):
+            self.provider().materialize(self.REPO_ID, "main")
+
+    def test_materialize_rejects_exact_duplicate_tree_paths(self):
+        first = self._git(
+            "hash-object", "-w", "--stdin", cwd=self.seed, input_text="first\n"
+        )
+        second = self._git(
+            "hash-object", "-w", "--stdin", cwd=self.seed, input_text="second\n"
+        )
+        tree_input = (
+            f"100644 blob {first}\tREADME.md\0"
+            f"100644 blob {second}\tREADME.md\0"
+        )
+        duplicate_tree = self._git(
+            "mktree", "-z", cwd=self.seed, input_text=tree_input
+        )
+        duplicate_commit = self._git(
+            "-c", "user.name=Synthetic Runtime Test",
+            "-c", "user.email=runtime-test@invalid.local",
+            "commit-tree", duplicate_tree, "-p", self.initial_commit,
+            "-m", "duplicate path tree",
+            cwd=self.seed,
+        )
+        self._git(
+            "push", "-q", "--force", "origin",
+            f"{duplicate_commit}:refs/heads/main",
+            cwd=self.seed,
+        )
+        with self.assertRaisesRegex(ResolutionError, "duplicate"):
             self.provider().materialize(self.REPO_ID, "main")
 
     def test_materialize_rejects_casefold_path_aliases(self):
