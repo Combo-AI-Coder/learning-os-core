@@ -337,6 +337,18 @@ class GitCliProvider:
                 raise ResolutionError("Git repository remote is unsafe")
             if re.match(r"^[A-Za-z]:[^/\\]", remote):
                 raise ResolutionError("drive-relative Git repository remote is unsafe")
+            windows_root_relative = (
+                (remote.startswith("\\") and not remote.startswith("\\\\"))
+                or (
+                    os.name == "nt"
+                    and remote.startswith("/")
+                    and not remote.startswith("//")
+                )
+            )
+            if windows_root_relative:
+                raise ResolutionError(
+                    "root-relative Git repository remote is unsafe"
+                )
             if (
                 "://" not in remote
                 and not re.match(r"^[^/\\]+:.+", remote)
@@ -368,6 +380,10 @@ class GitCliProvider:
                 if any(char.isspace() for char in known_hosts_input):
                     raise ResolutionError(
                         "binding.ssh_known_hosts_file must not contain whitespace"
+                    )
+                if "%" in known_hosts_input:
+                    raise ResolutionError(
+                        "binding.ssh_known_hosts_file must not contain OpenSSH tokens"
                     )
                 ssh_known_hosts_file = os.path.abspath(known_hosts_input)
             self.bindings[repository_id] = GitRepositoryBinding(
@@ -428,12 +444,15 @@ class GitCliProvider:
         known_hosts = (
             None if binding is None else binding.ssh_known_hosts_file
         )
-        if known_hosts is not None:
-            args.extend([
-                "-o", "StrictHostKeyChecking=yes",
-                "-o", f"UserKnownHostsFile={known_hosts}",
-                "-o", "GlobalKnownHostsFile=none",
-            ])
+        args.extend([
+            "-o", "StrictHostKeyChecking=yes",
+            "-o", "GlobalKnownHostsFile=none",
+            "-o", (
+                f"UserKnownHostsFile={known_hosts}"
+                if known_hosts is not None
+                else "UserKnownHostsFile=none"
+            ),
+        ])
         return " ".join(shlex.quote(arg) for arg in args)
 
     def _env(

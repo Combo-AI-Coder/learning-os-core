@@ -405,6 +405,31 @@ class GitCliProviderTests(unittest.TestCase):
                 )
             ])
 
+    def test_known_hosts_path_with_openssh_token_fails_closed(self):
+        with self.assertRaisesRegex(ResolutionError, "OpenSSH tokens"):
+            GitCliProvider([
+                GitRepositoryBinding(
+                    self.REPO_ID,
+                    str(self.remote),
+                    ssh_known_hosts_file="/run/%h_known_hosts",
+                )
+            ])
+
+    def test_unpinned_ssh_transport_disables_ambient_known_hosts(self):
+        provider = GitCliProvider([
+            GitRepositoryBinding(
+                self.REPO_ID,
+                "ssh://git@example.invalid/instance.git",
+            )
+        ])
+        self.addCleanup(provider.close)
+        command = provider._env(
+            provider._binding(self.REPO_ID)
+        )["GIT_SSH_COMMAND"]
+        self.assertIn("StrictHostKeyChecking=yes", command)
+        self.assertIn("GlobalKnownHostsFile=none", command)
+        self.assertIn("UserKnownHostsFile=none", command)
+
     def test_relative_known_hosts_path_is_resolved_at_construction(self):
         provider = GitCliProvider([
             GitRepositoryBinding(
@@ -451,6 +476,17 @@ class GitCliProviderTests(unittest.TestCase):
             with self.subTest(remote=remote):
                 with self.assertRaisesRegex(ResolutionError, "drive-relative"):
                     GitCliProvider([GitRepositoryBinding(self.REPO_ID, remote)])
+
+    def test_windows_root_relative_remote_fails_closed(self):
+        remotes = ["\\repo.git"]
+        if os.name == "nt":
+            remotes.append("/repo.git")
+        for remote in remotes:
+            with self.subTest(remote=remote):
+                with self.assertRaisesRegex(ResolutionError, "root-relative"):
+                    GitCliProvider([
+                        GitRepositoryBinding(self.REPO_ID, remote)
+                    ])
 
     def test_relative_filesystem_remote_is_stabilized_at_construction(self):
         relative = os.path.relpath(self.remote, Path.cwd())
