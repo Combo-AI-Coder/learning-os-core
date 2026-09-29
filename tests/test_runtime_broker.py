@@ -23,8 +23,8 @@ CORE_COMMIT = "a" * 40
 RC_COMMIT = "b" * 40
 INSTANCE_COMMIT = "c" * 40
 RUNTIME_PATH = "topics/synthetic/coordination/branches/main/runtime.yaml"
-READ_PATH = "scratch/context.txt"
-WRITE_PATH = "scratch/state.txt"
+READ_PATH = "learner/knowledge.yaml"
+WRITE_PATH = "learner/model.yaml"
 
 
 def locator():
@@ -180,8 +180,8 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         self.provider = BrokerProvider(Path(rc.name), Path(inst.name))
         self.broker = RuntimeSessionBroker(self.provider, locator())
         self.policy = RuntimeCapabilityPolicy(
-            readable_roots=("scratch",),
-            writable_roots=("scratch/state.txt",),
+            readable_roots=("learner",),
+            writable_roots=("learner/model.yaml",),
         )
 
     def open(self, **kwargs):
@@ -214,6 +214,29 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         with self.assertRaisesRegex(GuardRejected, "not active"):
             self.open(expected_generation=2)
 
+    def test_open_session_requires_canonical_branch_runtime_path(self):
+        with self.assertRaisesRegex(ResolutionError, "not canonical"):
+            self.broker.open_session(
+                branch_runtime_path="learner/model.yaml",
+                policy=self.policy,
+                expected_generation=3,
+            )
+
+    def test_open_session_rejects_runtime_identity_path_mismatch(self):
+        other_path = (
+            "topics/synthetic/coordination/branches/other/runtime.yaml"
+        )
+        self.provider.docs[other_path] = yaml.safe_dump(
+            branch_runtime(), sort_keys=False
+        )
+        self.provider.blobs[other_path] = "5" * 40
+        with self.assertRaisesRegex(ResolutionError, "identity"):
+            self.broker.open_session(
+                branch_runtime_path=other_path,
+                policy=self.policy,
+                expected_generation=3,
+            )
+
     def test_writable_session_requires_established_generation(self):
         with self.assertRaisesRegex(GuardRejected, "established generation"):
             self.broker.open_session(
@@ -222,7 +245,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             )
 
     def test_read_only_session_may_bind_current_generation(self):
-        policy = RuntimeCapabilityPolicy(readable_roots=("scratch",))
+        policy = RuntimeCapabilityPolicy(readable_roots=("learner",))
         session = self.broker.open_session(
             branch_runtime_path=RUNTIME_PATH,
             policy=policy,
@@ -240,8 +263,23 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
     def test_capability_policy_rejects_write_outside_read_scope(self):
         with self.assertRaisesRegex(ResolutionError, "writable root"):
             RuntimeCapabilityPolicy(
-                readable_roots=("scratch/context.txt",),
+                readable_roots=("learner/knowledge.yaml",),
                 writable_roots=("other/state.txt",),
+            )
+
+    def test_repository_paths_reject_single_backslashes(self):
+        with self.assertRaisesRegex(ResolutionError, "canonical relative"):
+            RuntimeCapabilityPolicy(
+                readable_roots=(r"learner\model.yaml",),
+            )
+        session = self.open()
+        with self.assertRaisesRegex(ResolutionError, "canonical relative"):
+            self.broker.guarded_update(
+                session,
+                path=r"learner\model.yaml",
+                content="state-v2\n",
+                expected_blob_sha="f" * 40,
+                message="must fail",
             )
 
     def test_read_is_scoped_and_returns_target_blob(self):
@@ -251,7 +289,9 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         self.assertEqual("e" * 40, result.version_token)
         self.assertFalse(hasattr(result, "commit_sha"))
         with self.assertRaisesRegex(GuardRejected, "outside"):
-            self.broker.read_instance_text(session, "learner/model.yaml")
+            self.broker.read_instance_text(
+                session, "topics/synthetic/progress.yaml"
+            )
 
     def test_generation_change_blocks_subsequent_read(self):
         session = self.open()
@@ -269,6 +309,25 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(GuardRejected, "fresh-read failed closed"):
             self.broker.read_instance_text(session, READ_PATH)
+
+    def test_branch_runtime_schema_and_required_fields_fail_closed(self):
+        session = self.open()
+        cases = []
+        unsupported = branch_runtime()
+        unsupported["schema_version"] = "9.9"
+        cases.append(unsupported)
+        missing = branch_runtime()
+        missing.pop("revision")
+        cases.append(missing)
+        for runtime in cases:
+            with self.subTest(runtime=runtime):
+                self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(
+                    runtime, sort_keys=False
+                )
+                with self.assertRaisesRegex(
+                    GuardRejected, "fresh-read failed closed"
+                ):
+                    self.broker.read_instance_text(session, READ_PATH)
 
     def test_pending_successor_with_active_source_fails_closed(self):
         session = self.open()
@@ -332,6 +391,57 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 message="test stale session",
             )
         self.assertFalse(any(call[0] == "update" for call in self.provider.calls))
+
+    def test_generic_update_rejects_immutable_append_families(self):
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic", "evidence"),
+            writable_roots=("topics/synthetic", "evidence"),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        immutable_paths = (
+            "evidence/ev001.yaml",
+            "topics/synthetic/execution/sessions/ses001.yaml",
+            "topics/synthetic/coordination/events/event001.yaml",
+            (
+                "topics/synthetic/handoffs/synthetic-main-lineage/"
+                "C03-to-C04.yaml"
+            ),
+        )
+        for immutable_path in immutable_paths:
+            with self.subTest(path=immutable_path):
+                with self.assertRaisesRegex(
+                    GuardRejected, "immutable/create-only"
+                ):
+                    self.broker.guarded_update(
+                        session,
+                        path=immutable_path,
+                        content="x",
+                        expected_blob_sha="f" * 40,
+                        message="must not overwrite history",
+                    )
+
+    def test_generic_update_rejects_unclassified_paths(self):
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("scratch",),
+            writable_roots=("scratch",),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        with self.assertRaisesRegex(GuardRejected, "unclassified"):
+            self.broker.guarded_update(
+                session,
+                path="scratch/state.txt",
+                content="x",
+                expected_blob_sha="f" * 40,
+                message="must fail closed",
+            )
 
     def test_branch_head_advance_after_generation_check_blocks_write(self):
         session = self.open()

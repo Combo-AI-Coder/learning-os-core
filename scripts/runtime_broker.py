@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import PurePosixPath
-import re
 
 import yaml
 
@@ -23,10 +22,26 @@ from scripts.runtime_adapter import (
     SessionDeploymentContext,
     load_locator,
 )
+from scripts.validate_learning_os import expected_types_for_path
 
-BRANCH_RUNTIME_PATH = re.compile(
-    r"topics/[^/]+/coordination/branches/[^/]+/runtime\.yaml"
-)
+BRANCH_RUNTIME_SCHEMA_VERSION = "0.3"
+BRANCH_RUNTIME_REQUIRED_FIELDS = frozenset({
+    "schema_version",
+    "document_type",
+    "revision",
+    "topic",
+    "branch_id",
+    "lineage_id",
+    "active_generation",
+    "pending_successor",
+    "generations",
+})
+IMMUTABLE_UPDATE_TYPES = frozenset({
+    "evidence",
+    "execution_session",
+    "coordination_event",
+    "learning_handoff",
+})
 
 
 def _relative_path(value: object, where: str) -> str:
@@ -34,7 +49,7 @@ def _relative_path(value: object, where: str) -> str:
         raise ResolutionError(f"{where} must be a non-empty repository path")
     pure = PurePosixPath(value)
     if (
-        "\\\\" in value
+        "\\" in value
         or pure.is_absolute()
         or ".." in pure.parts
         or "." in pure.parts
@@ -132,8 +147,25 @@ class RuntimeSessionBroker:
             raise ResolutionError(
                 f"Branch runtime is malformed YAML: {exc.__class__.__name__}"
             ) from None
-        if not isinstance(data, dict) or data.get("document_type") != "branch_runtime":
+        if not isinstance(data, dict):
+            raise ResolutionError("Branch runtime must be a mapping")
+        missing = BRANCH_RUNTIME_REQUIRED_FIELDS - set(data)
+        if missing:
+            raise ResolutionError(
+                "Branch runtime is missing required fields: "
+                + ", ".join(sorted(missing))
+            )
+        if data.get("schema_version") != BRANCH_RUNTIME_SCHEMA_VERSION:
+            raise ResolutionError("Branch runtime schema_version is unsupported")
+        if data.get("document_type") != "branch_runtime":
             raise ResolutionError("Branch runtime has the wrong document type")
+        revision = data.get("revision")
+        if (
+            not isinstance(revision, int)
+            or isinstance(revision, bool)
+            or revision < 1
+        ):
+            raise ResolutionError("Branch runtime revision is invalid")
         for field in ("topic", "branch_id", "lineage_id"):
             if not isinstance(data.get(field), str) or not data[field]:
                 raise ResolutionError(f"Branch runtime {field} is invalid")
@@ -175,10 +207,21 @@ class RuntimeSessionBroker:
         instance_ref: str,
         runtime_path: str,
     ) -> tuple[dict, str]:
+        types = expected_types_for_path(runtime_path)
+        if types != ("branch_runtime",):
+            raise ResolutionError(
+                "Branch runtime authority path is not canonical"
+            )
         text, _, commit_sha = self.provider.read_text(
             instance_repository_id, instance_ref, runtime_path
         )
-        return self._parse_branch_runtime(text), commit_sha
+        runtime = self._parse_branch_runtime(text)
+        parts = PurePosixPath(runtime_path).parts
+        if runtime["topic"] != parts[1] or runtime["branch_id"] != parts[4]:
+            raise ResolutionError(
+                "Branch runtime identity does not match its canonical path"
+            )
+        return runtime, commit_sha
 
     def open_session(
         self,
@@ -268,9 +311,20 @@ class RuntimeSessionBroker:
         message: str,
     ) -> InstanceWriteAck:
         path = _relative_path(path, "path")
-        if BRANCH_RUNTIME_PATH.fullmatch(path):
+        types = expected_types_for_path(path)
+        if len(types) != 1:
+            raise GuardRejected(
+                "Instance update path is unclassified or ambiguous"
+            )
+        document_type = types[0]
+        if document_type == "branch_runtime":
             raise GuardRejected(
                 "ordinary learning session cannot mutate Branch runtime authority"
+            )
+        if document_type in IMMUTABLE_UPDATE_TYPES:
+            raise GuardRejected(
+                "ordinary learning session cannot overwrite immutable/create-only "
+                f"{document_type} records"
             )
         if not session.policy.may_write(path):
             raise GuardRejected("Instance write is outside the session capability policy")
