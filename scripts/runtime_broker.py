@@ -8,7 +8,9 @@ writes always re-check deployment, generation, and target CAS.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
+import shutil
+import tempfile
 
 import yaml
 
@@ -22,7 +24,11 @@ from scripts.runtime_adapter import (
     SessionDeploymentContext,
     load_locator,
 )
-from scripts.validate_learning_os import expected_types_for_path
+from scripts.validate_learning_os import (
+    DeploymentBinding,
+    expected_types_for_path,
+    validate_instance,
+)
 
 BRANCH_RUNTIME_SCHEMA_VERSION = "0.3"
 BRANCH_RUNTIME_REQUIRED_FIELDS = frozenset({
@@ -281,11 +287,43 @@ class RuntimeSessionBroker:
         return runtime["active_generation"], commit_sha
 
     def assert_current(self, session: LearningRuntimeSession) -> str:
-        self.guard.check(session.deployment)
+        self.guard.check(session.deployment, require_active=False)
         generation, authority_head = self._fresh_generation(session)
         if generation != session.binding.generation:
             raise GuardRejected("semantic generation changed")
         return authority_head
+
+    def _validate_candidate(
+        self,
+        session: LearningRuntimeSession,
+        *,
+        authority_head: str,
+        path: str,
+        content: str,
+        contract: dict,
+    ) -> None:
+        instance = self.provider.materialize(
+            session.deployment.instance_repository_id,
+            authority_head,
+        )
+        core = self.provider.materialize(
+            session.deployment.core_repository_id,
+            session.deployment.core_commit,
+        )
+        binding = DeploymentBinding.from_contract(contract, self.locator)
+        with tempfile.TemporaryDirectory(
+            prefix="learning-os-candidate-"
+        ) as candidate_dir:
+            root = Path(candidate_dir)
+            shutil.copytree(instance.root, root, dirs_exist_ok=True)
+            candidate_path = root.joinpath(*PurePosixPath(path).parts)
+            candidate_path.parent.mkdir(parents=True, exist_ok=True)
+            candidate_path.write_bytes(content.encode("utf-8"))
+            findings = validate_instance(root, core.root, binding)
+        if any(finding.severity == "error" for finding in findings):
+            raise GuardRejected(
+                "candidate Instance state failed canonical validation"
+            )
 
     def read_instance_text(
         self, session: LearningRuntimeSession, path: str
@@ -328,10 +366,17 @@ class RuntimeSessionBroker:
             )
         if not session.policy.may_write(path):
             raise GuardRejected("Instance write is outside the session capability policy")
-        self.guard.check(session.deployment)
+        contract = self.guard.check(session.deployment)
         generation, authority_head = self._fresh_generation(session)
         if generation != session.binding.generation:
             raise GuardRejected("semantic generation changed")
+        self._validate_candidate(
+            session,
+            authority_head=authority_head,
+            path=path,
+            content=content,
+            contract=contract,
+        )
         try:
             self.provider.update_text(
                 session.deployment.instance_repository_id,

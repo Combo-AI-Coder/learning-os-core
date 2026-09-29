@@ -280,7 +280,12 @@ class DeploymentGuard:
     def __init__(self, provider: RepositoryProvider):
         self.provider = provider
 
-    def check(self, session: SessionDeploymentContext) -> dict:
+    def check(
+        self,
+        session: SessionDeploymentContext,
+        *,
+        require_active: bool = True,
+    ) -> dict:
         try:
             text, _, _ = self.provider.read_text(
                 session.runtime_control_repository_id,
@@ -291,8 +296,9 @@ class DeploymentGuard:
         except (ResolutionError, OSError, RuntimeError) as exc:
             raise GuardRejected(f"Runtime-Control fresh-read failed closed: {exc}") from None
         dep, core = contract["deployment"], contract["core"]
+        if require_active and dep.get("write_state") != "active":
+            raise GuardRejected("deployment is not active")
         for ok, message in (
-            (dep.get("write_state") == "active", "deployment is not active"),
             (dep.get("id") == session.deployment_id, "deployment id changed"),
             (dep.get("epoch") == session.epoch, "deployment epoch changed"),
             (core.get("repository_id") == session.core_repository_id, "Core repository changed"),

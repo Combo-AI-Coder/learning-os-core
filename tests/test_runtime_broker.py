@@ -23,8 +23,27 @@ CORE_COMMIT = "a" * 40
 RC_COMMIT = "b" * 40
 INSTANCE_COMMIT = "c" * 40
 RUNTIME_PATH = "topics/synthetic/coordination/branches/main/runtime.yaml"
-READ_PATH = "learner/knowledge.yaml"
+READ_PATH = "learner/knowledge/synthetic.yaml"
 WRITE_PATH = "learner/model.yaml"
+READ_V1 = yaml.safe_dump({
+    "schema_version": "0.3",
+    "document_type": "learner_knowledge",
+    "revision": 1,
+    "domain": "synthetic",
+    "concepts": {},
+}, sort_keys=False)
+WRITE_V1 = yaml.safe_dump({
+    "schema_version": "0.3",
+    "document_type": "learner_model",
+    "updated_at": "2026-09-29T00:00:00Z",
+    "working_style": {},
+}, sort_keys=False)
+WRITE_V2 = yaml.safe_dump({
+    "schema_version": "0.3",
+    "document_type": "learner_model",
+    "updated_at": "2026-09-29T00:01:00Z",
+    "working_style": {},
+}, sort_keys=False)
 
 
 def locator():
@@ -81,8 +100,8 @@ class BrokerProvider:
         self.advance_on_update = False
         self.docs = {
             RUNTIME_PATH: yaml.safe_dump(branch_runtime(), sort_keys=False),
-            READ_PATH: "context-v1\n",
-            WRITE_PATH: "state-v1\n",
+            READ_PATH: READ_V1,
+            WRITE_PATH: WRITE_V1,
         }
         self.blobs = {
             RUNTIME_PATH: "d" * 40,
@@ -118,6 +137,12 @@ class BrokerProvider:
                 raise ResolutionError("exact Core unavailable")
             return MaterializedRepository(ROOT, CORE_ID, CORE_COMMIT, "synthetic/core")
         if repository_id == INSTANCE_ID:
+            for path in (READ_PATH, WRITE_PATH):
+                target = self.instance.joinpath(*Path(path).parts)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(
+                    self.docs[path], encoding="utf-8", newline="\n"
+                )
             return MaterializedRepository(
                 self.instance, INSTANCE_ID, self.instance_head, "synthetic/instance"
             )
@@ -255,7 +280,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             self.broker.guarded_update(
                 session,
                 path=WRITE_PATH,
-                content="state-v2\n",
+                content=WRITE_V2,
                 expected_blob_sha="f" * 40,
                 message="must remain read-only",
             )
@@ -277,7 +302,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             self.broker.guarded_update(
                 session,
                 path=r"learner\model.yaml",
-                content="state-v2\n",
+                content=WRITE_V2,
                 expected_blob_sha="f" * 40,
                 message="must fail",
             )
@@ -285,7 +310,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
     def test_read_is_scoped_and_returns_target_blob(self):
         session = self.open()
         result = self.broker.read_instance_text(session, READ_PATH)
-        self.assertEqual("context-v1\n", result.content)
+        self.assertEqual(READ_V1, result.content)
         self.assertEqual("e" * 40, result.version_token)
         self.assertFalse(hasattr(result, "commit_sha"))
         with self.assertRaisesRegex(GuardRejected, "outside"):
@@ -355,6 +380,16 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         with self.assertRaisesRegex(GuardRejected, "epoch"):
             self.broker.read_instance_text(session, READ_PATH)
 
+    def test_read_only_session_remains_available_while_writes_are_frozen(self):
+        self.provider.contract = contract(write_state="frozen")
+        policy = RuntimeCapabilityPolicy(readable_roots=("learner",))
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+        )
+        result = self.broker.read_instance_text(session, READ_PATH)
+        self.assertEqual(READ_V1, result.content)
+
     def test_generic_write_cannot_mutate_branch_runtime_authority(self):
         policy = RuntimeCapabilityPolicy(
             readable_roots=("topics/synthetic",),
@@ -386,7 +421,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             self.broker.guarded_update(
                 session,
                 path=WRITE_PATH,
-                content="state-v2\n",
+                content=WRITE_V2,
                 expected_blob_sha="f" * 40,
                 message="test stale session",
             )
@@ -450,11 +485,32 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             self.broker.guarded_update(
                 session,
                 path=WRITE_PATH,
-                content="state-v2\n",
+                content=WRITE_V2,
                 expected_blob_sha="f" * 40,
                 message="test concurrent handoff",
             )
-        self.assertEqual("state-v1\n", self.provider.docs[WRITE_PATH])
+        self.assertEqual(WRITE_V1, self.provider.docs[WRITE_PATH])
+
+    def test_invalid_candidate_state_is_rejected_before_provider_update(self):
+        session = self.open()
+        invalid = yaml.safe_dump({
+            "schema_version": "0.3",
+            "document_type": "topic_goal",
+            "revision": 1,
+            "topic": "synthetic",
+            "goal": {},
+        }, sort_keys=False)
+        with self.assertRaisesRegex(GuardRejected, "canonical validation"):
+            self.broker.guarded_update(
+                session,
+                path=WRITE_PATH,
+                content=invalid,
+                expected_blob_sha="f" * 40,
+                message="must reject invalid candidate",
+            )
+        self.assertFalse(
+            any(call[0] == "update" for call in self.provider.calls)
+        )
 
     def test_provider_without_exact_head_cas_fails_write_closed(self):
         session = self.open()
@@ -469,11 +525,11 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             self.broker.guarded_update(
                 session,
                 path=WRITE_PATH,
-                content="state-v2\n",
+                content=WRITE_V2,
                 expected_blob_sha="f" * 40,
                 message="test unsupported exact head provider",
             )
-        self.assertEqual("state-v1\n", self.provider.docs[WRITE_PATH])
+        self.assertEqual(WRITE_V1, self.provider.docs[WRITE_PATH])
 
     def test_allowed_write_uses_deployment_generation_branch_and_target_cas(self):
         session = self.open()
@@ -481,14 +537,14 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         result = self.broker.guarded_update(
             session,
             path=WRITE_PATH,
-            content="state-v2\n",
+            content=WRITE_V2,
             expected_blob_sha="f" * 40,
             message="test broker write",
         )
         self.assertTrue(result.applied)
         self.assertFalse(hasattr(result, "commit_sha"))
         self.assertFalse(hasattr(result, "sha"))
-        self.assertEqual("state-v2\n", self.provider.docs[WRITE_PATH])
+        self.assertEqual(WRITE_V2, self.provider.docs[WRITE_PATH])
         update = next(
             call for call in self.provider.calls if call[0] == "update"
         )
