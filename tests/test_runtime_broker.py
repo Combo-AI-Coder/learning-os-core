@@ -77,6 +77,8 @@ class BrokerProvider:
         self.instance = instance
         self.contract = contract()
         self.calls = []
+        self.instance_head = INSTANCE_COMMIT
+        self.advance_on_update = False
         self.docs = {
             RUNTIME_PATH: yaml.safe_dump(branch_runtime(), sort_keys=False),
             READ_PATH: "context-v1\n",
@@ -117,37 +119,56 @@ class BrokerProvider:
             return MaterializedRepository(ROOT, CORE_ID, CORE_COMMIT, "synthetic/core")
         if repository_id == INSTANCE_ID:
             return MaterializedRepository(
-                self.instance, INSTANCE_ID, INSTANCE_COMMIT, "synthetic/instance"
+                self.instance, INSTANCE_ID, self.instance_head, "synthetic/instance"
             )
         raise ResolutionError("unknown repository")
 
     def read_text(self, repository_id, ref, path):
         self.calls.append(("read", repository_id, ref, path))
-        if ref != "main":
-            raise ResolutionError("unexpected ref")
-        if repository_id == RC_ID and path == "deployment.yaml":
+        if repository_id == RC_ID and ref == "main" and path == "deployment.yaml":
             return yaml.safe_dump(self.contract, sort_keys=False), "1" * 40, RC_COMMIT
-        if repository_id == INSTANCE_ID and path in self.docs:
-            return self.docs[path], self.blobs[path], INSTANCE_COMMIT
+        if (
+            repository_id == INSTANCE_ID
+            and ref in {"main", self.instance_head}
+            and path in self.docs
+        ):
+            return self.docs[path], self.blobs[path], self.instance_head
         raise ResolutionError("unexpected read")
 
     def update_text(
-        self, repository_id, branch, path, content, expected_blob_sha, message
+        self,
+        repository_id,
+        branch,
+        path,
+        content,
+        expected_blob_sha,
+        message,
+        expected_ref_sha=None,
     ):
-        self.calls.append(("update", repository_id, branch, path, expected_blob_sha))
+        self.calls.append((
+            "update", repository_id, branch, path,
+            expected_blob_sha, expected_ref_sha,
+        ))
         if repository_id != INSTANCE_ID or branch != "main" or path not in self.docs:
             raise CasConflict("unexpected update target")
+        if self.advance_on_update:
+            self.advance_on_update = False
+            self.set_generation(4)
+        if expected_ref_sha is not None and expected_ref_sha != self.instance_head:
+            raise CasConflict("branch head compare-and-swap mismatch")
         if expected_blob_sha != self.blobs[path]:
             raise CasConflict("stale blob")
         self.docs[path] = content
         self.blobs[path] = "9" * 40
-        return "8" * 40
+        self.instance_head = "8" * 40
+        return self.instance_head
 
     def set_generation(self, generation: int):
         self.docs[RUNTIME_PATH] = yaml.safe_dump(
             branch_runtime(generation=generation), sort_keys=False
         )
         self.blobs[RUNTIME_PATH] = "7" * 40
+        self.instance_head = "6" * 40
 
 
 class RuntimeSessionBrokerTests(unittest.TestCase):
@@ -164,6 +185,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         )
 
     def open(self, **kwargs):
+        kwargs.setdefault("expected_generation", 3)
         return self.broker.open_session(
             branch_runtime_path=RUNTIME_PATH,
             policy=self.policy,
@@ -184,12 +206,36 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         session = broker.open_session(
             branch_runtime_path=RUNTIME_PATH,
             policy=self.policy,
+            expected_generation=3,
         )
         self.assertEqual(INSTANCE_ID, session.deployment.instance_repository_id)
 
     def test_open_session_rejects_wrong_expected_generation(self):
         with self.assertRaisesRegex(GuardRejected, "not active"):
             self.open(expected_generation=2)
+
+    def test_writable_session_requires_established_generation(self):
+        with self.assertRaisesRegex(GuardRejected, "established generation"):
+            self.broker.open_session(
+                branch_runtime_path=RUNTIME_PATH,
+                policy=self.policy,
+            )
+
+    def test_read_only_session_may_bind_current_generation(self):
+        policy = RuntimeCapabilityPolicy(readable_roots=("scratch",))
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+        )
+        self.assertEqual(3, session.binding.generation)
+        with self.assertRaisesRegex(GuardRejected, "outside"):
+            self.broker.guarded_update(
+                session,
+                path=WRITE_PATH,
+                content="state-v2\n",
+                expected_blob_sha="f" * 40,
+                message="must remain read-only",
+            )
 
     def test_capability_policy_rejects_write_outside_read_scope(self):
         with self.assertRaisesRegex(ResolutionError, "writable root"):
@@ -224,6 +270,26 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         with self.assertRaisesRegex(GuardRejected, "fresh-read failed closed"):
             self.broker.read_instance_text(session, READ_PATH)
 
+    def test_pending_successor_with_active_source_fails_closed(self):
+        session = self.open()
+        runtime = branch_runtime()
+        runtime["pending_successor"] = {"generation": 4}
+        self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(
+            runtime, sort_keys=False
+        )
+        with self.assertRaisesRegex(GuardRejected, "fresh-read failed closed"):
+            self.broker.read_instance_text(session, READ_PATH)
+
+    def test_second_active_generation_fails_closed(self):
+        session = self.open()
+        runtime = branch_runtime()
+        runtime["generations"][4] = {"lifecycle": "active"}
+        self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(
+            runtime, sort_keys=False
+        )
+        with self.assertRaisesRegex(GuardRejected, "exactly one active"):
+            self.broker.read_instance_text(session, READ_PATH)
+
     def test_deployment_change_blocks_subsequent_read(self):
         session = self.open()
         self.provider.contract = contract(epoch=2)
@@ -236,16 +302,23 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             writable_roots=("topics/synthetic",),
         )
         session = self.broker.open_session(
-            branch_runtime_path=RUNTIME_PATH, policy=policy
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
         )
-        with self.assertRaisesRegex(GuardRejected, "Branch runtime"):
-            self.broker.guarded_update(
-                session,
-                path=RUNTIME_PATH,
-                content="x",
-                expected_blob_sha="d" * 40,
-                message="must fail",
-            )
+        for runtime_path in (
+            RUNTIME_PATH,
+            "topics/synthetic/coordination/branches/other/runtime.yaml",
+        ):
+            with self.subTest(runtime_path=runtime_path):
+                with self.assertRaisesRegex(GuardRejected, "Branch runtime"):
+                    self.broker.guarded_update(
+                        session,
+                        path=runtime_path,
+                        content="x",
+                        expected_blob_sha="d" * 40,
+                        message="must fail",
+                    )
 
     def test_generation_change_blocks_write_before_target_cas(self):
         session = self.open()
@@ -260,8 +333,22 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             )
         self.assertFalse(any(call[0] == "update" for call in self.provider.calls))
 
-    def test_allowed_write_uses_deployment_generation_and_target_cas(self):
+    def test_branch_head_advance_after_generation_check_blocks_write(self):
         session = self.open()
+        self.provider.advance_on_update = True
+        with self.assertRaisesRegex(CasConflict, "branch head"):
+            self.broker.guarded_update(
+                session,
+                path=WRITE_PATH,
+                content="state-v2\n",
+                expected_blob_sha="f" * 40,
+                message="test concurrent handoff",
+            )
+        self.assertEqual("state-v1\n", self.provider.docs[WRITE_PATH])
+
+    def test_allowed_write_uses_deployment_generation_branch_and_target_cas(self):
+        session = self.open()
+        previous_head = self.provider.instance_head
         result = self.broker.guarded_update(
             session,
             path=WRITE_PATH,
@@ -269,8 +356,14 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             expected_blob_sha="f" * 40,
             message="test broker write",
         )
-        self.assertEqual("8" * 40, result)
+        self.assertTrue(result.applied)
+        self.assertFalse(hasattr(result, "commit_sha"))
+        self.assertFalse(hasattr(result, "sha"))
         self.assertEqual("state-v2\n", self.provider.docs[WRITE_PATH])
+        update = next(
+            call for call in self.provider.calls if call[0] == "update"
+        )
+        self.assertEqual(previous_head, update[5])
         names = [call[0] for call in self.provider.calls]
         self.assertLess(names.index("read"), names.index("update"))
 
