@@ -247,6 +247,32 @@ class RuntimeAdapterTests(unittest.TestCase):
         names = [call[0] for call in self.provider.calls]
         self.assertLess(names.index("read"), names.index("update"))
 
+    def test_guarded_update_omits_head_keyword_when_not_requested(self):
+        session = self.session()
+        calls = []
+
+        def legacy_update(
+            repository_id, branch, path, content,
+            expected_blob_sha, message,
+        ):
+            calls.append((
+                repository_id, branch, path,
+                expected_blob_sha, message,
+            ))
+            return "f" * 40
+
+        self.provider.update_text = legacy_update
+        result = DeploymentGuard(self.provider).guarded_update(
+            session,
+            branch="main",
+            path="learner/model.yaml",
+            content="x",
+            expected_blob_sha=self.provider.cas_sha,
+            message="legacy provider",
+        )
+        self.assertEqual("f" * 40, result)
+        self.assertEqual(1, len(calls))
+
     def test_guarded_update_forwards_exact_branch_head_precondition(self):
         session = self.session()
         authority_head = "a" * 40
@@ -348,24 +374,31 @@ class GitCliProviderTests(unittest.TestCase):
             (snapshot.root / "state.txt").read_text(encoding="utf-8"),
         )
 
-    def test_fetch_retries_without_depth_after_shallow_failure(self):
+    def test_remote_transport_requires_bounded_filtering(self):
         provider = self.provider()
-        original_git = provider._git
-        attempts = []
+        self.assertTrue(
+            provider._requires_filtered_fetch(
+                "https://example.invalid/repo.git"
+            )
+        )
+        self.assertTrue(
+            provider._requires_filtered_fetch(
+                "git@example.invalid:repo.git"
+            )
+        )
+        self.assertFalse(
+            provider._requires_filtered_fetch(str(self.remote))
+        )
 
-        def flaky_git(*args, cwd=None, cas=False, binding=None):
-            if args and args[0] == "fetch":
-                attempts.append(args)
-                if "--depth=1" in args:
-                    raise ResolutionError("synthetic shallow transport failure")
-            return original_git(*args, cwd=cwd, cas=cas, binding=binding)
-
-        provider._git = flaky_git  # type: ignore[method-assign]
-        snapshot = provider.materialize(self.REPO_ID, "main")
-        self.assertEqual(self.initial_commit, snapshot.commit_sha)
-        self.assertEqual(2, len(attempts))
-        self.assertIn("--depth=1", attempts[0])
-        self.assertNotIn("--depth=1", attempts[1])
+    def test_fetch_object_store_budget_fails_closed(self):
+        provider = self.provider()
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_FETCH_OBJECT_BYTES", 1
+        ):
+            with self.assertRaisesRegex(
+                ResolutionError, "object-store budget"
+            ):
+                provider.materialize(self.REPO_ID, "main")
 
     def test_transient_git_init_uses_provider_owned_empty_template(self):
         provider = self.provider()
@@ -914,6 +947,50 @@ class GitCliProviderTests(unittest.TestCase):
                 "f" * 40,
                 "test: stale",
             )
+
+    def test_update_rejects_text_above_runtime_write_limit(self):
+        provider = self.provider()
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_TEXT_BLOB_BYTES", 1
+        ):
+            with self.assertRaisesRegex(CasConflict, "write limit"):
+                provider.update_text(
+                    self.REPO_ID,
+                    "main",
+                    "state.txt",
+                    "two\n",
+                    self.initial_blob,
+                    "test: oversized text",
+                )
+        self.assertEqual(
+            self.initial_commit,
+            self._git(
+                "--git-dir", str(self.remote),
+                "rev-parse", "refs/heads/main",
+            ),
+        )
+
+    def test_update_rejects_result_above_snapshot_total_limit(self):
+        provider = self.provider()
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_TOTAL_BLOB_BYTES", 7
+        ):
+            with self.assertRaisesRegex(CasConflict, "total-size budget"):
+                provider.update_text(
+                    self.REPO_ID,
+                    "main",
+                    "state.txt",
+                    "two-two\n",
+                    self.initial_blob,
+                    "test: oversized snapshot",
+                )
+        self.assertEqual(
+            self.initial_commit,
+            self._git(
+                "--git-dir", str(self.remote),
+                "rev-parse", "refs/heads/main",
+            ),
+        )
 
     def test_successful_update_pushes_one_file_on_bound_branch(self):
         provider = self.provider()

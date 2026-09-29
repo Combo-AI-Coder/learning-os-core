@@ -12,6 +12,7 @@ import re
 import shlex
 import subprocess
 import threading
+import time
 import unicodedata
 import tempfile
 import urllib.error
@@ -33,6 +34,8 @@ MAX_SNAPSHOT_TREE_ENTRIES = 50_000
 MAX_SNAPSHOT_TREE_LIST_BYTES = 16 * 1024 * 1024
 MAX_SNAPSHOT_BLOB_BYTES = 64 * 1024 * 1024
 MAX_SNAPSHOT_TOTAL_BLOB_BYTES = 256 * 1024 * 1024
+MAX_FETCH_OBJECT_BYTES = 320 * 1024 * 1024
+FETCH_POLL_SECONDS = 0.02
 
 
 class ResolutionError(RuntimeError):
@@ -305,6 +308,11 @@ class DeploymentGuard:
             if generation_reader() != expected_generation:
                 raise GuardRejected("semantic generation changed")
         try:
+            if expected_ref_sha is None:
+                return self.provider.update_text(
+                    session.instance_repository_id, branch, path, content,
+                    expected_blob_sha, message,
+                )
             return self.provider.update_text(
                 session.instance_repository_id, branch, path, content,
                 expected_blob_sha, message,
@@ -808,6 +816,7 @@ class GitCliProvider:
                 raise ResolutionError(
                     "Git snapshot exceeds Runtime total-size budget"
                 )
+        return total
 
     def _verify_regular_tree(
         self, repo: Path, commit: str
@@ -941,22 +950,95 @@ class GitCliProvider:
             cwd=repo,
         )
 
+    @staticmethod
+    def _requires_filtered_fetch(remote: str) -> bool:
+        if remote.startswith("file://"):
+            return False
+        if (
+            remote.startswith(("/", "\\\\", "//"))
+            or re.match(r"^[A-Za-z]:[/\\\\]", remote)
+        ):
+            return False
+        if "://" in remote:
+            return True
+        return bool(re.match(r"^[^/\\\\]+:.+", remote))
+
+    @staticmethod
+    def _object_store_bytes(repo: Path) -> int:
+        root = repo / ".git" / "objects"
+        total = 0
+        if not root.exists():
+            return 0
+        for candidate in root.rglob("*"):
+            try:
+                if candidate.is_file():
+                    total += candidate.stat().st_size
+                    if total > MAX_FETCH_OBJECT_BYTES:
+                        return total
+            except OSError:
+                continue
+        return total
+
     def _fetch_ref(
         self,
         repo: Path,
         binding: GitRepositoryBinding,
         fetch_ref: str,
     ) -> None:
+        filtered = self._requires_filtered_fetch(binding.remote)
+        args = ["git", "fetch", "-q", "--no-tags", "--depth=1"]
+        if filtered:
+            args.append(
+                f"--filter=blob:limit={MAX_SNAPSHOT_BLOB_BYTES + 1}"
+            )
+        args.extend(["origin", fetch_ref])
         try:
-            self._git(
-                "fetch", "-q", "--depth=1", "origin", fetch_ref,
-                cwd=repo, binding=binding,
+            process = subprocess.Popen(
+                args,
+                cwd=repo,
+                env=self._env(binding),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
             )
-        except ResolutionError:
-            self._git(
-                "fetch", "-q", "origin", fetch_ref,
-                cwd=repo, binding=binding,
+        except OSError:
+            raise ResolutionError("Git bounded fetch failed") from None
+
+        deadline = time.monotonic() + 90
+        exceeded = False
+        timed_out = False
+        while process.poll() is None:
+            if self._object_store_bytes(repo) > MAX_FETCH_OBJECT_BYTES:
+                exceeded = True
+                process.kill()
+                break
+            if time.monotonic() > deadline:
+                timed_out = True
+                process.kill()
+                break
+            time.sleep(FETCH_POLL_SECONDS)
+
+        _, stderr = process.communicate()
+        if self._object_store_bytes(repo) > MAX_FETCH_OBJECT_BYTES:
+            exceeded = True
+        if exceeded:
+            raise ResolutionError(
+                "Git fetch exceeded Runtime object-store budget"
             )
+        if timed_out:
+            raise ResolutionError("Git bounded fetch timed out")
+        if process.returncode:
+            raise ResolutionError(
+                "Git remote does not support bounded fetch semantics"
+            )
+        if filtered:
+            warning = (stderr or b"").lower()
+            if (
+                b"filtering not recognized" in warning
+                or b"filtering not supported" in warning
+            ):
+                raise ResolutionError(
+                    "Git remote does not support bounded object filtering"
+                )
 
     def _checkout(
         self,
@@ -991,7 +1073,7 @@ class GitCliProvider:
         self,
         binding: GitRepositoryBinding,
         branch: str,
-    ) -> tuple[tempfile.TemporaryDirectory, Path, str, str]:
+    ) -> tuple[tempfile.TemporaryDirectory, Path, str, str, int]:
         branch_ref = self._branch_ref(branch)
         td = tempfile.TemporaryDirectory(prefix="learning-os-git-")
         repo = Path(td.name) / "repo"
@@ -1006,9 +1088,9 @@ class GitCliProvider:
             if not EXACT_COMMIT.fullmatch(fetched):
                 raise ResolutionError("Git did not resolve an exact branch head")
             objects = self._verify_regular_tree(repo, fetched)
-            self._validate_snapshot_budget(repo, objects)
+            snapshot_total = self._validate_snapshot_budget(repo, objects)
             self._git("reset", "-q", "--mixed", fetched, cwd=repo)
-            return td, repo, fetched, branch_ref
+            return td, repo, fetched, branch_ref, snapshot_total
         except Exception:
             td.cleanup()
             raise
@@ -1098,7 +1180,9 @@ class GitCliProvider:
         ):
             raise CasConflict("expected branch head SHA must be exact")
         pure = self._safe_path(path)
-        td, repo, commit, branch_ref = self._checkout_branch(binding, branch)
+        td, repo, commit, branch_ref, snapshot_total = self._checkout_branch(
+            binding, branch
+        )
         try:
             if expected_ref_sha is not None and commit != expected_ref_sha:
                 raise CasConflict("branch head compare-and-swap mismatch")
@@ -1115,6 +1199,25 @@ class GitCliProvider:
                 raise CasConflict("target blob compare-and-swap mismatch")
 
             content_bytes = content.encode("utf-8")
+            if len(content_bytes) > MAX_TEXT_BLOB_BYTES:
+                raise CasConflict(
+                    "replacement text exceeds Runtime write limit"
+                )
+            current_size_text = self._git(
+                "cat-file", "-s", current_blob, cwd=repo, cas=True
+            )
+            if not current_size_text.isdigit():
+                raise CasConflict("current blob size is invalid")
+            next_snapshot_total = (
+                snapshot_total
+                - int(current_size_text)
+                + len(content_bytes)
+            )
+            if next_snapshot_total > MAX_SNAPSHOT_TOTAL_BLOB_BYTES:
+                raise CasConflict(
+                    "updated snapshot exceeds Runtime total-size budget"
+                )
+
             new_blob = self._git_bytes(
                 "hash-object", "-w", "--stdin",
                 cwd=repo, cas=True, input_bytes=content_bytes,
