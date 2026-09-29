@@ -221,9 +221,13 @@ class DeploymentResolver:
         control = self.provider.materialize(rc["repository_id"], rc["canonical_ref"])
         if control.repository_id != rc["repository_id"]:
             raise ResolutionError("resolved Runtime-Control repository ID mismatch")
-        contract_text, _, _ = self.provider.read_text(
-            rc["repository_id"], rc["canonical_ref"], rc["contract_path"]
+        contract_text, _, contract_commit = self.provider.read_text(
+            rc["repository_id"], control.commit_sha, rc["contract_path"]
         )
+        if contract_commit != control.commit_sha:
+            raise ResolutionError(
+                "Runtime-Control contract provenance changed during bootstrap"
+            )
         contract = _load_contract(contract_text)
         core_block = contract["core"]
         core_id = _positive_id(core_block.get("repository_id"), "core.repository_id")
@@ -410,7 +414,9 @@ class GitCliProvider:
                     raise ResolutionError(
                         "binding.ssh_known_hosts_file must not contain OpenSSH tokens or escapes"
                     )
-                ssh_known_hosts_file = os.path.abspath(known_hosts_input)
+                ssh_known_hosts_file = os.path.abspath(
+                    known_hosts_input
+                ).replace(chr(92), "/")
             self.bindings[repository_id] = GitRepositoryBinding(
                 repository_id=repository_id,
                 remote=remote,
@@ -537,12 +543,16 @@ class GitCliProvider:
         cas: bool = False,
         timeout: int = 90,
         binding: GitRepositoryBinding | None = None,
+        extra_env: dict[str, str] | None = None,
     ) -> bytes:
+        env = self._env(binding)
+        if extra_env:
+            env.update(extra_env)
         try:
             result = subprocess.run(
                 ["git", *args],
                 cwd=cwd,
-                env=self._env(binding),
+                env=env,
                 input=input_bytes,
                 capture_output=True,
                 timeout=timeout,
@@ -578,10 +588,11 @@ class GitCliProvider:
         cas: bool = False,
         input_bytes: bytes | None = None,
         binding: GitRepositoryBinding | None = None,
+        extra_env: dict[str, str] | None = None,
     ) -> bytes:
         return self._run_git(
             tuple(args), cwd=cwd, cas=cas, input_bytes=input_bytes,
-            binding=binding,
+            binding=binding, extra_env=extra_env,
         )
 
     def _git_blob_to_file(
@@ -783,6 +794,7 @@ class GitCliProvider:
             "--batch-check=%(objectname) %(objecttype) %(objectsize)",
             cwd=repo,
             input_bytes=query,
+            extra_env={"GIT_NO_LAZY_FETCH": "1"},
         )
         sizes: dict[str, int] = {}
         try:

@@ -92,9 +92,17 @@ class FakeProvider:
         self.calls.append(("read", repository_id, ref, path))
         if self.unavailable:
             raise ResolutionError("outage")
-        if repository_id != RC_ID or ref != "main" or path != "deployment.yaml":
+        if (
+            repository_id != RC_ID
+            or ref not in {"main", RC_COMMIT}
+            or path != "deployment.yaml"
+        ):
             raise ResolutionError("wrong read")
-        return yaml.safe_dump(self.contract, sort_keys=False), "e" * 40, RC_COMMIT
+        return (
+            yaml.safe_dump(self.contract, sort_keys=False),
+            "e" * 40,
+            RC_COMMIT,
+        )
 
     def update_text(
         self,
@@ -147,6 +155,14 @@ class RuntimeAdapterTests(unittest.TestCase):
     def test_navigation_rename_does_not_change_identity(self):
         resolved = DeploymentResolver(self.provider).resolve(locator(repository="old/name"))
         self.assertEqual(RC_ID, resolved.context.runtime_control_repository_id)
+
+    def test_bootstrap_reads_contract_from_materialized_control_commit(self):
+        resolved = DeploymentResolver(self.provider).resolve(locator())
+        self.assertEqual(RC_COMMIT, resolved.control.commit_sha)
+        self.assertIn(
+            ("read", RC_ID, RC_COMMIT, "deployment.yaml"),
+            self.provider.calls,
+        )
 
     def test_core_main_advance_is_not_used(self):
         resolved = DeploymentResolver(self.provider).resolve(locator())
@@ -584,6 +600,28 @@ class GitCliProviderTests(unittest.TestCase):
         self.assertIn("GlobalKnownHostsFile=none", command)
         self.assertIn("UserKnownHostsFile=none", command)
 
+    def test_known_hosts_normalization_preserves_forward_slash_unc(self):
+        with mock.patch(
+            "scripts.runtime_adapter.os.path.abspath",
+            return_value=r"\\server\share\known_hosts",
+        ):
+            provider = GitCliProvider([
+                GitRepositoryBinding(
+                    self.REPO_ID,
+                    str(self.remote),
+                    ssh_known_hosts_file="//server/share/known_hosts",
+                )
+            ])
+        self.addCleanup(provider.close)
+        self.assertEqual(
+            "//server/share/known_hosts",
+            provider._binding(self.REPO_ID).ssh_known_hosts_file,
+        )
+        self.assertNotIn(
+            "\\",
+            provider._binding(self.REPO_ID).ssh_known_hosts_file,
+        )
+
     def test_relative_known_hosts_path_is_resolved_at_construction(self):
         provider = GitCliProvider([
             GitRepositoryBinding(
@@ -593,7 +631,7 @@ class GitCliProviderTests(unittest.TestCase):
             )
         ])
         self.addCleanup(provider.close)
-        expected = os.path.abspath("relative-known-hosts")
+        expected = os.path.abspath("relative-known-hosts").replace(chr(92), "/")
         binding = provider._binding(self.REPO_ID)
         self.assertEqual(expected, binding.ssh_known_hosts_file)
         self.assertIn(
@@ -1124,6 +1162,26 @@ class GitCliProviderTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(ResolutionError, "entry budget"):
                 provider.materialize(self.REPO_ID, "main")
+
+    def test_snapshot_budget_disables_promisor_lazy_fetch(self):
+        provider = self.provider()
+        sha = "1" * 40
+        calls = []
+
+        def fake_git_bytes(*args, **kwargs):
+            calls.append((args, kwargs))
+            return f"{sha} blob 4\n".encode("ascii")
+
+        provider._git_bytes = fake_git_bytes  # type: ignore[method-assign]
+        total = provider._validate_snapshot_budget(
+            self.seed,
+            [("state.txt", sha, "100644", "blob")],
+        )
+        self.assertEqual(4, total)
+        self.assertEqual(
+            {"GIT_NO_LAZY_FETCH": "1"},
+            calls[0][1].get("extra_env"),
+        )
 
     def test_snapshot_total_blob_budget_fails_before_materialization(self):
         provider = self.provider()
