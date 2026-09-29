@@ -366,6 +366,16 @@ class GitCliProviderTests(unittest.TestCase):
         )
         self.assertIn("GlobalKnownHostsFile=none", command)
 
+    def test_relative_ssh_agent_socket_fails_closed(self):
+        with self.assertRaisesRegex(ResolutionError, "absolute host path"):
+            GitCliProvider([
+                GitRepositoryBinding(
+                    self.REPO_ID,
+                    str(self.remote),
+                    ssh_auth_sock="agent.sock",
+                )
+            ])
+
     def test_relative_known_hosts_path_is_resolved_at_construction(self):
         provider = GitCliProvider([
             GitRepositoryBinding(
@@ -758,6 +768,44 @@ class GitCliProviderTests(unittest.TestCase):
         with self.assertRaisesRegex(ResolutionError, "non-regular"):
             self.provider().materialize(self.REPO_ID, "main")
 
+    def test_materialize_rejects_dos_83_short_name_paths(self):
+        blob = self._git(
+            "hash-object", "-w", "--stdin", cwd=self.seed, input_text="hidden\n"
+        )
+        tree_input = f"100644 blob {blob}\trequir~1.txt\0"
+        tree = self._git("mktree", "-z", cwd=self.seed, input_text=tree_input)
+        commit = self._git(
+            "-c", "user.name=Synthetic Runtime Test",
+            "-c", "user.email=runtime-test@invalid.local",
+            "commit-tree", tree, "-p", self.initial_commit,
+            "-m", "dos short-name path tree",
+            cwd=self.seed,
+        )
+        self._git(
+            "push", "-q", "--force", "origin",
+            f"{commit}:refs/heads/main", cwd=self.seed,
+        )
+        with self.assertRaisesRegex(ResolutionError, "unsafe"):
+            self.provider().materialize(self.REPO_ID, "main")
+
+    def test_materialize_rejects_empty_tree_entries(self):
+        empty_tree = self._git("mktree", cwd=self.seed, input_text="")
+        tree_input = f"040000 tree {empty_tree}\tlearner\0"
+        tree = self._git("mktree", "-z", cwd=self.seed, input_text=tree_input)
+        commit = self._git(
+            "-c", "user.name=Synthetic Runtime Test",
+            "-c", "user.email=runtime-test@invalid.local",
+            "commit-tree", tree, "-p", self.initial_commit,
+            "-m", "empty learner tree",
+            cwd=self.seed,
+        )
+        self._git(
+            "push", "-q", "--force", "origin",
+            f"{commit}:refs/heads/main", cwd=self.seed,
+        )
+        with self.assertRaisesRegex(ResolutionError, "empty directory"):
+            self.provider().materialize(self.REPO_ID, "main")
+
     def test_materialize_rejects_windows_reserved_device_paths(self):
         blob = self._git(
             "hash-object", "-w", "--stdin", cwd=self.seed, input_text="hidden\n"
@@ -786,6 +834,19 @@ class GitCliProviderTests(unittest.TestCase):
                 )
                 with self.assertRaisesRegex(ResolutionError, "unsafe"):
                     self.provider().materialize(self.REPO_ID, "main")
+
+    def test_materialize_rejects_preexisting_resolved_alias_target(self):
+        provider = self.provider()
+        original_exists = Path.exists
+
+        def alias_exists(path):
+            if "learning-os-snapshot-" in str(path) and path.name == "state.txt":
+                return True
+            return original_exists(path)
+
+        with mock.patch.object(Path, "exists", alias_exists):
+            with self.assertRaisesRegex(ResolutionError, "aliases an existing"):
+                provider.materialize(self.REPO_ID, "main")
 
     def test_materialize_verifies_regular_output_after_write(self):
         provider = self.provider()

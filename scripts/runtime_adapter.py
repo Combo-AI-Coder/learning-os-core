@@ -345,10 +345,20 @@ class GitCliProvider:
                 remote = os.path.abspath(remote)
             if not isinstance(binding.writable, bool):
                 raise ResolutionError("binding.writable must be a boolean")
-            ssh_auth_sock = (
-                None if binding.ssh_auth_sock is None
-                else _nonempty(binding.ssh_auth_sock, "binding.ssh_auth_sock")
-            )
+            ssh_auth_sock = None
+            if binding.ssh_auth_sock is not None:
+                ssh_auth_sock = _nonempty(
+                    binding.ssh_auth_sock, "binding.ssh_auth_sock"
+                )
+                absolute_socket = (
+                    ssh_auth_sock.startswith("/")
+                    or ssh_auth_sock.startswith("\\\\")
+                    or bool(re.match(r"^[A-Za-z]:[/\\]", ssh_auth_sock))
+                )
+                if not absolute_socket:
+                    raise ResolutionError(
+                        "binding.ssh_auth_sock must be an absolute host path"
+                    )
             ssh_known_hosts_file = (
                 None if binding.ssh_known_hosts_file is None
                 else os.path.abspath(
@@ -516,7 +526,11 @@ class GitCliProvider:
         stem = normalized.split(".", 1)[0].rstrip(" ").casefold()
         if stem in {"con", "prn", "aux", "nul", "conin$", "conout$"}:
             return True
-        return bool(re.fullmatch(r"(?:com|lpt)[1-9\u00b9\u00b2\u00b3]", stem))
+        if re.fullmatch(r"(?:com|lpt)[1-9\u00b9\u00b2\u00b3]", stem):
+            return True
+        return bool(
+            re.fullmatch(r"[^. ]{1,6}~[0-9]+(?:\.[^. ]{0,3})?", normalized)
+        )
 
     @classmethod
     def _safe_path(cls, path: str) -> PurePosixPath:
@@ -540,7 +554,9 @@ class GitCliProvider:
         return pure
 
     @classmethod
-    def _decode_tree_record(cls, record: bytes) -> tuple[str, str, str]:
+    def _decode_tree_object_record(
+        cls, record: bytes
+    ) -> tuple[str, str, str, str]:
         try:
             header, raw_path = record.split(b"\t", 1)
             mode_raw, type_raw, sha_raw = header.split(b" ", 2)
@@ -550,23 +566,49 @@ class GitCliProvider:
             path = raw_path.decode("utf-8")
         except (ValueError, UnicodeDecodeError):
             raise ResolutionError("Git tree contains an undecodable entry") from None
-        if mode not in {"100644", "100755"} or object_type != "blob":
+        if not EXACT_COMMIT.fullmatch(sha):
+            raise ResolutionError("Git tree returned a non-exact object identity")
+        if object_type == "tree":
+            if mode != "040000":
+                raise ResolutionError("Git tree contains an unsupported tree entry")
+        elif object_type == "blob":
+            if mode not in {"100644", "100755"}:
+                raise ResolutionError(
+                    "Git tree contains an unsupported non-regular entry"
+                )
+        else:
             raise ResolutionError(
                 "Git tree contains an unsupported non-regular entry"
             )
-        if not EXACT_COMMIT.fullmatch(sha):
-            raise ResolutionError("Git tree returned a non-exact blob identity")
         cls._safe_path(path)
+        return path, sha, mode, object_type
+
+    @classmethod
+    def _decode_tree_record(cls, record: bytes) -> tuple[str, str, str]:
+        path, sha, mode, object_type = cls._decode_tree_object_record(record)
+        if object_type != "blob":
+            raise ResolutionError(
+                "Git tree contains an unsupported non-regular entry"
+            )
         return path, sha, mode
+
+    def _tree_objects(
+        self, repo: Path, commit: str
+    ) -> list[tuple[str, str, str, str]]:
+        raw = self._git_bytes("ls-tree", "-r", "-t", "-z", commit, cwd=repo)
+        return [
+            self._decode_tree_object_record(record)
+            for record in raw.split(b"\x00")
+            if record
+        ]
 
     def _tree_entries(
         self, repo: Path, commit: str
     ) -> list[tuple[str, str, str]]:
-        raw = self._git_bytes("ls-tree", "-r", "-z", commit, cwd=repo)
         return [
-            self._decode_tree_record(record)
-            for record in raw.split(b"\x00")
-            if record
+            (path, sha, mode)
+            for path, sha, mode, object_type in self._tree_objects(repo, commit)
+            if object_type == "blob"
         ]
 
     @staticmethod
@@ -574,8 +616,10 @@ class GitCliProvider:
         return unicodedata.normalize("NFC", path).casefold()
 
     def _verify_regular_tree(self, repo: Path, commit: str) -> None:
+        objects = self._tree_objects(repo, commit)
         seen: dict[str, str] = {}
-        for path, _, _ in self._tree_entries(repo, commit):
+        blob_paths = [path for path, _, _, kind in objects if kind == "blob"]
+        for path, _, _, kind in objects:
             key = self._portable_snapshot_key(path)
             previous = seen.get(key)
             if previous is not None:
@@ -583,6 +627,10 @@ class GitCliProvider:
                     "Git tree contains duplicate or filesystem-equivalent path aliases"
                 )
             seen[key] = path
+            if kind == "tree" and not any(
+                blob.startswith(path + "/") for blob in blob_paths
+            ):
+                raise ResolutionError("Git tree contains an empty directory")
 
     def _regular_blob(
         self,
@@ -749,6 +797,10 @@ class GitCliProvider:
             for path, sha, mode in self._tree_entries(repo, commit):
                 output = snapshot.joinpath(*PurePosixPath(path).parts)
                 output.parent.mkdir(parents=True, exist_ok=True)
+                if output.exists():
+                    raise ResolutionError(
+                        "materialized Git path aliases an existing snapshot entry"
+                    )
                 output.write_bytes(
                     self._git_bytes("cat-file", "blob", sha, cwd=repo)
                 )
