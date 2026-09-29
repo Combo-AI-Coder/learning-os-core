@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,6 +13,8 @@ from scripts.runtime_adapter import (
     DeploymentGuard,
     DeploymentResolver,
     GuardRejected,
+    GitCliProvider,
+    GitRepositoryBinding,
     MaterializedRepository,
     ResolutionError,
     TransitionRejected,
@@ -225,6 +229,206 @@ class RuntimeAdapterTests(unittest.TestCase):
         self.assertEqual("f" * 40, result)
         names = [call[0] for call in self.provider.calls]
         self.assertLess(names.index("read"), names.index("update"))
+
+
+class GitCliProviderTests(unittest.TestCase):
+    REPO_ID = 9000000201
+
+    def setUp(self):
+        td = tempfile.TemporaryDirectory()
+        self.addCleanup(td.cleanup)
+        self.root = Path(td.name)
+        self.remote = self.root / "remote.git"
+        self.seed = self.root / "seed"
+        self._git("init", "--bare", "-q", str(self.remote))
+        self._git("init", "-q", str(self.seed))
+        self._git("checkout", "-q", "-b", "main", cwd=self.seed)
+        self._git("config", "user.name", "Synthetic Runtime Test", cwd=self.seed)
+        self._git("config", "user.email", "runtime-test@invalid.local", cwd=self.seed)
+        (self.seed / "state.txt").write_text("one\n", encoding="utf-8", newline="\n")
+        self._git("add", "state.txt", cwd=self.seed)
+        self._git("commit", "-q", "-m", "seed", cwd=self.seed)
+        self._git("remote", "add", "origin", str(self.remote), cwd=self.seed)
+        self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
+        self.initial_commit = self._git("rev-parse", "HEAD", cwd=self.seed)
+        self.initial_blob = self._git("rev-parse", "HEAD:state.txt", cwd=self.seed)
+
+    @staticmethod
+    def _git(*args, cwd=None, input_text=None):
+        env = {
+            **os.environ,
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_TERMINAL_PROMPT": "0",
+        }
+        result = subprocess.run(
+            ["git", *args],
+            cwd=cwd,
+            env=env,
+            input=input_text,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+        if result.returncode:
+            raise AssertionError(
+                f"git {' '.join(args)} failed: {result.stderr.strip()}"
+            )
+        return result.stdout.strip()
+
+    def provider(self, *, writable=True):
+        provider = GitCliProvider([
+            GitRepositoryBinding(
+                self.REPO_ID,
+                str(self.remote),
+                "synthetic/instance",
+                writable=writable,
+            )
+        ])
+        self.addCleanup(provider.close)
+        return provider
+
+    def test_materialize_uses_host_bound_identity_and_strips_git_metadata(self):
+        snapshot = self.provider().materialize(self.REPO_ID, "main")
+        self.assertEqual(self.REPO_ID, snapshot.repository_id)
+        self.assertEqual(self.initial_commit, snapshot.commit_sha)
+        self.assertEqual("synthetic/instance", snapshot.full_name)
+        self.assertEqual("one\n", (snapshot.root / "state.txt").read_text(encoding="utf-8"))
+        self.assertFalse((snapshot.root / ".git").exists())
+
+    def test_exact_commit_materialization_is_fetched_from_bound_remote(self):
+        snapshot = self.provider().materialize(self.REPO_ID, self.initial_commit)
+        self.assertEqual(self.initial_commit, snapshot.commit_sha)
+
+    def test_unknown_numeric_identity_fails_closed(self):
+        with self.assertRaisesRegex(ResolutionError, "host-trusted"):
+            self.provider().materialize(self.REPO_ID + 1, "main")
+
+    def test_read_text_returns_exact_blob_and_commit(self):
+        text, blob, commit = self.provider().read_text(
+            self.REPO_ID, "main", "state.txt"
+        )
+        self.assertEqual("one\n", text)
+        self.assertEqual(self.initial_blob, blob)
+        self.assertEqual(self.initial_commit, commit)
+
+    def test_unsafe_path_fails_closed(self):
+        with self.assertRaisesRegex(ResolutionError, "unsafe"):
+            self.provider().read_text(self.REPO_ID, "main", "../state.txt")
+
+    def test_ambiguous_dot_segment_path_fails_closed(self):
+        with self.assertRaisesRegex(ResolutionError, "unsafe"):
+            self.provider().read_text(self.REPO_ID, "main", "./state.txt")
+
+    def test_unsafe_git_environment_override_fails_closed(self):
+        with self.assertRaisesRegex(ResolutionError, "environment"):
+            GitCliProvider(
+                [GitRepositoryBinding(self.REPO_ID, str(self.remote))],
+                git_env={"GIT_DIR": "elsewhere"},
+            )
+
+    def test_read_only_binding_cannot_update(self):
+        provider = self.provider(writable=False)
+        with self.assertRaisesRegex(CasConflict, "read-only"):
+            provider.update_text(
+                self.REPO_ID,
+                "main",
+                "state.txt",
+                "two\n",
+                self.initial_blob,
+                "test: should not write",
+            )
+        self.assertEqual(
+            self.initial_commit,
+            self._git("--git-dir", str(self.remote), "rev-parse", "refs/heads/main"),
+        )
+
+    def test_stale_blob_cas_is_rejected(self):
+        provider = self.provider()
+        with self.assertRaisesRegex(CasConflict, "compare-and-swap"):
+            provider.update_text(
+                self.REPO_ID,
+                "main",
+                "state.txt",
+                "two\n",
+                "f" * 40,
+                "test: stale",
+            )
+
+    def test_successful_update_pushes_one_file_on_bound_branch(self):
+        provider = self.provider()
+        commit = provider.update_text(
+            self.REPO_ID,
+            "main",
+            "state.txt",
+            "two\n",
+            self.initial_blob,
+            "test: update synthetic state",
+        )
+        self.assertEqual(
+            commit,
+            self._git("--git-dir", str(self.remote), "rev-parse", "refs/heads/main"),
+        )
+        self.assertEqual(
+            "two",
+            self._git("--git-dir", str(self.remote), "show", "refs/heads/main:state.txt"),
+        )
+
+    def test_concurrent_branch_advance_rejects_non_force_push(self):
+        test = self
+
+        class RacingProvider(GitCliProvider):
+            raced = False
+
+            def _git(self, *args, cwd=None, cas=False):
+                if args and args[0] == "push" and cas and not self.raced:
+                    self.raced = True
+                    (test.seed / "other.txt").write_text("race\n", encoding="utf-8")
+                    test._git("add", "other.txt", cwd=test.seed)
+                    test._git("commit", "-q", "-m", "concurrent advance", cwd=test.seed)
+                    test._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=test.seed)
+                return super()._git(*args, cwd=cwd, cas=cas)
+
+        provider = RacingProvider([
+            GitRepositoryBinding(
+                self.REPO_ID,
+                str(self.remote),
+                "synthetic/instance",
+                writable=True,
+            )
+        ])
+        self.addCleanup(provider.close)
+        with self.assertRaisesRegex(CasConflict, "compare-and-swap"):
+            provider.update_text(
+                self.REPO_ID,
+                "main",
+                "state.txt",
+                "two\n",
+                self.initial_blob,
+                "test: racing update",
+            )
+        self.assertEqual(
+            "one",
+            self._git("--git-dir", str(self.remote), "show", "refs/heads/main:state.txt"),
+        )
+
+    def test_symlink_tree_entry_is_rejected_before_checkout(self):
+        target_blob = self._git(
+            "hash-object", "-w", "--stdin",
+            cwd=self.seed,
+            input_text="state.txt",
+        )
+        self._git(
+            "update-index", "--add", "--cacheinfo",
+            "120000", target_blob, "synthetic-link",
+            cwd=self.seed,
+        )
+        self._git("commit", "-q", "-m", "add synthetic symlink entry", cwd=self.seed)
+        self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
+        with self.assertRaisesRegex(ResolutionError, "non-regular"):
+            self.provider().materialize(self.REPO_ID, "main")
 
 
 class DeploymentTransitionTests(unittest.TestCase):

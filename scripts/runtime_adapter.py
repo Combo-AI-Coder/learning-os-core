@@ -9,6 +9,7 @@ import base64
 import json
 import os
 import re
+import subprocess
 import tempfile
 import urllib.error
 import urllib.parse
@@ -295,6 +296,351 @@ class DeploymentGuard:
             raise
         except Exception as exc:
             raise CasConflict(f"target blob CAS failed: {exc}") from None
+
+
+
+@dataclass(frozen=True)
+class GitRepositoryBinding:
+    """Host-trusted numeric repository identity bound to one Git remote."""
+
+    repository_id: int
+    remote: str
+    full_name: str = ""
+    writable: bool = False
+
+
+class GitCliProvider:
+    """Git transport provider for host-bound runtimes (for example SSH deploy keys).
+
+    Numeric repository identity comes from the host-trusted binding supplied by
+    the caller. The remote/name is navigation/capability routing only and is
+    never promoted into security identity.
+    """
+
+    def __init__(
+        self,
+        bindings: list[GitRepositoryBinding] | tuple[GitRepositoryBinding, ...],
+        *,
+        git_env: dict[str, str] | None = None,
+    ):
+        self.bindings: dict[int, GitRepositoryBinding] = {}
+        for binding in bindings:
+            repository_id = _positive_id(binding.repository_id, "binding.repository_id")
+            if repository_id in self.bindings:
+                raise ResolutionError("duplicate Git repository binding")
+            remote = _nonempty(binding.remote, "binding.remote")
+            if remote.startswith("-") or any(char in remote for char in "\x00\r\n"):
+                raise ResolutionError("Git repository remote is unsafe")
+            self.bindings[repository_id] = GitRepositoryBinding(
+                repository_id=repository_id,
+                remote=remote,
+                full_name=str(binding.full_name or ""),
+                writable=bool(binding.writable),
+            )
+        if not self.bindings:
+            raise ResolutionError("at least one Git repository binding is required")
+        self.git_env = dict(git_env or {})
+        blocked_env = {
+            "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE",
+            "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+            "GIT_CONFIG", "GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM",
+            "GIT_CONFIG_NOSYSTEM",
+        }
+        if blocked_env.intersection(self.git_env):
+            raise ResolutionError("Git environment attempts to override repository/config isolation")
+        self._tempdirs: list[tempfile.TemporaryDirectory] = []
+
+    def close(self) -> None:
+        while self._tempdirs:
+            self._tempdirs.pop().cleanup()
+
+    def _binding(self, repository_id: int) -> GitRepositoryBinding:
+        repository_id = _positive_id(repository_id, "repository_id")
+        try:
+            return self.bindings[repository_id]
+        except KeyError:
+            raise ResolutionError("repository ID is absent from host-trusted Git bindings") from None
+
+    def _env(self) -> dict[str, str]:
+        env = {
+            key: value for key, value in os.environ.items()
+            if not key.startswith("GIT_")
+        }
+        env.update(self.git_env)
+        env.update({
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_TERMINAL_PROMPT": "0",
+        })
+        return env
+
+    def _git(
+        self,
+        *args: str,
+        cwd: Path | None = None,
+        cas: bool = False,
+    ) -> str:
+        try:
+            result = subprocess.run(
+                ["git", *args],
+                cwd=cwd,
+                env=self._env(),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=90,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            if cas:
+                raise CasConflict("Git transport failed during compare-and-swap") from None
+            raise ResolutionError("Git transport failed") from None
+        if result.returncode:
+            if cas:
+                raise CasConflict("Git rejected compare-and-swap update") from None
+            raise ResolutionError("Git transport or ref resolution failed")
+        return result.stdout.strip()
+
+    def _git_bytes(
+        self,
+        *args: str,
+        cwd: Path | None = None,
+        cas: bool = False,
+    ) -> bytes:
+        try:
+            result = subprocess.run(
+                ["git", *args],
+                cwd=cwd,
+                env=self._env(),
+                capture_output=True,
+                timeout=90,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            if cas:
+                raise CasConflict("Git transport failed during compare-and-swap") from None
+            raise ResolutionError("Git transport failed") from None
+        if result.returncode:
+            if cas:
+                raise CasConflict("Git rejected compare-and-swap update") from None
+            raise ResolutionError("Git transport or ref resolution failed")
+        return result.stdout
+
+    @staticmethod
+    def _safe_path(path: str) -> PurePosixPath:
+        pure = PurePosixPath(path)
+        if (
+            not path
+            or "\\" in path
+            or pure.is_absolute()
+            or ".." in pure.parts
+            or ".git" in pure.parts
+            or pure.as_posix() != path
+        ):
+            raise ResolutionError("repository path is unsafe")
+        return pure
+
+    @classmethod
+    def _decode_tree_record(cls, record: bytes) -> tuple[str, str]:
+        try:
+            header, raw_path = record.split(b"	", 1)
+            mode_raw, type_raw, sha_raw = header.split(b" ", 2)
+            mode = mode_raw.decode("ascii")
+            object_type = type_raw.decode("ascii")
+            sha = sha_raw.decode("ascii")
+            path = raw_path.decode("utf-8")
+        except (ValueError, UnicodeDecodeError):
+            raise ResolutionError("Git tree contains an undecodable entry") from None
+        if mode not in {"100644", "100755"} or object_type != "blob":
+            raise ResolutionError("Git tree contains an unsupported non-regular entry")
+        if not EXACT_COMMIT.fullmatch(sha):
+            raise ResolutionError("Git tree returned a non-exact blob identity")
+        cls._safe_path(path)
+        return path, sha
+
+    def _verify_regular_tree(self, repo: Path, commit: str) -> None:
+        raw = self._git_bytes("ls-tree", "-r", "-z", commit, cwd=repo)
+        for record in raw.split(b"\x00"):
+            if record:
+                self._decode_tree_record(record)
+
+    def _regular_blob(
+        self,
+        repo: Path,
+        commit: str,
+        path: PurePosixPath,
+        *,
+        cas: bool = False,
+    ) -> str | None:
+        raw = self._git_bytes(
+            "ls-tree", "-z", commit, "--", path.as_posix(),
+            cwd=repo, cas=cas,
+        )
+        records = [record for record in raw.split(b"\x00") if record]
+        if not records:
+            return None
+        if len(records) != 1:
+            if cas:
+                raise CasConflict("target path resolved ambiguously")
+            raise ResolutionError("Git path resolved ambiguously")
+        try:
+            resolved_path, sha = self._decode_tree_record(records[0])
+        except ResolutionError as exc:
+            if cas:
+                raise CasConflict(str(exc)) from None
+            raise
+        if resolved_path != path.as_posix():
+            if cas:
+                raise CasConflict("target path did not resolve exactly")
+            raise ResolutionError("Git path did not resolve exactly")
+        return sha
+
+    def _remote_commit(self, binding: GitRepositoryBinding, ref: str) -> str:
+        ref = _nonempty(ref, "ref")
+        if EXACT_COMMIT.fullmatch(ref):
+            # Exact commits are still fetched from the bound remote below; the
+            # caller may not substitute a local object with the same SHA text.
+            return ref
+        self._git("check-ref-format", "--branch", ref)
+        output = self._git("ls-remote", "--heads", binding.remote, f"refs/heads/{ref}")
+        rows = [row for row in output.splitlines() if row.strip()]
+        if len(rows) != 1:
+            raise ResolutionError("Git remote did not resolve one exact branch head")
+        sha = rows[0].split()[0]
+        if not EXACT_COMMIT.fullmatch(sha):
+            raise ResolutionError("Git remote returned a non-exact commit")
+        return sha
+
+    def _checkout(self, binding: GitRepositoryBinding, ref: str) -> tuple[Path, str]:
+        commit = self._remote_commit(binding, ref)
+        td = tempfile.TemporaryDirectory(prefix="learning-os-git-")
+        self._tempdirs.append(td)
+        repo = Path(td.name) / "repo"
+        repo.mkdir()
+        self._git("init", "-q", cwd=repo)
+        self._git("remote", "add", "origin", binding.remote, cwd=repo)
+        self._git("fetch", "-q", "--depth=1", "origin", commit, cwd=repo)
+        fetched = self._git("rev-parse", "--verify", "FETCH_HEAD^{commit}", cwd=repo)
+        if fetched != commit:
+            raise ResolutionError("fetched Git commit does not match requested provenance")
+        self._verify_regular_tree(repo, commit)
+        self._git("checkout", "-q", "--detach", commit, cwd=repo)
+        return repo, commit
+
+    def materialize(self, repository_id: int, ref: str) -> MaterializedRepository:
+        binding = self._binding(repository_id)
+        repo, commit = self._checkout(binding, ref)
+        snapshot = repo.parent / "snapshot"
+        snapshot.mkdir()
+        archive = repo.parent / "snapshot.zip"
+        self._git(
+            "archive", "--format=zip", "-o", str(archive), commit,
+            cwd=repo,
+        )
+        try:
+            with zipfile.ZipFile(archive) as bundle:
+                for entry in bundle.infolist():
+                    if entry.is_dir():
+                        continue
+                    pure = self._safe_path(entry.filename)
+                    output = snapshot.joinpath(*pure.parts)
+                    output.parent.mkdir(parents=True, exist_ok=True)
+                    output.write_bytes(bundle.read(entry))
+        except zipfile.BadZipFile:
+            raise ResolutionError("Git archive is not a valid ZIP") from None
+        return MaterializedRepository(
+            snapshot,
+            binding.repository_id,
+            commit,
+            binding.full_name,
+        )
+
+    def read_text(self, repository_id: int, ref: str, path: str) -> tuple[str, str, str]:
+        binding = self._binding(repository_id)
+        pure = self._safe_path(path)
+        repo, commit = self._checkout(binding, ref)
+        blob = self._regular_blob(repo, commit, pure)
+        if blob is None:
+            raise ResolutionError("Git path does not exist")
+        spec = f"{commit}:{pure.as_posix()}"
+        try:
+            raw = subprocess.run(
+                ["git", "show", spec],
+                cwd=repo,
+                env=self._env(),
+                capture_output=True,
+                timeout=30,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            raise ResolutionError("Git content read failed") from None
+        if raw.returncode:
+            raise ResolutionError("Git content read failed")
+        try:
+            text = raw.stdout.decode("utf-8")
+        except UnicodeDecodeError:
+            raise ResolutionError("Git content is not valid UTF-8") from None
+        return text, blob, commit
+
+    def update_text(
+        self,
+        repository_id: int,
+        branch: str,
+        path: str,
+        content: str,
+        expected_blob_sha: str,
+        message: str,
+    ) -> str:
+        binding = self._binding(repository_id)
+        if not binding.writable:
+            raise CasConflict("repository is read-only in this Runtime binding")
+        if not EXACT_COMMIT.fullmatch(str(expected_blob_sha)):
+            raise CasConflict("expected blob SHA must be exact")
+        branch = _nonempty(branch, "branch")
+        try:
+            self._git("check-ref-format", "--branch", branch, cas=True)
+        except CasConflict:
+            raise CasConflict("target branch is unsupported") from None
+        pure = self._safe_path(path)
+        repo, commit = self._checkout(binding, branch)
+        try:
+            current_blob = self._regular_blob(repo, commit, pure, cas=True)
+        except CasConflict:
+            raise CasConflict("target path is unsafe, missing, or stale") from None
+        if current_blob is None:
+            raise CasConflict("target path is missing or stale")
+        if current_blob != expected_blob_sha:
+            raise CasConflict("target blob compare-and-swap mismatch")
+
+        output = repo.joinpath(*pure.parts)
+        if not output.exists() or not output.is_file():
+            raise CasConflict("target path is not a regular tracked file")
+        output.write_text(content, encoding="utf-8", newline="\n")
+        self._git("add", "--", pure.as_posix(), cwd=repo, cas=True)
+        status = self._git("diff", "--cached", "--name-only", "--", pure.as_posix(), cwd=repo, cas=True)
+        if status != pure.as_posix():
+            raise CasConflict("target update produced no single-file change")
+        self._git(
+            "-c", "user.name=Learning OS Runtime",
+            "-c", "user.email=runtime@learning-os.invalid",
+            "commit", "-q", "-m", message, "--", pure.as_posix(),
+            cwd=repo,
+            cas=True,
+        )
+        new_commit = self._git("rev-parse", "--verify", "HEAD^{commit}", cwd=repo, cas=True)
+        if not EXACT_COMMIT.fullmatch(new_commit):
+            raise CasConflict("Git update returned no exact commit")
+
+        # A normal non-force push is intentionally stricter than target-file
+        # CAS: any concurrent branch advance rejects this attempt instead of
+        # overwriting unrelated work.
+        self._git(
+            "push", "-q", "origin", f"HEAD:refs/heads/{branch}",
+            cwd=repo,
+            cas=True,
+        )
+        return new_commit
 
 
 class GitHubApiProvider:
