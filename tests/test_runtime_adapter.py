@@ -301,6 +301,25 @@ class GitCliProviderTests(unittest.TestCase):
         self.assertEqual("one\n", (snapshot.root / "state.txt").read_text(encoding="utf-8"))
         self.assertFalse((snapshot.root / ".git").exists())
 
+    def test_fetch_retries_without_depth_after_shallow_failure(self):
+        provider = self.provider()
+        original_git = provider._git
+        attempts = []
+
+        def flaky_git(*args, cwd=None, cas=False, binding=None):
+            if args and args[0] == "fetch":
+                attempts.append(args)
+                if "--depth=1" in args:
+                    raise ResolutionError("synthetic shallow transport failure")
+            return original_git(*args, cwd=cwd, cas=cas, binding=binding)
+
+        provider._git = flaky_git  # type: ignore[method-assign]
+        snapshot = provider.materialize(self.REPO_ID, "main")
+        self.assertEqual(self.initial_commit, snapshot.commit_sha)
+        self.assertEqual(2, len(attempts))
+        self.assertIn("--depth=1", attempts[0])
+        self.assertNotIn("--depth=1", attempts[1])
+
     def test_exact_commit_materialization_is_fetched_from_bound_remote(self):
         snapshot = self.provider().materialize(self.REPO_ID, self.initial_commit)
         self.assertEqual(self.initial_commit, snapshot.commit_sha)
@@ -373,6 +392,16 @@ class GitCliProviderTests(unittest.TestCase):
                     self.REPO_ID,
                     str(self.remote),
                     ssh_auth_sock="agent.sock",
+                )
+            ])
+
+    def test_known_hosts_path_with_whitespace_fails_closed(self):
+        with self.assertRaisesRegex(ResolutionError, "whitespace"):
+            GitCliProvider([
+                GitRepositoryBinding(
+                    self.REPO_ID,
+                    str(self.remote),
+                    ssh_known_hosts_file="known hosts",
                 )
             ])
 
@@ -787,6 +816,16 @@ class GitCliProviderTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ResolutionError, "unsafe"):
             self.provider().materialize(self.REPO_ID, "main")
+
+    def test_empty_tree_check_does_not_scan_all_blobs_per_tree(self):
+        provider = self.provider()
+        objects = []
+        for index in range(250):
+            directory = f"d{index}"
+            objects.append((directory, "1" * 40, "040000", "tree"))
+            objects.append((f"{directory}/file.txt", "2" * 40, "100644", "blob"))
+        with mock.patch.object(provider, "_tree_objects", return_value=objects):
+            provider._verify_regular_tree(self.seed, self.initial_commit)
 
     def test_materialize_rejects_empty_tree_entries(self):
         empty_tree = self._git("mktree", cwd=self.seed, input_text="")

@@ -359,15 +359,17 @@ class GitCliProvider:
                     raise ResolutionError(
                         "binding.ssh_auth_sock must be an absolute host path"
                     )
-            ssh_known_hosts_file = (
-                None if binding.ssh_known_hosts_file is None
-                else os.path.abspath(
-                    _nonempty(
-                        binding.ssh_known_hosts_file,
-                        "binding.ssh_known_hosts_file",
-                    )
+            ssh_known_hosts_file = None
+            if binding.ssh_known_hosts_file is not None:
+                known_hosts_input = _nonempty(
+                    binding.ssh_known_hosts_file,
+                    "binding.ssh_known_hosts_file",
                 )
-            )
+                if any(char.isspace() for char in known_hosts_input):
+                    raise ResolutionError(
+                        "binding.ssh_known_hosts_file must not contain whitespace"
+                    )
+                ssh_known_hosts_file = os.path.abspath(known_hosts_input)
             self.bindings[repository_id] = GitRepositoryBinding(
                 repository_id=repository_id,
                 remote=remote,
@@ -618,7 +620,13 @@ class GitCliProvider:
     def _verify_regular_tree(self, repo: Path, commit: str) -> None:
         objects = self._tree_objects(repo, commit)
         seen: dict[str, str] = {}
-        blob_paths = [path for path, _, _, kind in objects if kind == "blob"]
+        nonempty_directories: set[str] = set()
+        for path, _, _, kind in objects:
+            if kind != "blob":
+                continue
+            parts = PurePosixPath(path).parts
+            for index in range(1, len(parts)):
+                nonempty_directories.add("/".join(parts[:index]))
         for path, _, _, kind in objects:
             key = self._portable_snapshot_key(path)
             previous = seen.get(key)
@@ -627,9 +635,7 @@ class GitCliProvider:
                     "Git tree contains duplicate or filesystem-equivalent path aliases"
                 )
             seen[key] = path
-            if kind == "tree" and not any(
-                blob.startswith(path + "/") for blob in blob_paths
-            ):
+            if kind == "tree" and path not in nonempty_directories:
                 raise ResolutionError("Git tree contains an empty directory")
 
     def _regular_blob(
@@ -727,6 +733,23 @@ class GitCliProvider:
             raise CasConflict("target branch is unsupported") from None
         return f"refs/heads/{branch}"
 
+    def _fetch_ref(
+        self,
+        repo: Path,
+        binding: GitRepositoryBinding,
+        fetch_ref: str,
+    ) -> None:
+        try:
+            self._git(
+                "fetch", "-q", "--depth=1", "origin", fetch_ref,
+                cwd=repo, binding=binding,
+            )
+        except ResolutionError:
+            self._git(
+                "fetch", "-q", "origin", fetch_ref,
+                cwd=repo, binding=binding,
+            )
+
     def _checkout(
         self,
         binding: GitRepositoryBinding,
@@ -739,10 +762,7 @@ class GitCliProvider:
         try:
             self._git("init", "-q", cwd=repo)
             self._git("remote", "add", "origin", binding.remote, cwd=repo)
-            self._git(
-                "fetch", "-q", "--depth=1", "origin", fetch_ref,
-                cwd=repo, binding=binding,
-            )
+            self._fetch_ref(repo, binding, fetch_ref)
             fetched = self._git(
                 "rev-parse", "--verify", "FETCH_HEAD^{commit}", cwd=repo
             )
@@ -770,10 +790,7 @@ class GitCliProvider:
         try:
             self._git("init", "-q", cwd=repo)
             self._git("remote", "add", "origin", binding.remote, cwd=repo)
-            self._git(
-                "fetch", "-q", "--depth=1", "origin", branch_ref,
-                cwd=repo, binding=binding,
-            )
+            self._fetch_ref(repo, binding, branch_ref)
             fetched = self._git(
                 "rev-parse", "--verify", "FETCH_HEAD^{commit}", cwd=repo
             )
