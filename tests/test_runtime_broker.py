@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import subprocess
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -18,6 +19,7 @@ from scripts.runtime_broker import (
     CANDIDATE_YAML_MAX_BYTES,
     CANDIDATE_YAML_MAX_DEPTH,
     CANDIDATE_YAML_MAX_NODES,
+    DeploymentWriteGate,
     RuntimeCapabilityPolicy,
     RuntimeSessionBroker,
     _preflight_candidate_yaml,
@@ -216,7 +218,12 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         self.addCleanup(rc.cleanup)
         self.addCleanup(inst.cleanup)
         self.provider = BrokerProvider(Path(rc.name), Path(inst.name))
-        self.broker = RuntimeSessionBroker(self.provider, locator())
+        self.write_gate = DeploymentWriteGate()
+        self.broker = RuntimeSessionBroker(
+            self.provider,
+            locator(),
+            write_admission=self.write_gate,
+        )
         self.policy = RuntimeCapabilityPolicy(
             readable_roots=("learner",),
             writable_roots=("learner/model.yaml",),
@@ -257,6 +264,58 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             expected_generation=3,
         )
         self.assertEqual(INSTANCE_ID, session.deployment.instance_repository_id)
+
+    def test_writable_session_requires_shared_admission_gate(self):
+        broker = RuntimeSessionBroker(self.provider, locator())
+        with self.assertRaisesRegex(GuardRejected, "write admission"):
+            broker.open_session(
+                branch_runtime_path=RUNTIME_PATH,
+                policy=self.policy,
+                expected_generation=3,
+            )
+
+    def test_read_only_session_does_not_require_admission_gate(self):
+        broker = RuntimeSessionBroker(self.provider, locator())
+        session = broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=RuntimeCapabilityPolicy(readable_roots=("learner",)),
+        )
+        self.assertEqual(3, session.binding.generation)
+
+    def test_promotion_barrier_closes_new_write_admissions(self):
+        gate = DeploymentWriteGate()
+        with gate.promotion_barrier():
+            with self.assertRaisesRegex(GuardRejected, "admissions are closed"):
+                with gate.write_lease():
+                    pass
+
+    def test_promotion_barrier_drains_inflight_write(self):
+        gate = DeploymentWriteGate()
+        holder_ready = threading.Event()
+        release_holder = threading.Event()
+        promotion_entered = threading.Event()
+
+        def hold_write():
+            with gate.write_lease():
+                holder_ready.set()
+                release_holder.wait(2)
+
+        def promote():
+            with gate.promotion_barrier():
+                promotion_entered.set()
+
+        writer = threading.Thread(target=hold_write)
+        promoter = threading.Thread(target=promote)
+        writer.start()
+        self.assertTrue(holder_ready.wait(1))
+        promoter.start()
+        self.assertFalse(promotion_entered.wait(0.05))
+        release_holder.set()
+        self.assertTrue(promotion_entered.wait(1))
+        writer.join(1)
+        promoter.join(1)
+        self.assertFalse(writer.is_alive())
+        self.assertFalse(promoter.is_alive())
 
     def test_open_session_rejects_wrong_expected_generation(self):
         with self.assertRaisesRegex(GuardRejected, "not active"):
@@ -446,6 +505,53 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                         expected_blob_sha="d" * 40,
                         message="must fail",
                     )
+
+    def test_write_lease_covers_validation_and_provider_update(self):
+        session = self.open()
+        observed = []
+        original_validate = self.broker._validate_candidate
+        original_update = self.provider.update_text
+
+        def validating(*args, **kwargs):
+            observed.append(("validate", self.write_gate._holders))
+            return original_validate(*args, **kwargs)
+
+        def updating(*args, **kwargs):
+            observed.append(("update", self.write_gate._holders))
+            return original_update(*args, **kwargs)
+
+        self.broker._validate_candidate = validating
+        self.provider.update_text = updating
+        self.broker.guarded_update(
+            session,
+            path=WRITE_PATH,
+            content=WRITE_V2,
+            expected_blob_sha="f" * 40,
+            message="test shared write lease",
+        )
+        self.assertIn(("validate", 1), observed)
+        self.assertIn(("update", 1), observed)
+
+    def test_deployment_change_during_validation_blocks_final_write(self):
+        session = self.open()
+        original_validate = self.broker._validate_candidate
+
+        def validating(*args, **kwargs):
+            original_validate(*args, **kwargs)
+            self.provider.contract = contract(epoch=2)
+
+        self.broker._validate_candidate = validating
+        with self.assertRaisesRegex(GuardRejected, "epoch"):
+            self.broker.guarded_update(
+                session,
+                path=WRITE_PATH,
+                content=WRITE_V2,
+                expected_blob_sha="f" * 40,
+                message="must fail after deployment drift",
+            )
+        self.assertFalse(
+            any(call[0] == "update" for call in self.provider.calls)
+        )
 
     def test_generation_change_blocks_write_before_target_cas(self):
         session = self.open()

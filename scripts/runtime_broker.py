@@ -7,12 +7,15 @@ writes always re-check deployment, generation, and target CAS.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
 import sys
 import tempfile
+import threading
+from typing import ContextManager, Iterator, Protocol
 
 import yaml
 from yaml.tokens import (
@@ -149,6 +152,57 @@ def _preflight_candidate_yaml(content: str) -> None:
         ) from None
 
 
+class DeploymentWriteAdmission(Protocol):
+    """Host admission authority shared by broker writes and promotion."""
+
+    def write_lease(self) -> ContextManager[None]: ...
+
+    def promotion_barrier(self) -> ContextManager[None]: ...
+
+
+class DeploymentWriteGate:
+    """Reference same-process admission/drain gate for Runtime writes.
+
+    Multi-process hosts must provide an equivalent cross-process implementation.
+    The promotion path must hold promotion_barrier() across the entire
+    freeze/promotion/activation transaction.
+    """
+
+    def __init__(self) -> None:
+        self._condition = threading.Condition()
+        self._promotion_lock = threading.Lock()
+        self._accepting = True
+        self._holders = 0
+
+    @contextmanager
+    def write_lease(self) -> Iterator[None]:
+        with self._condition:
+            if not self._accepting:
+                raise GuardRejected("deployment write admissions are closed")
+            self._holders += 1
+        try:
+            yield
+        finally:
+            with self._condition:
+                self._holders -= 1
+                self._condition.notify_all()
+
+    @contextmanager
+    def promotion_barrier(self) -> Iterator[None]:
+        self._promotion_lock.acquire()
+        try:
+            with self._condition:
+                self._accepting = False
+                while self._holders:
+                    self._condition.wait()
+            yield
+        finally:
+            with self._condition:
+                self._accepting = True
+                self._condition.notify_all()
+            self._promotion_lock.release()
+
+
 @dataclass(frozen=True)
 class RuntimeCapabilityPolicy:
     """Host-owned Instance path capabilities exposed to a conversation surface."""
@@ -209,10 +263,13 @@ class RuntimeSessionBroker:
         self,
         provider: RepositoryProvider,
         locator_source: str | dict,
+        *,
+        write_admission: DeploymentWriteAdmission | None = None,
     ):
         self.provider = provider
         self.locator = load_locator(locator_source)
         self.guard = DeploymentGuard(provider)
+        self.write_admission = write_admission
 
     @staticmethod
     def _parse_branch_runtime(text: str) -> dict:
@@ -326,6 +383,10 @@ class RuntimeSessionBroker:
                 self.provider.release_materialization(snapshot)
         instance_ref = self.locator["instance"]["canonical_ref"]
         runtime_path = _relative_path(branch_runtime_path, "branch_runtime_path")
+        if policy.writable_roots and self.write_admission is None:
+            raise GuardRejected(
+                "writable learning session requires shared deployment write admission"
+            )
         if policy.writable_roots and expected_generation is None:
             raise GuardRejected(
                 "writable learning session requires an established generation"
@@ -516,29 +577,50 @@ class RuntimeSessionBroker:
             )
         if not session.policy.may_write(path):
             raise GuardRejected("Instance write is outside the session capability policy")
-        contract = self.guard.check(session.deployment)
-        generation, authority_head = self._fresh_generation(session)
-        if generation != session.binding.generation:
-            raise GuardRejected("semantic generation changed")
-        self._validate_candidate(
-            session,
-            authority_head=authority_head,
-            path=path,
-            content=content,
-            contract=contract,
-        )
-        try:
-            self.provider.update_text(
-                session.deployment.instance_repository_id,
-                session.binding.instance_ref,
-                path,
-                content,
-                expected_blob_sha,
-                message,
-                expected_ref_sha=authority_head,
+        if self.write_admission is None:
+            raise GuardRejected(
+                "writable learning session requires shared deployment write admission"
             )
-        except CasConflict:
-            raise
-        except Exception as exc:
-            raise CasConflict(f"Instance compare-and-swap failed: {exc}") from None
+        with self.write_admission.write_lease():
+            contract = self.guard.check(session.deployment)
+            generation, authority_head = self._fresh_generation(session)
+            if generation != session.binding.generation:
+                raise GuardRejected("semantic generation changed")
+            self._validate_candidate(
+                session,
+                authority_head=authority_head,
+                path=path,
+                content=content,
+                contract=contract,
+            )
+
+            # The shared lease prevents a conforming promotion path from
+            # closing/finalizing Runtime-Control while validation is in flight.
+            # Re-read both authorities after validation as an additional
+            # fail-closed check against an external actor that ignored the gate.
+            self.guard.check(session.deployment)
+            final_generation, final_authority_head = self._fresh_generation(
+                session
+            )
+            if final_generation != session.binding.generation:
+                raise GuardRejected("semantic generation changed")
+            if final_authority_head != authority_head:
+                raise GuardRejected("Instance authority head changed")
+
+            try:
+                self.provider.update_text(
+                    session.deployment.instance_repository_id,
+                    session.binding.instance_ref,
+                    path,
+                    content,
+                    expected_blob_sha,
+                    message,
+                    expected_ref_sha=authority_head,
+                )
+            except CasConflict:
+                raise
+            except Exception as exc:
+                raise CasConflict(
+                    f"Instance compare-and-swap failed: {exc}"
+                ) from None
         return InstanceWriteAck()
