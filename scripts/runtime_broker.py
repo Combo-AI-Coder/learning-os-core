@@ -189,6 +189,14 @@ def _preflight_candidate_yaml(content: str) -> None:
         ) from None
 
 
+def _preflight_authority_yaml(content: str, where: str) -> None:
+    try:
+        _preflight_candidate_yaml(content)
+    except GuardRejected as exc:
+        message = str(exc).replace("candidate YAML", where)
+        raise ResolutionError(message) from None
+
+
 class DeploymentWriteAdmission(Protocol):
     """Host admission authority shared by broker reads/writes and promotion."""
 
@@ -320,6 +328,13 @@ class _LearningRuntimeSessionState:
     policy: RuntimeCapabilityPolicy
 
 
+@dataclass
+class _IssuedSessionRecord:
+    state: _LearningRuntimeSessionState
+    holders: int = 0
+    revoked: bool = False
+
+
 class RuntimeSessionBroker:
     """Bind a replaceable conversation surface to narrow Learning OS authority."""
 
@@ -334,35 +349,55 @@ class RuntimeSessionBroker:
         self.locator = load_locator(locator_source)
         self.guard = DeploymentGuard(provider)
         self.write_admission = write_admission
-        self._session_lock = threading.Lock()
-        self._issued_sessions: dict[str, _LearningRuntimeSessionState] = {}
+        self._session_condition = threading.Condition()
+        self._issued_sessions: dict[str, _IssuedSessionRecord] = {}
 
     def close_session(self, session: LearningRuntimeSession) -> None:
-        """Explicitly revoke one broker-issued session capability.
-
-        All copies/serialized representations of the same opaque handle share
-        this broker-side lifetime and become invalid together after close.
-        """
+        """Revoke one capability and drain operations already using it."""
         if not isinstance(session, LearningRuntimeSession):
             raise GuardRejected("session capability is not broker-issued")
-        with self._session_lock:
-            removed = self._issued_sessions.pop(session.session_id, None)
-        if removed is None:
-            raise GuardRejected("session capability is not broker-issued")
+        with self._session_condition:
+            record = self._issued_sessions.get(session.session_id)
+            if record is None or record.revoked:
+                raise GuardRejected("session capability is not broker-issued")
+            record.revoked = True
+            while record.holders:
+                self._session_condition.wait()
+            self._issued_sessions.pop(session.session_id, None)
+            self._session_condition.notify_all()
 
     def _session_state(
         self, session: LearningRuntimeSession
     ) -> _LearningRuntimeSessionState:
         if not isinstance(session, LearningRuntimeSession):
             raise GuardRejected("session capability is not broker-issued")
-        with self._session_lock:
-            state = self._issued_sessions.get(session.session_id)
-        if state is None:
+        with self._session_condition:
+            record = self._issued_sessions.get(session.session_id)
+            if record is None or record.revoked:
+                raise GuardRejected("session capability is not broker-issued")
+            return record.state
+
+    @contextmanager
+    def _session_operation(
+        self, session: LearningRuntimeSession
+    ) -> Iterator[_LearningRuntimeSessionState]:
+        if not isinstance(session, LearningRuntimeSession):
             raise GuardRejected("session capability is not broker-issued")
-        return state
+        with self._session_condition:
+            record = self._issued_sessions.get(session.session_id)
+            if record is None or record.revoked:
+                raise GuardRejected("session capability is not broker-issued")
+            record.holders += 1
+        try:
+            yield record.state
+        finally:
+            with self._session_condition:
+                record.holders -= 1
+                self._session_condition.notify_all()
 
     @staticmethod
     def _parse_branch_runtime(text: str) -> dict:
+        _preflight_authority_yaml(text, "Branch runtime YAML")
         try:
             data = yaml.safe_load(text)
         except yaml.YAMLError as exc:
@@ -454,6 +489,7 @@ class RuntimeSessionBroker:
 
     @staticmethod
     def _parse_branch_registry(text: str) -> dict:
+        _preflight_authority_yaml(text, "Branch registry YAML")
         try:
             data = yaml.safe_load(text)
         except yaml.YAMLError as exc:
@@ -583,6 +619,7 @@ class RuntimeSessionBroker:
                 raise ResolutionError(
                     "Branch runtime handoff_ref provenance changed during validation"
                 )
+            _preflight_authority_yaml(text, "Learning handoff YAML")
             try:
                 handoff = yaml.safe_load(text)
             except yaml.YAMLError as exc:
@@ -708,11 +745,11 @@ class RuntimeSessionBroker:
             binding=binding,
             policy=policy,
         )
-        with self._session_lock:
+        with self._session_condition:
             session_id = secrets.token_urlsafe(32)
             while session_id in self._issued_sessions:
                 session_id = secrets.token_urlsafe(32)
-            self._issued_sessions[session_id] = state
+            self._issued_sessions[session_id] = _IssuedSessionRecord(state=state)
         return LearningRuntimeSession(session_id=session_id)
 
     def _fresh_generation(
@@ -763,7 +800,8 @@ class RuntimeSessionBroker:
 
     def assert_current(self, session: LearningRuntimeSession) -> None:
         """Verify session freshness without exposing private Instance commit identity."""
-        self._assert_state_current(self._session_state(session))
+        with self._session_operation(session) as state:
+            self._assert_state_current(state)
 
     def _assert_instance_authority_head_current(
         self,
@@ -1014,40 +1052,42 @@ class RuntimeSessionBroker:
     def read_instance_text(
         self, session: LearningRuntimeSession, path: str
     ) -> InstanceText:
-        state = self._session_state(session)
-        path = _relative_path(path, "path")
-        if not state.policy.may_read(path):
-            raise GuardRejected("Instance read is outside the session capability policy")
-        if self.write_admission is None:
-            raise GuardRejected(
-                "learning session requires shared deployment operation admission"
-            )
-        with self.write_admission.read_lease():
-            authority_head = self._assert_state_current(state)
-            content, blob_sha, read_head = self.provider.read_text(
-                state.deployment.instance_repository_id,
-                authority_head,
-                path,
-            )
-            if read_head != authority_head:
+        with self._session_operation(session) as state:
+            path = _relative_path(path, "path")
+            if not state.policy.may_read(path):
                 raise GuardRejected(
-                    "Instance read provenance changed during the operation"
+                    "Instance read is outside the session capability policy"
                 )
-            self.guard.check(state.deployment, require_active=False)
-            final_generation, final_authority_head = self._fresh_generation(state)
-            if final_generation != state.binding.generation:
-                raise GuardRejected("semantic generation changed during Instance read")
-            if final_authority_head != authority_head:
-                raise GuardRejected("Instance authority head changed during read")
-            # Branch handoff can advance Instance independently of deployment
-            # promotion, so keep an exact-head recheck even while the read lease
-            # fences the entire operation against Runtime-Control promotion.
-            self._assert_instance_authority_head_current(state, authority_head)
-            # The shared read lease is the primary promotion fence. Recheck
-            # Runtime-Control last as defense in depth against a nonconforming
-            # external actor that mutates deployment authority without the gate.
-            self.guard.check(state.deployment, require_active=False)
-            return InstanceText(content=content, version_token=blob_sha)
+            if self.write_admission is None:
+                raise GuardRejected(
+                    "learning session requires shared deployment operation admission"
+                )
+            with self.write_admission.read_lease():
+                authority_head = self._assert_state_current(state)
+                content, blob_sha, read_head = self.provider.read_text(
+                    state.deployment.instance_repository_id,
+                    authority_head,
+                    path,
+                )
+                if read_head != authority_head:
+                    raise GuardRejected(
+                        "Instance read provenance changed during the operation"
+                    )
+                self.guard.check(state.deployment, require_active=False)
+                final_generation, final_authority_head = self._fresh_generation(state)
+                if final_generation != state.binding.generation:
+                    raise GuardRejected(
+                        "semantic generation changed during Instance read"
+                    )
+                if final_authority_head != authority_head:
+                    raise GuardRejected(
+                        "Instance authority head changed during read"
+                    )
+                self._assert_instance_authority_head_current(
+                    state, authority_head
+                )
+                self.guard.check(state.deployment, require_active=False)
+                return InstanceText(content=content, version_token=blob_sha)
 
     def guarded_update(
         self,
@@ -1058,91 +1098,93 @@ class RuntimeSessionBroker:
         expected_blob_sha: str,
         message: str,
     ) -> InstanceWriteAck:
-        state = self._session_state(session)
-        path = _relative_path(path, "path")
-        if not state.policy.may_write(path):
-            raise GuardRejected("Instance write is outside the session capability policy")
-        if self.write_admission is None:
-            raise GuardRejected(
-                "writable learning session requires shared deployment write admission"
-            )
-        with self.write_admission.write_lease():
-            contract = self.guard.check(state.deployment)
-            self._assert_deployed_write_policy_compatible(state)
+        with self._session_operation(session) as state:
+            path = _relative_path(path, "path")
+            if not state.policy.may_write(path):
+                raise GuardRejected(
+                    "Instance write is outside the session capability policy"
+                )
+            if self.write_admission is None:
+                raise GuardRejected(
+                    "writable learning session requires shared deployment write admission"
+                )
+            with self.write_admission.write_lease():
+                contract = self.guard.check(state.deployment)
+                self._assert_deployed_write_policy_compatible(state)
 
-            types = instance_expected_types(path)
-            if len(types) != 1:
-                raise GuardRejected(
-                    "Instance update path is unclassified or ambiguous"
+                types = instance_expected_types(path)
+                if len(types) != 1:
+                    raise GuardRejected(
+                        "Instance update path is unclassified or ambiguous"
+                    )
+                document_type = types[0]
+                write_mode = instance_generic_write_mode(document_type)
+                if write_mode == "branch_authority":
+                    raise GuardRejected(
+                        "ordinary learning session cannot mutate Branch runtime authority"
+                    )
+                if write_mode == "hub_authority":
+                    raise GuardRejected(
+                        "ordinary learning session cannot mutate Global Hub runtime state"
+                    )
+                if write_mode == "immutable_create_only":
+                    raise GuardRejected(
+                        "ordinary learning session cannot overwrite immutable/create-only "
+                        f"{document_type} records"
+                    )
+                if write_mode == "protocol_transition":
+                    raise GuardRejected(
+                        "ordinary learning session must use the dedicated transition "
+                        f"operation for {document_type}"
+                    )
+                if write_mode == "hub_transition":
+                    raise GuardRejected(
+                        "ordinary learning session must use a dedicated Hub-class "
+                        f"transition for {document_type}"
+                    )
+                if write_mode != "replace":
+                    raise GuardRejected(
+                        "deployed Core generic write mode is unsupported"
+                    )
+                self._assert_replace_role_compatible(
+                    state,
+                    document_type=document_type,
+                    path=path,
                 )
-            document_type = types[0]
-            write_mode = instance_generic_write_mode(document_type)
-            if write_mode == "branch_authority":
-                raise GuardRejected(
-                    "ordinary learning session cannot mutate Branch runtime authority"
-                )
-            if write_mode == "hub_authority":
-                raise GuardRejected(
-                    "ordinary learning session cannot mutate Global Hub runtime state"
-                )
-            if write_mode == "immutable_create_only":
-                raise GuardRejected(
-                    "ordinary learning session cannot overwrite immutable/create-only "
-                    f"{document_type} records"
-                )
-            if write_mode == "protocol_transition":
-                raise GuardRejected(
-                    "ordinary learning session must use the dedicated transition "
-                    f"operation for {document_type}"
-                )
-            if write_mode != "replace":
-                raise GuardRejected(
-                    "deployed Core generic write mode is unsupported"
-                )
-            self._assert_replace_role_compatible(
-                state,
-                document_type=document_type,
-                path=path,
-            )
 
-            generation, authority_head = self._fresh_generation(state)
-            if generation != state.binding.generation:
-                raise GuardRejected("semantic generation changed")
-            self._validate_candidate(
-                state,
-                authority_head=authority_head,
-                path=path,
-                content=content,
-                contract=contract,
-            )
-
-            # The shared lease prevents a conforming promotion path from
-            # closing/finalizing Runtime-Control while validation is in flight.
-            # Re-read both authorities after validation as an additional
-            # fail-closed check against an external actor that ignored the gate.
-            self.guard.check(state.deployment)
-            final_generation, final_authority_head = self._fresh_generation(
-                state
-            )
-            if final_generation != state.binding.generation:
-                raise GuardRejected("semantic generation changed")
-            if final_authority_head != authority_head:
-                raise GuardRejected("Instance authority head changed")
-
-            try:
-                self.provider.update_text(
-                    state.deployment.instance_repository_id,
-                    state.binding.instance_ref,
-                    path,
-                    content,
-                    expected_blob_sha,
-                    message,
-                    expected_ref_sha=authority_head,
+                generation, authority_head = self._fresh_generation(state)
+                if generation != state.binding.generation:
+                    raise GuardRejected("semantic generation changed")
+                self._validate_candidate(
+                    state,
+                    authority_head=authority_head,
+                    path=path,
+                    content=content,
+                    contract=contract,
                 )
-            except CasConflict:
-                raise
-            except Exception as exc:
-                raise CasConflict(
-                    f"Instance compare-and-swap failed: {exc}"
-                ) from None
-        return InstanceWriteAck()
+                self.guard.check(state.deployment)
+                final_generation, final_authority_head = self._fresh_generation(
+                    state
+                )
+                if final_generation != state.binding.generation:
+                    raise GuardRejected("semantic generation changed")
+                if final_authority_head != authority_head:
+                    raise GuardRejected("Instance authority head changed")
+
+                try:
+                    self.provider.update_text(
+                        state.deployment.instance_repository_id,
+                        state.binding.instance_ref,
+                        path,
+                        content,
+                        expected_blob_sha,
+                        message,
+                        expected_ref_sha=authority_head,
+                    )
+                except CasConflict:
+                    raise
+                except Exception as exc:
+                    raise CasConflict(
+                        f"Instance compare-and-swap failed: {exc}"
+                    ) from None
+            return InstanceWriteAck()

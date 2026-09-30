@@ -418,6 +418,58 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         with self.assertRaisesRegex(GuardRejected, "not broker-issued"):
             self.broker.close_session(copied)
 
+    def test_close_session_drains_inflight_write_before_return(self):
+        session = self.open()
+        validation_entered = threading.Event()
+        release_validation = threading.Event()
+        close_done = threading.Event()
+        failures = []
+
+        def blocking_validation(*args, **kwargs):
+            validation_entered.set()
+            if not release_validation.wait(2):
+                raise AssertionError("validation release timed out")
+
+        def writer():
+            try:
+                self.broker.guarded_update(
+                    session,
+                    path=WRITE_PATH,
+                    content=WRITE_V2,
+                    expected_blob_sha="f" * 40,
+                    message="close must drain this write",
+                )
+            except Exception as exc:
+                failures.append(exc)
+
+        def closer():
+            try:
+                self.broker.close_session(session)
+                close_done.set()
+            except Exception as exc:
+                failures.append(exc)
+
+        with mock.patch.object(
+            self.broker, "_validate_candidate", side_effect=blocking_validation
+        ):
+            writer_thread = threading.Thread(target=writer)
+            close_thread = threading.Thread(target=closer)
+            writer_thread.start()
+            self.assertTrue(validation_entered.wait(1))
+            close_thread.start()
+            self.assertFalse(close_done.wait(0.05))
+            release_validation.set()
+            writer_thread.join(2)
+            close_thread.join(2)
+
+        self.assertFalse(writer_thread.is_alive())
+        self.assertFalse(close_thread.is_alive())
+        self.assertTrue(close_done.is_set())
+        self.assertEqual([], failures)
+        self.assertEqual(WRITE_V2, self.provider.docs[WRITE_PATH])
+        with self.assertRaisesRegex(GuardRejected, "not broker-issued"):
+            self.broker.read_instance_text(session, READ_PATH)
+
     def test_forged_session_handle_is_rejected(self):
         session = self.open()
         forged = replace(session, session_id="forged-session-token")
@@ -677,6 +729,47 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         ):
             self.broker.read_instance_text(session, READ_PATH)
 
+    def test_fresh_branch_runtime_rejects_yaml_alias_graphs(self):
+        session = self.open()
+        self.provider.docs[RUNTIME_PATH] = (
+            yaml.safe_dump(branch_runtime(), sort_keys=False)
+            + "cycle: &cycle [*cycle]\n"
+        )
+        with self.assertRaisesRegex(GuardRejected, "aliases and anchors"):
+            self.broker.read_instance_text(session, READ_PATH)
+
+    def test_fresh_branch_registry_rejects_yaml_alias_graphs(self):
+        session = self.open()
+        self.provider.docs[REGISTRY_PATH] = (
+            yaml.safe_dump(branch_registry(), sort_keys=False)
+            + "cycle: &cycle [*cycle]\n"
+        )
+        with self.assertRaisesRegex(GuardRejected, "aliases and anchors"):
+            self.broker.read_instance_text(session, READ_PATH)
+
+    def test_fresh_handoff_rejects_yaml_alias_graphs(self):
+        session = self.open()
+        runtime = branch_runtime()
+        runtime["generations"][1]["handoff_ref"] = HANDOFF_PATH
+        self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(
+            runtime, sort_keys=False
+        )
+        self.provider.docs[HANDOFF_PATH] = (
+            yaml.safe_dump({
+                "schema_version": "0.3",
+                "document_type": "learning_handoff",
+                "topic": "synthetic",
+                "branch_id": "main",
+                "lineage_id": "synthetic-main-lineage",
+                "from_generation": 1,
+                "to_generation": 2,
+            }, sort_keys=False)
+            + "cycle: &cycle [*cycle]\n"
+        )
+        self.provider.blobs[HANDOFF_PATH] = "3" * 40
+        with self.assertRaisesRegex(GuardRejected, "aliases and anchors"):
+            self.broker.read_instance_text(session, READ_PATH)
+
     def test_fresh_branch_runtime_forbidden_keys_fail_closed(self):
         session = self.open()
         runtime = branch_runtime()
@@ -907,6 +1000,51 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 message="test stale session",
             )
         self.assertFalse(any(call[0] == "update" for call in self.provider.calls))
+
+    def test_generic_update_rejects_topic_route_progress_without_hub_transition(self):
+        path = "topics/synthetic/progress.yaml"
+        self.provider.docs[path] = "revision: 1\n"
+        self.provider.blobs[path] = "2" * 40
+        self.provider.set_branch_registry(role="practice", subtopic="unit")
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(path,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        with self.assertRaisesRegex(GuardRejected, "Hub-class transition"):
+            self.broker.guarded_update(
+                session,
+                path=path,
+                content="revision: 2\n",
+                expected_blob_sha="2" * 40,
+                message="topic route requires Hub-class transition",
+            )
+
+    def test_generic_update_rejects_weekly_execution_without_hub_transition(self):
+        path = "execution/weekly/2026-W40.yaml"
+        self.provider.docs[path] = "revision: 1\n"
+        self.provider.blobs[path] = "2" * 40
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("execution",),
+            writable_roots=(path,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        with self.assertRaisesRegex(GuardRejected, "Hub-class transition"):
+            self.broker.guarded_update(
+                session,
+                path=path,
+                content="revision: 2\n",
+                expected_blob_sha="2" * 40,
+                message="weekly planning requires Hub-class transition",
+            )
 
     def test_main_branch_may_replace_bound_subtopic_progress(self):
         path = "topics/synthetic/subtopics/unit/progress.yaml"

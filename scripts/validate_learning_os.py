@@ -577,6 +577,13 @@ INSTANCE_GENERIC_WRITE_MODE_OVERRIDES={
     "learning_handoff":"immutable_create_only",
     "branch_registry":"protocol_transition",
     "conversation_sequence_registry":"protocol_transition",
+    "topic_plan":"hub_transition",
+    "topic_progress":"hub_transition",
+    "topic_deferred":"hub_transition",
+    "subtopic_definition":"hub_transition",
+    "subtopic_plan":"hub_transition",
+    "weekly_execution":"hub_transition",
+    "topic_report":"hub_transition",
 }
 INSTANCE_GENERIC_WRITE_ROLE_RULES={
     "subtopic_progress": {
