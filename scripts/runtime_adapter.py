@@ -235,52 +235,105 @@ class DeploymentResolver:
     def resolve(self, locator_source: str | Path | dict) -> ResolvedDeployment:
         locator = load_locator(locator_source)
         rc, inst = locator["runtime_control"], locator["instance"]
-        control = self.provider.materialize(rc["repository_id"], rc["canonical_ref"])
-        if control.repository_id != rc["repository_id"]:
-            raise ResolutionError("resolved Runtime-Control repository ID mismatch")
-        contract_text, _, contract_commit = self.provider.read_text(
-            rc["repository_id"], control.commit_sha, rc["contract_path"]
-        )
-        if contract_commit != control.commit_sha:
-            raise ResolutionError(
-                "Runtime-Control contract provenance changed during bootstrap"
+        snapshots: list[MaterializedRepository] = []
+        try:
+            control = self.provider.materialize(
+                rc["repository_id"], rc["canonical_ref"]
             )
-        contract = _load_contract(contract_text)
-        core_block = contract["core"]
-        core_id = _positive_id(core_block.get("repository_id"), "core.repository_id")
-        core_commit = _nonempty(core_block.get("commit"), "core.commit")
-        if not EXACT_COMMIT.fullmatch(core_commit):
-            raise ResolutionError("core.commit must be an exact 40-lowercase-hex commit")
-        core = self.provider.materialize(core_id, core_commit)
-        if core.repository_id != core_id or core.commit_sha != core_commit:
-            raise ResolutionError("resolved Core provenance does not match the exact deployment pin")
-        instance = self.provider.materialize(inst["repository_id"], inst["canonical_ref"])
-        if instance.repository_id != inst["repository_id"]:
-            raise ResolutionError("resolved Instance repository ID mismatch")
-        findings = validate_deployment(
-            RepositorySnapshot(control.root, control.repository_id, control.commit_sha),
-            RepositorySnapshot(core.root, core.repository_id, core.commit_sha),
-            RepositorySnapshot(instance.root, instance.repository_id, instance.commit_sha),
-            locator,
-        )
-        errors = [finding.render() for finding in findings if finding.severity == "error"]
-        if errors:
-            raise ResolutionError("deployment validation failed:\n" + "\n".join(errors))
-        dep = contract["deployment"]
-        epoch = dep.get("epoch")
-        if not isinstance(epoch, int) or isinstance(epoch, bool) or epoch < 1:
-            raise ResolutionError("deployment.epoch must be a positive integer")
-        context = SessionDeploymentContext(
-            deployment_id=_nonempty(dep.get("id"), "deployment.id"),
-            epoch=epoch,
-            core_repository_id=core_id,
-            core_commit=core_commit,
-            instance_repository_id=inst["repository_id"],
-            runtime_control_repository_id=rc["repository_id"],
-            runtime_control_ref=rc["canonical_ref"],
-            contract_path=rc["contract_path"],
-        )
-        return ResolvedDeployment(context, control, core, instance)
+            snapshots.append(control)
+            if control.repository_id != rc["repository_id"]:
+                raise ResolutionError(
+                    "resolved Runtime-Control repository ID mismatch"
+                )
+            contract_text, _, contract_commit = self.provider.read_text(
+                rc["repository_id"],
+                control.commit_sha,
+                rc["contract_path"],
+            )            if contract_commit != control.commit_sha:
+                raise ResolutionError(
+                    "Runtime-Control contract provenance changed during bootstrap"
+                )
+            contract = _load_contract(contract_text)
+            core_block = contract["core"]
+            core_id = _positive_id(
+                core_block.get("repository_id"), "core.repository_id"
+            )
+            core_commit = _nonempty(
+                core_block.get("commit"), "core.commit"
+            )
+            if not EXACT_COMMIT.fullmatch(core_commit):
+                raise ResolutionError(
+                    "core.commit must be an exact 40-lowercase-hex commit"
+                )
+            core = self.provider.materialize(core_id, core_commit)
+            snapshots.append(core)
+            if (
+                core.repository_id != core_id
+                or core.commit_sha != core_commit
+            ):
+                raise ResolutionError(
+                    "resolved Core provenance does not match the exact "
+                    "deployment pin"
+                )            instance = self.provider.materialize(
+                inst["repository_id"], inst["canonical_ref"]
+            )
+            snapshots.append(instance)
+            if instance.repository_id != inst["repository_id"]:
+                raise ResolutionError(
+                    "resolved Instance repository ID mismatch"
+                )
+            findings = validate_deployment(
+                RepositorySnapshot(
+                    control.root, control.repository_id, control.commit_sha
+                ),
+                RepositorySnapshot(
+                    core.root, core.repository_id, core.commit_sha
+                ),
+                RepositorySnapshot(
+                    instance.root,
+                    instance.repository_id,
+                    instance.commit_sha,
+                ),
+                locator,
+            )
+            errors = [
+                finding.render()
+                for finding in findings
+                if finding.severity == "error"
+            ]
+            if errors:
+                raise ResolutionError(
+                    "deployment validation failed:\n" + "\n".join(errors)
+                )            dep = contract["deployment"]
+            epoch = dep.get("epoch")
+            if (
+                not isinstance(epoch, int)
+                or isinstance(epoch, bool)
+                or epoch < 1
+            ):
+                raise ResolutionError(
+                    "deployment.epoch must be a positive integer"
+                )
+            context = SessionDeploymentContext(
+                deployment_id=_nonempty(
+                    dep.get("id"), "deployment.id"
+                ),
+                epoch=epoch,
+                core_repository_id=core_id,
+                core_commit=core_commit,
+                instance_repository_id=inst["repository_id"],
+                runtime_control_repository_id=rc["repository_id"],
+                runtime_control_ref=rc["canonical_ref"],
+                contract_path=rc["contract_path"],
+            )
+            return ResolvedDeployment(context, control, core, instance)
+        except Exception:
+            for snapshot in reversed(snapshots):
+                try:
+                    self.provider.release_materialization(snapshot)
+                except Exception:
+                    pass
+            raise
 
 
 class DeploymentGuard:

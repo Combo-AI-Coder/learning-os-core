@@ -619,6 +619,45 @@ class DeploymentBinding:
         }
         return b
 
+def validate_instance_document_trust_boundary(p,d,t):
+    """Return canonical Instance authority/credential findings for one document."""
+    findings=[]
+
+    def error(code,path,message):
+        findings.append(Finding("error",code,path,message))
+
+    def walk(x,path):
+        if isinstance(x,dict):
+            for k,v in x.items():
+                kp=f"{path}.{k}" if path else str(k)
+                if k in INSTANCE_FORBIDDEN_KEYS:
+                    error(
+                        "instance.authority_key",
+                        f"{p}:{kp}",
+                        f"forbidden Control/deployment/credential key: {k}",
+                    )
+                elif k in INSTANCE_LINEAGE_KEYS and t!="branch_runtime":
+                    error(
+                        "instance.lineage_key",
+                        f"{p}:{kp}",
+                        f"lineage authority key {k} is only allowed in "
+                        "branch_runtime (learning lineage)",
+                    )
+                walk(v,kp)
+        elif isinstance(x,list):
+            for i,v in enumerate(x):
+                walk(v,f"{path}[{i}]")
+        elif isinstance(x,str) and CORE_TOKEN_RE.search(x):
+            error(
+                "instance.credential_value",
+                f"{p}:{path}",
+                "structurally detected credential/token value",
+            )
+
+    walk(d,"")
+    return findings
+
+
 class InstanceValidator:
     """Deterministic validate_instance(instance_snapshot, deployed_core,
     deployment_binding) surface for the V0.4 Instance plane."""
@@ -734,18 +773,9 @@ class InstanceValidator:
                 except Exception: continue
                 if isinstance(c,dict) and isinstance(c.get("domain"),dict) and isinstance(c["domain"].get("id"),str): self.core_bases[c["domain"]["id"]]=c
     def check_keys(self,p,d,t):
-        def walk(x,path):
-            if isinstance(x,dict):
-                for k,v in x.items():
-                    kp=f"{path}.{k}" if path else str(k)
-                    if k in INSTANCE_FORBIDDEN_KEYS: self.error("instance.authority_key",f"{p}:{kp}",f"forbidden Control/deployment/credential key: {k}")
-                    elif k in INSTANCE_LINEAGE_KEYS and t!="branch_runtime": self.error("instance.lineage_key",f"{p}:{kp}",f"lineage authority key {k} is only allowed in branch_runtime (learning lineage)")
-                    walk(v,kp)
-            elif isinstance(x,list):
-                for i,v in enumerate(x): walk(v,f"{path}[{i}]")
-            elif isinstance(x,str) and CORE_TOKEN_RE.search(x):
-                self.error("instance.credential_value",f"{p}:{path}","structurally detected credential/token value")
-        walk(d,"")
+        self.findings.extend(
+            validate_instance_document_trust_boundary(p,d,t)
+        )
     def check_documents(self):
         for p,d in self.docs.items():
             t=d.get("document_type")

@@ -11,6 +11,7 @@ import yaml
 
 from scripts.runtime_adapter import (
     CasConflict,
+    DeploymentResolver,
     GuardRejected,
     MaterializedRepository,
     ResolutionError,
@@ -244,6 +245,19 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         self.assertEqual("main", session.binding.branch_id)
         self.assertEqual("synthetic-main-lineage", session.binding.lineage_id)
 
+    def test_resolver_releases_partial_materializations_on_failure(self):
+        self.provider.calls.clear()
+        self.provider.contract = contract(core_commit="not-an-exact-commit")
+        with self.assertRaises(ResolutionError):
+            DeploymentResolver(self.provider).resolve(locator())
+        releases = [
+            call for call in self.provider.calls if call[0] == "release"
+        ]
+        self.assertEqual(
+            [("release", RC_ID, RC_COMMIT)],
+            releases,
+        )
+
     def test_open_session_releases_bootstrap_materializations(self):
         self.provider.calls.clear()
         self.open(expected_generation=3)
@@ -408,6 +422,17 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         session = self.open()
         self.provider.set_generation(4)
         with self.assertRaisesRegex(GuardRejected, "generation"):
+            self.broker.read_instance_text(session, READ_PATH)
+
+    def test_fresh_branch_runtime_forbidden_keys_fail_closed(self):
+        session = self.open()
+        runtime = branch_runtime()
+        runtime["repository_id"] = INSTANCE_ID
+        runtime["generations"][3]["token"] = "ghp_" + "a" * 36
+        self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(
+            runtime, sort_keys=False
+        )
+        with self.assertRaisesRegex(GuardRejected, "trust boundary"):
             self.broker.read_instance_text(session, READ_PATH)
 
     def test_branch_runtime_handoff_state_blocks_subsequent_read(self):
@@ -602,6 +627,28 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                         message="must not overwrite history",
                     )
 
+    def test_generic_update_rejects_protocol_governed_branch_registry(self):
+        path = "topics/synthetic/coordination/branches.yaml"
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(path,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        with self.assertRaisesRegex(
+            GuardRejected, "dedicated transition"
+        ):
+            self.broker.guarded_update(
+                session,
+                path=path,
+                content="x",
+                expected_blob_sha="4" * 40,
+                message="must use Hub-owned Branch transition",
+            )
+
     def test_generic_update_rejects_protocol_governed_sequence_registry(self):
         path = "runtime/ui/conversation-sequences.yaml"
         policy = RuntimeCapabilityPolicy(
@@ -730,6 +777,50 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(GuardRejected, "node limit"):
             _preflight_candidate_yaml(many_nodes)
+
+    def test_candidate_validation_uses_deployed_core_validator(self):
+        session = self.open()
+        core_td = tempfile.TemporaryDirectory()
+        self.addCleanup(core_td.cleanup)
+        core_root = Path(core_td.name)
+        validator_path = (
+            core_root / "scripts" / "validate_learning_os.py"
+        )
+        validator_path.parent.mkdir(parents=True)
+        validator_path.write_text(
+            "# synthetic pinned validator\n", encoding="utf-8"
+        )
+
+        original_materialize = self.provider.materialize
+        calls = []
+
+        def materialize(repository_id, ref):
+            if repository_id == CORE_ID:
+                return MaterializedRepository(
+                    core_root,
+                    CORE_ID,
+                    CORE_COMMIT,
+                    "synthetic/core",
+                )
+            return original_materialize(repository_id, ref)
+
+        def run(command, **kwargs):
+            calls.append((command, kwargs))
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        self.provider.materialize = materialize
+        with mock.patch(
+            "scripts.runtime_broker.subprocess.run", side_effect=run
+        ):
+            self.broker._validate_candidate(
+                session,
+                authority_head=self.provider.instance_head,
+                path=WRITE_PATH,
+                content=WRITE_V2,
+                contract=self.provider.contract,
+            )
+        self.assertEqual(str(validator_path), calls[0][0][1])
+        self.assertEqual(core_root, calls[0][1]["cwd"])
 
     def test_candidate_validation_timeout_fails_before_provider_update(self):
         session = self.open()

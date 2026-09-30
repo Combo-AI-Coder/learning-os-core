@@ -44,6 +44,7 @@ from scripts.runtime_adapter import (
 from scripts.validate_learning_os import (
     DeploymentBinding,
     instance_expected_types,
+    validate_instance_document_trust_boundary,
 )
 
 BRANCH_RUNTIME_SCHEMA_VERSION = "0.3"
@@ -76,6 +77,7 @@ IMMUTABLE_UPDATE_TYPES = frozenset({
     "learning_handoff",
 })
 PROTOCOL_GOVERNED_UPDATE_TYPES = frozenset({
+    "branch_registry",
     "conversation_sequence_registry",
 })
 
@@ -291,6 +293,16 @@ class RuntimeSessionBroker:
             raise ResolutionError("Branch runtime schema_version is unsupported")
         if data.get("document_type") != "branch_runtime":
             raise ResolutionError("Branch runtime has the wrong document type")
+        trust_findings = validate_instance_document_trust_boundary(
+            "<branch-runtime>", data, "branch_runtime"
+        )
+        if trust_findings:
+            raise ResolutionError(
+                "Branch runtime violates the canonical Instance trust boundary: "
+                + "; ".join(
+                    finding.render() for finding in trust_findings
+                )
+            )
         revision = data.get("revision")
         if (
             not isinstance(revision, int)
@@ -495,9 +507,16 @@ class RuntimeSessionBroker:
                     encoding="utf-8",
                     newline="\n",
                 )
+                validator_path = (
+                    core.root / "scripts" / "validate_learning_os.py"
+                )
+                if not validator_path.is_file():
+                    raise GuardRejected(
+                        "deployed Core validator is unavailable"
+                    )
                 command = [
                     sys.executable,
-                    str(Path(__file__).with_name("validate_learning_os.py")),
+                    str(validator_path),
                     str(root),
                     "--instance",
                     "--core-snapshot",
@@ -514,6 +533,7 @@ class RuntimeSessionBroker:
                         errors="replace",
                         timeout=CANDIDATE_VALIDATION_TIMEOUT_SECONDS,
                         check=False,
+                        cwd=core.root,
                     )
                 except subprocess.TimeoutExpired:
                     raise GuardRejected(
