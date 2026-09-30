@@ -16,6 +16,7 @@ from pathlib import Path
 import yaml
 
 from scripts.runtime_adapter import (
+    BOUNDED_YAML_MAX_NODES,
     CasConflict,
     DeploymentGuard,
     DeploymentResolver,
@@ -188,8 +189,125 @@ class RuntimeAdapterTests(unittest.TestCase):
         with self.assertRaises(ResolutionError):
             DeploymentResolver(self.provider).resolve(locator())
 
+    def test_fresh_guard_rejects_runtime_control_alias_graph_before_parse(self):
+        session = self.session()
+        raw = """schema_version: "0.4"
+document_type: deployment_binding
+deployment: &deployment
+  id: dep-runtime-test
+  topology: split
+  epoch: 1
+  write_state: active
+  nested: *deployment
+core:
+  repository_id: 9000000102
+  commit: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+"""
+        self.provider.read_text = lambda *args: (
+            raw,
+            "e" * 40,
+            RC_COMMIT,
+        )
+        with self.assertRaisesRegex(
+            GuardRejected, "aliases and anchors"
+        ):
+            DeploymentGuard(self.provider).check(
+                session, require_active=False
+            )
+
+    def test_fresh_guard_rejects_runtime_control_duplicate_keys(self):
+        session = self.session()
+        raw = yaml.safe_dump(contract(), sort_keys=False) + (
+            "deployment:\n"
+            "  id: dep-runtime-test\n"
+            "  topology: split\n"
+            "  epoch: 1\n"
+            "  write_state: active\n"
+        )
+        self.provider.read_text = lambda *args: (
+            raw,
+            "e" * 40,
+            RC_COMMIT,
+        )
+        with self.assertRaisesRegex(
+            GuardRejected, "duplicate mapping key"
+        ):
+            DeploymentGuard(self.provider).check(
+                session, require_active=False
+            )
+
+    def test_fresh_guard_rejects_implicit_null_node_overflow(self):
+        session = self.session()
+        raw = (
+            'schema_version: "0.4"\n'
+            "document_type: deployment_binding\n"
+            "deployment:\n"
+            "  id: dep-runtime-test\n"
+            "  topology: split\n"
+            "  epoch: 1\n"
+            "  write_state: active\n"
+            "  extra:\n"
+            + "    -\n" * (BOUNDED_YAML_MAX_NODES + 1)
+        )
+        self.provider.read_text = lambda *args: (
+            raw,
+            "e" * 40,
+            RC_COMMIT,
+        )
+        with self.assertRaisesRegex(GuardRejected, "node limit"):
+            DeploymentGuard(self.provider).check(
+                session, require_active=False
+            )
+
+    def test_fresh_guard_rejects_complete_contract_schema_drift(self):
+        session = self.session()
+        cases = []
+
+        wrong_schema = contract()
+        wrong_schema["schema_version"] = "9.9"
+        cases.append(wrong_schema)
+
+        wrong_type = contract()
+        wrong_type["document_type"] = "not_deployment_binding"
+        cases.append(wrong_type)
+
+        wrong_topology = contract()
+        wrong_topology["deployment"]["topology"] = "legacy"
+        cases.append(wrong_topology)
+
+        extra_field = contract()
+        extra_field["unexpected"] = True
+        cases.append(extra_field)
+
+        forbidden_identity = contract()
+        forbidden_identity["instance_repository_id"] = INSTANCE_ID
+        cases.append(forbidden_identity)
+
+        for candidate in cases:
+            with self.subTest(candidate=candidate):
+                self.provider.contract = candidate
+                with self.assertRaisesRegex(
+                    GuardRejected, "canonical validation"
+                ):
+                    DeploymentGuard(self.provider).check(
+                        session, require_active=False
+                    )
+        self.provider.contract = contract()
+
     def test_active_fresh_session_guard_passes(self):
         DeploymentGuard(self.provider).check(self.session())
+
+    def test_read_guard_allows_frozen_but_rejects_invalid_write_state(self):
+        session = self.session()
+        self.provider.contract = contract(write_state="frozen")
+        DeploymentGuard(self.provider).check(session, require_active=False)
+        for state in (None, "corrupt"):
+            with self.subTest(state=state):
+                self.provider.contract = contract(write_state=state)
+                with self.assertRaisesRegex(GuardRejected, "write_state"):
+                    DeploymentGuard(self.provider).check(
+                        session, require_active=False
+                    )
 
     def test_frozen_guard_blocks_before_mutation(self):
         session = self.session()
@@ -380,6 +498,83 @@ class GitCliProviderTests(unittest.TestCase):
         self.assertEqual("synthetic/instance", snapshot.full_name)
         self.assertEqual("one\n", (snapshot.root / "state.txt").read_text(encoding="utf-8"))
         self.assertFalse((snapshot.root / ".git").exists())
+
+    def test_materialized_snapshot_can_be_released_without_closing_provider(self):
+        provider = self.provider()
+        snapshot = provider.materialize(self.REPO_ID, "main")
+        root = snapshot.root
+        self.assertTrue(root.is_dir())
+        provider.release_materialization(snapshot)
+        self.assertFalse(root.exists())
+        replacement = provider.materialize(self.REPO_ID, "main")
+        self.assertTrue(replacement.root.is_dir())
+
+    def test_concurrent_materialization_releases_remove_only_owned_snapshots(self):
+        provider = self.provider()
+        first = provider.materialize(self.REPO_ID, "main")
+        second = provider.materialize(self.REPO_ID, "main")
+        roots = (first.root, second.root)
+        barrier = threading.Barrier(3)
+        errors = []
+
+        def release(snapshot):
+            try:
+                barrier.wait(timeout=5)
+                provider.release_materialization(snapshot)
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [
+            threading.Thread(target=release, args=(snapshot,))
+            for snapshot in (first, second)
+        ]
+        for thread in threads:
+            thread.start()
+        barrier.wait(timeout=5)
+        for thread in threads:
+            thread.join(timeout=5)
+        self.assertFalse(errors)
+        self.assertTrue(all(not root.exists() for root in roots))
+        self.assertEqual([], provider._tempdirs)
+
+    def test_materialize_fails_closed_after_provider_close(self):
+        provider = self.provider()
+        provider.close()
+        with self.assertRaisesRegex(ResolutionError, "closed"):
+            provider.materialize(self.REPO_ID, "main")
+
+    def test_inflight_materialize_cannot_retain_snapshot_after_close(self):
+        provider = self.provider()
+        entered = threading.Event()
+        proceed = threading.Event()
+        errors = []
+
+        def blocked_materialize_blobs(repo, entries, snapshot):
+            entered.set()
+            proceed.wait(timeout=5)
+            (snapshot / "state.txt").write_text(
+                "synthetic\n", encoding="utf-8", newline="\n"
+            )
+
+        provider._materialize_blobs = blocked_materialize_blobs
+
+        def run_materialize():
+            try:
+                provider.materialize(self.REPO_ID, "main")
+            except Exception as exc:
+                errors.append(exc)
+
+        worker = threading.Thread(target=run_materialize)
+        worker.start()
+        self.assertTrue(entered.wait(2))
+        provider.close()
+        proceed.set()
+        worker.join(timeout=5)
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(1, len(errors))
+        self.assertIsInstance(errors[0], ResolutionError)
+        self.assertIn("closed during materialization", str(errors[0]))
+        self.assertEqual([], provider._tempdirs)
 
     def test_materialize_streams_blob_content_instead_of_buffering_it(self):
         provider = self.provider()
@@ -1751,6 +1946,69 @@ class GitHubApiProviderTests(unittest.TestCase):
 
         provider._request = request
         return provider
+
+    def test_release_materialization_cleans_owned_snapshot(self):
+        provider = self.provider()
+        tempdir = tempfile.TemporaryDirectory(
+            prefix="synthetic-github-snapshot-"
+        )
+        provider._tempdirs.append(tempdir)
+        snapshot = MaterializedRepository(
+            Path(tempdir.name),
+            self.REPO_ID,
+            self.HEAD,
+            "synthetic/instance",
+        )
+        root = snapshot.root
+        self.assertTrue(root.is_dir())
+        provider.release_materialization(snapshot)
+        self.assertFalse(root.exists())
+        self.assertEqual([], provider._tempdirs)
+
+    def test_concurrent_release_materialization_is_identity_safe(self):
+        provider = self.provider()
+        snapshots = []
+        for index in range(3):
+            tempdir = tempfile.TemporaryDirectory(
+                prefix=f"synthetic-github-concurrent-{index}-"
+            )
+            with provider._tempdirs_lock:
+                provider._tempdirs.append(tempdir)
+            snapshots.append(MaterializedRepository(
+                Path(tempdir.name),
+                self.REPO_ID,
+                self.HEAD,
+                "synthetic/instance",
+            ))
+        roots = [snapshot.root for snapshot in snapshots]
+        barrier = threading.Barrier(len(snapshots) + 1)
+        errors = []
+
+        def release(snapshot):
+            try:
+                barrier.wait(timeout=5)
+                provider.release_materialization(snapshot)
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [
+            threading.Thread(target=release, args=(snapshot,))
+            for snapshot in snapshots
+        ]
+        for thread in threads:
+            thread.start()
+        barrier.wait(timeout=5)
+        for thread in threads:
+            thread.join(timeout=5)
+        self.assertFalse(errors)
+        self.assertTrue(all(not root.exists() for root in roots))
+        self.assertEqual([], provider._tempdirs)
+
+    def test_materialize_fails_closed_after_provider_close(self):
+        provider = self.provider()
+        provider.close()
+        with self.assertRaisesRegex(ResolutionError, "closed"):
+            provider.materialize(self.REPO_ID, "main")
 
     def test_read_text_pins_content_to_resolved_commit(self):
         provider = GitHubApiProvider(

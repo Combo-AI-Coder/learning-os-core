@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Deterministic mechanical validator for Learning OS canonical YAML."""
 from __future__ import annotations
-import argparse, re, stat
+import argparse, hashlib, json, re, stat
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import yaml
 
 ROOTS={"config","runtime","learner","domains","topics","execution","coordination","evidence"}
@@ -444,6 +444,17 @@ class CoreValidator:
         if not (isinstance(m.get("release"),str) and m["release"].strip()): self.error("core.manifest_release",p,"manifest.release must be a non-empty string")
         sv=m.get("supported_instance_state_schema_versions")
         if not (isinstance(sv,list) and sv and all(isinstance(x,str) and x for x in sv)): self.error("core.instance_schema_support",p,"manifest.supported_instance_state_schema_versions must be a non-empty string list")
+        write_policy=m.get("runtime_session_write_policy_fingerprint")
+        if not (
+            isinstance(write_policy,str)
+            and re.fullmatch(r"[0-9a-f]{64}",write_policy)
+        ):
+            self.error(
+                "core.runtime_session_write_policy",
+                p,
+                "manifest.runtime_session_write_policy_fingerprint must be a "
+                "64-hex semantic fingerprint",
+            )
         for field in ("canonical_status","deployment_status"):
             if field in m:
                 self.error("core.deployment_authority",p,f"manifest.{field} is forbidden: deployment authority belongs exclusively to Runtime-Control")
@@ -519,6 +530,17 @@ INSTANCE_CONFIG_FORBIDDEN={"core.yaml":"Core plane contract","project.yaml":"leg
 # Instance 中被拒绝的 Instance/Control 之外的 plane 文档类型
 INSTANCE_FORBIDDEN_DOC_TYPES={"lineage_control":"private project-design Control lineage","project_config":"legacy canonical project configuration","deployment_binding":"Runtime-Control deployment binding","migration_transaction":"Control migration transaction","core_config":"Core plane contract document"}
 INSTANCE_STATE_TYPES={"learner_background","learner_model","learner_calibration","learner_costs","learner_execution","learner_knowledge","topic_goal","topic_plan","topic_progress","topic_deferred","subtopic_definition","subtopic_plan","subtopic_progress","evidence","weekly_execution","daily_execution","execution_session","branch_registry","branch_runtime","learning_handoff","topic_report","branch_report","hub_runtime","coordination_event","conversation_sequence_registry"}
+INSTANCE_REVISIONED_TYPES={"learner_execution","learner_knowledge","topic_goal","topic_plan","topic_progress","subtopic_plan","subtopic_progress","weekly_execution","daily_execution","branch_registry","branch_runtime","branch_report","hub_runtime","topic_report"}
+INSTANCE_GENERIC_WRITE_VERSION_RULES={
+    **{
+        document_type:{"field":"revision","ordering":"positive_int"}
+        for document_type in INSTANCE_REVISIONED_TYPES
+    },
+    "curriculum_extension":{
+        "field":"extension_revision",
+        "ordering":"positive_int",
+    },
+}
 INSTANCE_CONTRACT_TYPES={"instance_config","curriculum_extension"}
 INSTANCE_CURRICULUM_TYPES={"curriculum"}
 # V0.4-R2B protocol/schema.md §2.1: complete split Instance physical registry.
@@ -556,11 +578,153 @@ INSTANCE_CANONICAL_PATH_RULES=(
     (re.compile(rf"evidence/{_YAML_SEG}"),"evidence"),
 )
 INSTANCE_ALL_TYPES=frozenset(t for _,t in INSTANCE_CANONICAL_PATH_RULES)
+INSTANCE_GENERIC_WRITE_MODE_OVERRIDES={
+    "branch_runtime":"branch_authority",
+    "hub_runtime":"hub_authority",
+    "evidence":"immutable_create_only",
+    "execution_session":"immutable_create_only",
+    "coordination_event":"immutable_create_only",
+    "learning_handoff":"immutable_create_only",
+    "branch_registry":"protocol_transition",
+    "conversation_sequence_registry":"protocol_transition",
+    "curriculum":"protocol_transition",
+    "topic_plan":"hub_transition",
+    "topic_progress":"hub_transition",
+    "topic_deferred":"hub_transition",
+    "subtopic_definition":"hub_transition",
+    "subtopic_plan":"hub_transition",
+    "weekly_execution":"hub_transition",
+    "topic_report":"hub_transition",
+}
+INSTANCE_GENERIC_WRITE_ROLE_RULES={
+    "subtopic_progress": {
+        "roles": ("main",),
+        "scope": "bound_subtopic",
+    },
+    "branch_report": {
+        "roles": ("hub", "main", "practice", "deep_dive"),
+        "scope": "bound_branch",
+    },
+}
+INSTANCE_GENERIC_WRITE_TRANSITION_RULES={
+    "daily_execution":"preserve_locked_daily_baseline_v1",
+}
 
 def instance_expected_types(p,rules=None):
     """Return every split Instance document type whose canonical family matches p."""
     if rules is None: rules=INSTANCE_CANONICAL_PATH_RULES
     return tuple(t for rx,t in rules if rx.fullmatch(p))
+
+def _semantic_id(value):
+    if isinstance(value,dict):
+        return value.get("id")
+    return value
+
+def instance_path_identity_mismatches(p,d,t):
+    """Return canonical path/document identity mismatches for one Instance doc."""
+    parts=PurePosixPath(p).parts
+    out=[]
+    def require(value,expected,label):
+        actual=_semantic_id(value)
+        if actual!=expected:
+            out.append(f"{label} {actual!r} != path identity {expected!r}")
+    def optional(value,expected,label):
+        if value is not None:
+            require(value,expected,label)
+
+    if t=="curriculum":
+        require(d.get("domain"),parts[2],"domain")
+    elif t=="topic_goal":
+        require(d.get("topic"),parts[1],"topic")
+    elif t in {"topic_plan","topic_progress"}:
+        require(d.get("topic"),parts[1],"topic")
+    elif t=="topic_deferred":
+        optional(d.get("topic"),parts[1],"topic")
+    elif t=="subtopic_definition":
+        require(d.get("subtopic"),parts[3],"subtopic")
+    elif t in {"subtopic_plan","subtopic_progress"}:
+        require(d.get("topic"),parts[1],"topic")
+        require(d.get("subtopic"),parts[3],"subtopic")
+    elif t=="daily_execution":
+        optional(d.get("topic"),parts[1],"topic")
+    elif t=="execution_session":
+        require(d.get("topic"),parts[1],"topic")
+        require(d.get("id"),PurePosixPath(p).stem,"session id")
+    elif t=="branch_registry":
+        require(d.get("topic"),parts[1],"topic")
+    elif t=="branch_runtime":
+        require(d.get("topic"),parts[1],"topic")
+        require(d.get("branch_id"),parts[4],"branch_id")
+    elif t=="branch_report":
+        optional(d.get("topic"),parts[1],"topic")
+        optional(d.get("branch_id"),parts[4],"branch_id")
+    elif t=="coordination_event":
+        optional(d.get("id"),PurePosixPath(p).stem,"event id")
+    elif t=="topic_report":
+        optional(d.get("topic"),parts[1],"topic")
+    elif t=="learning_handoff":
+        require(d.get("topic"),parts[1],"topic")
+    elif t=="evidence":
+        require(d.get("id"),PurePosixPath(p).stem,"evidence id")
+    return out
+
+def instance_generic_write_mode(document_type):
+    """Return the generic Runtime mutation mode owned by the deployed Core."""
+    if document_type not in INSTANCE_ALL_TYPES:
+        return None
+    return INSTANCE_GENERIC_WRITE_MODE_OVERRIDES.get(document_type,"replace")
+
+def instance_generic_write_role_rule(document_type):
+    """Return an optional canonical Branch-role constraint for generic replacement."""
+    return INSTANCE_GENERIC_WRITE_ROLE_RULES.get(document_type)
+
+def instance_generic_write_version_rule(document_type):
+    """Return the semantic-version transition rule for generic replacement."""
+    return INSTANCE_GENERIC_WRITE_VERSION_RULES.get(document_type)
+
+def instance_generic_write_transition_rule(document_type):
+    """Return a non-version old-to-candidate transition rule, if any."""
+    return INSTANCE_GENERIC_WRITE_TRANSITION_RULES.get(document_type)
+
+def instance_write_policy_fingerprint():
+    """Stable semantic fingerprint for path classification + generic mutation modes."""
+    payload={
+        "schema":"learning-os-runtime-session-write-policy-v1",
+        "path_rules":[
+            {"pattern":rx.pattern,"document_type":t}
+            for rx,t in INSTANCE_CANONICAL_PATH_RULES
+        ],
+        "modes":{
+            t:instance_generic_write_mode(t)
+            for t in sorted(INSTANCE_ALL_TYPES)
+        },
+        "role_rules":{
+            t:{
+                "roles":list(rule["roles"]),
+                "scope":rule["scope"],
+            }
+            for t,rule in sorted(INSTANCE_GENERIC_WRITE_ROLE_RULES.items())
+        },
+        "semantic_version_transition":{
+            "rules":{
+                t:dict(rule)
+                for t,rule in sorted(
+                    INSTANCE_GENERIC_WRITE_VERSION_RULES.items()
+                )
+            },
+            "rule":"candidate_semantic_version_must_exceed_current",
+        },
+        "document_transition_rules":{
+            t:rule
+            for t,rule in sorted(
+                INSTANCE_GENERIC_WRITE_TRANSITION_RULES.items()
+            )
+        },
+    }
+    encoded=json.dumps(
+        payload,sort_keys=True,separators=(",",":"),ensure_ascii=True
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 # instance.yaml 不得重定义 Core 拥有的契约区块（Core semantic override 拒绝）
 INSTANCE_CONFIG_CORE_SECTIONS={"chat_routing","protocol","domains","governance","bootstrap","manifest","runtime","time"}
@@ -618,6 +782,45 @@ class DeploymentBinding:
             "write_state":contract["deployment"]["write_state"],
         }
         return b
+
+def validate_instance_document_trust_boundary(p,d,t):
+    """Return canonical Instance authority/credential findings for one document."""
+    findings=[]
+
+    def error(code,path,message):
+        findings.append(Finding("error",code,path,message))
+
+    def walk(x,path):
+        if isinstance(x,dict):
+            for k,v in x.items():
+                kp=f"{path}.{k}" if path else str(k)
+                if k in INSTANCE_FORBIDDEN_KEYS:
+                    error(
+                        "instance.authority_key",
+                        f"{p}:{kp}",
+                        f"forbidden Control/deployment/credential key: {k}",
+                    )
+                elif k in INSTANCE_LINEAGE_KEYS and t!="branch_runtime":
+                    error(
+                        "instance.lineage_key",
+                        f"{p}:{kp}",
+                        f"lineage authority key {k} is only allowed in "
+                        "branch_runtime (learning lineage)",
+                    )
+                walk(v,kp)
+        elif isinstance(x,list):
+            for i,v in enumerate(x):
+                walk(v,f"{path}[{i}]")
+        elif isinstance(x,str) and CORE_TOKEN_RE.search(x):
+            error(
+                "instance.credential_value",
+                f"{p}:{path}",
+                "structurally detected credential/token value",
+            )
+
+    walk(d,"")
+    return findings
+
 
 class InstanceValidator:
     """Deterministic validate_instance(instance_snapshot, deployed_core,
@@ -734,18 +937,9 @@ class InstanceValidator:
                 except Exception: continue
                 if isinstance(c,dict) and isinstance(c.get("domain"),dict) and isinstance(c["domain"].get("id"),str): self.core_bases[c["domain"]["id"]]=c
     def check_keys(self,p,d,t):
-        def walk(x,path):
-            if isinstance(x,dict):
-                for k,v in x.items():
-                    kp=f"{path}.{k}" if path else str(k)
-                    if k in INSTANCE_FORBIDDEN_KEYS: self.error("instance.authority_key",f"{p}:{kp}",f"forbidden Control/deployment/credential key: {k}")
-                    elif k in INSTANCE_LINEAGE_KEYS and t!="branch_runtime": self.error("instance.lineage_key",f"{p}:{kp}",f"lineage authority key {k} is only allowed in branch_runtime (learning lineage)")
-                    walk(v,kp)
-            elif isinstance(x,list):
-                for i,v in enumerate(x): walk(v,f"{path}[{i}]")
-            elif isinstance(x,str) and CORE_TOKEN_RE.search(x):
-                self.error("instance.credential_value",f"{p}:{path}","structurally detected credential/token value")
-        walk(d,"")
+        self.findings.extend(
+            validate_instance_document_trust_boundary(p,d,t)
+        )
     def check_documents(self):
         for p,d in self.docs.items():
             t=d.get("document_type")
@@ -757,6 +951,9 @@ class InstanceValidator:
             if not matches: self.error("path.unregistered",p,f"no canonical split Instance storage family registered for {p}")
             elif len(matches)>1: self.error("path.ambiguous",p,f"multiple split Instance storage families match {p}: {list(matches)}")
             elif t is not None and t!=matches[0]: self.error("path.document_type",p,f"expected {matches[0]}, found {t}")
+            if len(matches)==1 and t==matches[0]:
+                for mismatch in instance_path_identity_mismatches(p,d,t):
+                    self.error("path.identity",p,mismatch)
             if "schema_version" not in d: self.error("yaml.schema_version",p,"missing schema_version")
             elif t in INSTANCE_STATE_TYPES and self.supported_state_schemas is not None and d["schema_version"] not in self.supported_state_schemas:
                 self.error("instance.state_schema_unsupported",p,f"state schema_version {d['schema_version']!r} not in Core supported_instance_state_schema_versions {sorted(self.supported_state_schemas)}")
@@ -835,6 +1032,14 @@ class InstanceValidator:
             if t not in INSTANCE_ALL_TYPES: continue
             for k in req.get(t,()):
                 if k not in d:self.error("document.required",p,f"missing {k}")
+            if t in INSTANCE_REVISIONED_TYPES:
+                revision=d.get("revision")
+                if not isinstance(revision,int) or isinstance(revision,bool) or revision<1:
+                    self.error(
+                        "revision.invalid",
+                        p,
+                        "revisioned document requires a positive integer revision",
+                    )
             if t=="topic_plan":self.enum(p,"plan.status",(d.get("plan")or{}).get("status"),{"awaiting_intake","provisional","active","paused"})
             elif t=="topic_progress":
                 self.enum(p,"lifecycle",d.get("lifecycle"),TLIFE)
@@ -1074,6 +1279,187 @@ LOCATOR_TOP_KEYS={"schema_version","document_type","runtime_control","instance"}
 LOCATOR_RC_KEYS={"repository_id","repository","canonical_ref","contract_path"}
 LOCATOR_INSTANCE_KEYS={"repository_id","repository","canonical_ref"}
 
+def validate_deployment_contract_document(
+    contract,
+    *,
+    path="<deployment-contract>",
+    raw_text=None,
+    structure=True,
+    trust_boundary=True,
+):
+    """Validate one Runtime-Control contract document without snapshot lookup."""
+    findings = []
+
+    def error(code, where, message):
+        findings.append(Finding("error", code, where, message))
+
+    if structure:
+        if not isinstance(contract, dict):
+            error(
+                "yaml.mapping",
+                path,
+                "deployment contract must be a mapping",
+            )
+            return findings
+        if contract.get("schema_version") != DEPLOYMENT_SCHEMA:
+            error(
+                "deployment.schema_version",
+                path,
+                f"deployment contract schema_version must be {DEPLOYMENT_SCHEMA!r}",
+            )
+        if contract.get("document_type") != DEPLOYMENT_DOC_TYPE:
+            error(
+                "deployment.document_type",
+                path,
+                "deployment contract document_type must be "
+                f"{DEPLOYMENT_DOC_TYPE!r}",
+            )
+        unknown = sorted(set(contract) - DEPLOYMENT_TOP_KEYS)
+        if unknown:
+            error(
+                "deployment.forbidden_field",
+                path,
+                "unknown top-level contract fields "
+                f"{unknown}; the public contract is allowlist-only",
+            )
+        deployment = contract.get("deployment")
+        core = contract.get("core")
+        if not isinstance(deployment, dict):
+            error(
+                "deployment.section",
+                path,
+                "deployment section must be a mapping",
+            )
+            deployment = {}
+        if not isinstance(core, dict):
+            error(
+                "deployment.section",
+                path,
+                "core section must be a mapping",
+            )
+            core = {}
+        for section, value in (
+            ("deployment", deployment),
+            ("core", core),
+        ):
+            extra = sorted(set(value) - DEPLOYMENT_SECTION_KEYS[section])
+            if extra:
+                error(
+                    "deployment.forbidden_field",
+                    f"{path}:{section}",
+                    f"unknown {section} fields {extra}; "
+                    "the public contract is allowlist-only",
+                )
+            for field in DEPLOYMENT_REQUIRED[section]:
+                if field not in value:
+                    error(
+                        "deployment.required_field",
+                        f"{path}:{section}.{field}",
+                        f"missing required field {section}.{field}",
+                    )
+
+        deployment_id = deployment.get("id")
+        if not (
+            isinstance(deployment_id, str)
+            and deployment_id.strip()
+        ):
+            error(
+                "deployment.id",
+                f"{path}:deployment.id",
+                "must be a non-empty string",
+            )
+        if deployment.get("topology") not in DEPLOYMENT_TOPOLOGIES:
+            error(
+                "deployment.topology",
+                f"{path}:deployment.topology",
+                f"must be one of {sorted(DEPLOYMENT_TOPOLOGIES)}",
+            )
+        epoch = deployment.get("epoch")
+        if (
+            not isinstance(epoch, int)
+            or isinstance(epoch, bool)
+            or epoch < 1
+        ):
+            error(
+                "deployment.epoch",
+                f"{path}:deployment.epoch",
+                "must be a positive integer (monotonic fencing token)",
+            )
+        if deployment.get("write_state") not in DEPLOYMENT_WRITE_STATES:
+            error(
+                "deployment.write_state",
+                f"{path}:deployment.write_state",
+                f"must be one of {sorted(DEPLOYMENT_WRITE_STATES)}",
+            )
+
+        repository_id = core.get("repository_id")
+        if (
+            not isinstance(repository_id, int)
+            or isinstance(repository_id, bool)
+            or repository_id <= 0
+        ):
+            error(
+                "deployment.core_repository_id",
+                f"{path}:core.repository_id",
+                "must be a positive integer repository ID "
+                "(security identity; owner/name is navigation only)",
+            )
+        commit = core.get("commit")
+        if not (
+            isinstance(commit, str)
+            and re.fullmatch(r"[0-9a-f]{40}", commit)
+        ):
+            error(
+                "deployment.core_commit",
+                f"{path}:core.commit",
+                "must be the exact 40-hex deployed commit; abbreviated "
+                "SHA and branch/tag/ref names are not valid pins",
+            )
+        full_name = core.get("repository_full_name")
+        if full_name is not None and not (
+            isinstance(full_name, str) and full_name.strip()
+        ):
+            error(
+                "deployment.core_navigation",
+                f"{path}:core.repository_full_name",
+                "optional navigation metadata must be a non-empty string",
+            )
+
+    if trust_boundary and isinstance(contract, dict):
+        def walk(value, current_path):
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    key_path = (
+                        f"{current_path}.{key}"
+                        if current_path else str(key)
+                    )
+                    if key in DEPLOYMENT_TRUST_BOUNDARY_KEYS:
+                        error(
+                            "deployment.trust_boundary",
+                            f"{path}:{key_path}",
+                            DEPLOYMENT_TRUST_BOUNDARY_KEYS[key],
+                        )
+                    walk(child, key_path)
+            elif isinstance(value, list):
+                for index, child in enumerate(value):
+                    walk(child, f"{current_path}[{index}]")
+            elif isinstance(value, str) and CORE_TOKEN_RE.search(value):
+                error(
+                    "deployment.credential_value",
+                    f"{path}:{current_path}",
+                    "structurally detected credential/token value",
+                )
+
+        walk(contract, "")
+        if isinstance(raw_text, str) and CORE_TOKEN_RE.search(raw_text):
+            error(
+                "deployment.credential_value",
+                path,
+                "structurally detected credential/token value in contract text",
+            )
+    return findings
+
+
 class DeploymentValidator:
     """Deterministic validate_deployment(control_snapshot, deployed_core,
     instance_snapshot, trusted_locator) surface for the V0.4 split planes.
@@ -1151,53 +1537,31 @@ class DeploymentValidator:
             else: self.error(f"deployment.contract_path_{reason}",where,f"invalid Runtime-Control contract_path {cp!r}: {message}")
             return
         self.contract_path=p
-        try:d=yaml.safe_load(p.read_text(encoding="utf-8"))
+        try:
+            self.contract_text=p.read_text(encoding="utf-8")
+            d=yaml.safe_load(self.contract_text)
         except Exception as e:self.error("yaml.parse",p.as_posix(),str(e)); return
         if not isinstance(d,dict): self.error("yaml.mapping",p.as_posix(),"deployment contract must be a mapping"); return
         self.contract=d
     def check_contract_structure(self):
-        p=self.contract_path.as_posix(); d=self.contract
-        if d.get("schema_version")!=DEPLOYMENT_SCHEMA: self.error("deployment.schema_version",p,f"deployment contract schema_version must be {DEPLOYMENT_SCHEMA!r}")
-        if d.get("document_type")!=DEPLOYMENT_DOC_TYPE: self.error("deployment.document_type",p,f"deployment contract document_type must be {DEPLOYMENT_DOC_TYPE!r}")
-        unknown=sorted(set(d)-DEPLOYMENT_TOP_KEYS)
-        if unknown: self.error("deployment.forbidden_field",p,f"unknown top-level contract fields {unknown}; the public contract is allowlist-only")
-        dep=d.get("deployment") or {}; core=d.get("core") or {}
-        if not isinstance(dep,dict): self.error("deployment.section",p,"deployment section must be a mapping"); dep={}
-        if not isinstance(core,dict): self.error("deployment.section",p,"core section must be a mapping"); core={}
-        for sec,obj in (("deployment",dep),("core",core)):
-            u=sorted(set(obj)-DEPLOYMENT_SECTION_KEYS[sec])
-            if u: self.error("deployment.forbidden_field",f"{p}:{sec}",f"unknown {sec} fields {u}; the public contract is allowlist-only")
-            for k in DEPLOYMENT_REQUIRED[sec]:
-                if k not in obj: self.error("deployment.required_field",f"{p}:{sec}.{k}",f"missing required field {sec}.{k}")
-        i=dep.get("id")
-        if not (isinstance(i,str) and i.strip()): self.error("deployment.id",f"{p}:deployment.id","must be a non-empty string")
-        if dep.get("topology") not in DEPLOYMENT_TOPOLOGIES: self.error("deployment.topology",f"{p}:deployment.topology",f"must be one of {sorted(DEPLOYMENT_TOPOLOGIES)}")
-        ep=dep.get("epoch")
-        if not isinstance(ep,int) or isinstance(ep,bool) or ep<1: self.error("deployment.epoch",f"{p}:deployment.epoch","must be a positive integer (monotonic fencing token)")
-        if dep.get("write_state") not in DEPLOYMENT_WRITE_STATES: self.error("deployment.write_state",f"{p}:deployment.write_state",f"must be one of {sorted(DEPLOYMENT_WRITE_STATES)}")
-        rid=core.get("repository_id")
-        if not isinstance(rid,int) or isinstance(rid,bool) or rid<=0: self.error("deployment.core_repository_id",f"{p}:core.repository_id","must be a positive integer repository ID (security identity; owner/name is navigation only)")
-        cc=core.get("commit")
-        if not (isinstance(cc,str) and re.fullmatch(r"[0-9a-f]{40}",cc)):
-            self.error("deployment.core_commit",f"{p}:core.commit","must be the exact 40-hex deployed commit; abbreviated SHA and branch/tag/ref names are not valid pins")
-        fn=core.get("repository_full_name")
-        if fn is not None and not (isinstance(fn,str) and fn.strip()): self.error("deployment.core_navigation",f"{p}:core.repository_full_name","optional navigation metadata must be a non-empty string")
+        self.findings.extend(
+            validate_deployment_contract_document(
+                self.contract,
+                path=self.contract_path.as_posix(),
+                structure=True,
+                trust_boundary=False,
+            )
+        )
     def check_trust_boundary(self):
-        # 公开 contract 的信任边界：递归扫描禁键 + 结构化 token 值检测
-        p=self.contract_path.as_posix()
-        def walk(x,path):
-            if isinstance(x,dict):
-                for k,v in x.items():
-                    kp=f"{path}.{k}" if path else str(k)
-                    if k in DEPLOYMENT_TRUST_BOUNDARY_KEYS: self.error("deployment.trust_boundary",f"{p}:{kp}",DEPLOYMENT_TRUST_BOUNDARY_KEYS[k])
-                    walk(v,kp)
-            elif isinstance(x,list):
-                for i,v in enumerate(x): walk(v,f"{path}[{i}]")
-            elif isinstance(x,str) and CORE_TOKEN_RE.search(x):
-                self.error("deployment.credential_value",f"{p}:{path}","structurally detected credential/token value")
-        walk(self.contract,"")
-        if CORE_TOKEN_RE.search(self.contract_path.read_text(encoding="utf-8")):
-            self.error("deployment.credential_value",p,"structurally detected credential/token value in contract text")
+        self.findings.extend(
+            validate_deployment_contract_document(
+                self.contract,
+                path=self.contract_path.as_posix(),
+                raw_text=self.contract_text,
+                structure=False,
+                trust_boundary=True,
+            )
+        )
     def check_identity(self):
         # 身份相等性：locator（TRUST ROOT）与 snapshot provenance（trusted
         # resolver output）双向核对；owner/name 永不参与判断。
@@ -1305,7 +1669,12 @@ def main():
     a.add_argument("--instance-snapshot",default=None,help="materialized Instance snapshot root required by --deployment")
     a.add_argument("--locator",default=None,help="YAML file with the trusted locator (external trust root) required by --deployment")
     a.add_argument("--provenance",default=None,help="YAML file with caller-supplied trusted snapshot provenance (control/core/instance repository_id[/commit_sha]) required by --deployment")
-    args=a.parse_args(); root=Path(args.root)
+    a.add_argument("--write-policy-fingerprint",action="store_true",help="print the write-policy fingerprint computed by this exact Core implementation")
+    args=a.parse_args()
+    if args.write_policy_fingerprint:
+        print(instance_write_policy_fingerprint())
+        return 0
+    root=Path(args.root)
     if args.deployment:
         need={"--control-snapshot":args.control_snapshot,"--core-snapshot":args.core_snapshot,"--instance-snapshot":args.instance_snapshot,"--locator":args.locator,"--provenance":args.provenance}
         missing=[k for k,v in need.items() if not v]

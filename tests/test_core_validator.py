@@ -6,7 +6,10 @@ from pathlib import Path
 
 import yaml
 
-from scripts.validate_learning_os import validate_core
+from scripts.validate_learning_os import (
+    instance_write_policy_fingerprint,
+    validate_core,
+)
 
 # Materialized Core repository root (for the real-snapshot integration test).
 CORE_REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +39,9 @@ def core_config(protocol: dict | None = None, reusable_bases: list | None = None
         "product": {"id": "learning-os", "name": "Learning OS"},
         "manifest": {
             "release": "0.4.0",
+            "runtime_session_write_policy_fingerprint": (
+                instance_write_policy_fingerprint()
+            ),
             # B2-B: manifest.artifact_schema 已移除；state schema 轴改由
             # supported_instance_state_schema_versions 声明（G8 D1/D3）。
             "supported_instance_state_schema_versions": ["0.3"],
@@ -219,6 +225,28 @@ class CoreValidatorTests(unittest.TestCase):
         config = core_config()
         config["manifest"]["supported_instance_state_schema_versions"] = []
         self.assertIn("core.instance_schema_support", core_errors(self.make_snapshot(config=config)))
+
+    def test_fail_runtime_session_write_policy_fingerprint_format(self):
+        config = core_config()
+        config["manifest"]["runtime_session_write_policy_fingerprint"] = "invalid"
+        self.assertIn(
+            "core.runtime_session_write_policy",
+            core_errors(self.make_snapshot(config=config)),
+        )
+
+    def test_core_validation_allows_different_valid_write_policy_fingerprint(self):
+        config = core_config()
+        config["manifest"]["runtime_session_write_policy_fingerprint"] = "0" * 64
+        self.assert_valid(self.make_snapshot(config=config))
+
+    def test_repository_core_write_policy_fingerprint_matches_local_semantics(self):
+        config = yaml.safe_load(
+            (CORE_REPO_ROOT / "config/core.yaml").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            instance_write_policy_fingerprint(),
+            config["manifest"]["runtime_session_write_policy_fingerprint"],
+        )
 
     # ===== Negative: structural credentials/secrets =====
 

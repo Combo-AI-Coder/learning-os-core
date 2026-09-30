@@ -26,8 +26,21 @@ from pathlib import Path, PurePosixPath
 from typing import Callable, Protocol
 
 import yaml
+from yaml.events import (
+    AliasEvent,
+    MappingEndEvent,
+    MappingStartEvent,
+    ScalarEvent,
+    SequenceEndEvent,
+    SequenceStartEvent,
+)
+from yaml.nodes import MappingNode, ScalarNode, SequenceNode
 
-from scripts.validate_learning_os import RepositorySnapshot, validate_deployment
+from scripts.validate_learning_os import (
+    RepositorySnapshot,
+    validate_deployment,
+    validate_deployment_contract_document,
+)
 
 EXACT_COMMIT = re.compile(r"[0-9a-f]{40}")
 MAX_TEXT_BLOB_BYTES = 8 * 1024 * 1024
@@ -46,6 +59,9 @@ MAX_SNAPSHOT_PATH_BYTES = 4096
 MAX_SNAPSHOT_PATH_DEPTH = 128
 MAX_SNAPSHOT_EXPANDED_PATH_BYTES = 16 * 1024 * 1024
 FETCH_POLL_SECONDS = 0.02
+BOUNDED_YAML_MAX_BYTES = 1024 * 1024
+BOUNDED_YAML_MAX_NODES = 20000
+BOUNDED_YAML_MAX_DEPTH = 64
 
 
 class ResolutionError(RuntimeError):
@@ -62,6 +78,73 @@ class CasConflict(RuntimeError):
 
 class TransitionRejected(RuntimeError):
     pass
+
+
+def _preflight_bounded_yaml(content: str, where: str) -> None:
+    try:
+        encoded = content.encode("utf-8")
+    except UnicodeEncodeError:
+        raise ResolutionError(f"{where} is not valid UTF-8 text") from None
+    if len(encoded) > BOUNDED_YAML_MAX_BYTES:
+        raise ResolutionError(f"{where} exceeds the byte limit")
+
+    depth = 0
+    nodes = 0
+    starts = (MappingStartEvent, SequenceStartEvent)
+    ends = (MappingEndEvent, SequenceEndEvent)
+    try:
+        for event in yaml.parse(content):
+            if isinstance(event, AliasEvent) or getattr(
+                event, "anchor", None
+            ) is not None:
+                raise ResolutionError(
+                    f"{where} aliases and anchors are not allowed"
+                )
+            if isinstance(event, starts):
+                depth += 1
+                nodes += 1
+                if depth > BOUNDED_YAML_MAX_DEPTH:
+                    raise ResolutionError(
+                        f"{where} exceeds the nesting-depth limit"
+                    )
+            elif isinstance(event, ScalarEvent):
+                nodes += 1
+            elif isinstance(event, ends):
+                depth = max(0, depth - 1)
+            if nodes > BOUNDED_YAML_MAX_NODES:
+                raise ResolutionError(f"{where} exceeds the node limit")
+
+        root = yaml.compose(content, Loader=yaml.SafeLoader)
+        if root is not None:
+            key_loader = yaml.SafeLoader("")
+            try:
+                def reject_duplicate_keys(node) -> None:
+                    if isinstance(node, MappingNode):
+                        seen = set()
+                        for key_node, value_node in node.value:
+                            if not isinstance(key_node, ScalarNode):
+                                raise ResolutionError(
+                                    f"{where} mapping keys must be scalars"
+                                )
+                            key = key_loader.construct_object(
+                                key_node, deep=True
+                            )
+                            if key in seen:
+                                raise ResolutionError(
+                                    f"{where} contains a duplicate mapping key"
+                                )
+                            seen.add(key)
+                            reject_duplicate_keys(value_node)
+                    elif isinstance(node, SequenceNode):
+                        for item in node.value:
+                            reject_duplicate_keys(item)
+                reject_duplicate_keys(root)
+            finally:
+                key_loader.dispose()
+    except yaml.YAMLError as exc:
+        raise ResolutionError(
+            f"{where} preflight failed: {exc.__class__.__name__}"
+        ) from None
 
 
 @dataclass(frozen=True)
@@ -105,6 +188,9 @@ class RepositoryProvider(Protocol):
         message: str,
         expected_ref_sha: str | None = None,
     ) -> str: ...
+    def release_materialization(
+        self, snapshot: MaterializedRepository
+    ) -> None: ...
 
 
 def _positive_id(value: object, where: str) -> int:
@@ -159,6 +245,7 @@ def load_locator(source: str | Path | dict) -> dict:
 
 
 def _load_contract(text: str) -> dict:
+    _preflight_bounded_yaml(text, "Runtime-Control YAML")
     try:
         data = yaml.safe_load(text)
     except yaml.YAMLError as exc:
@@ -228,59 +315,120 @@ class DeploymentResolver:
     def resolve(self, locator_source: str | Path | dict) -> ResolvedDeployment:
         locator = load_locator(locator_source)
         rc, inst = locator["runtime_control"], locator["instance"]
-        control = self.provider.materialize(rc["repository_id"], rc["canonical_ref"])
-        if control.repository_id != rc["repository_id"]:
-            raise ResolutionError("resolved Runtime-Control repository ID mismatch")
-        contract_text, _, contract_commit = self.provider.read_text(
-            rc["repository_id"], control.commit_sha, rc["contract_path"]
-        )
-        if contract_commit != control.commit_sha:
-            raise ResolutionError(
-                "Runtime-Control contract provenance changed during bootstrap"
+        snapshots: list[MaterializedRepository] = []
+        try:
+            control = self.provider.materialize(
+                rc["repository_id"], rc["canonical_ref"]
             )
-        contract = _load_contract(contract_text)
-        core_block = contract["core"]
-        core_id = _positive_id(core_block.get("repository_id"), "core.repository_id")
-        core_commit = _nonempty(core_block.get("commit"), "core.commit")
-        if not EXACT_COMMIT.fullmatch(core_commit):
-            raise ResolutionError("core.commit must be an exact 40-lowercase-hex commit")
-        core = self.provider.materialize(core_id, core_commit)
-        if core.repository_id != core_id or core.commit_sha != core_commit:
-            raise ResolutionError("resolved Core provenance does not match the exact deployment pin")
-        instance = self.provider.materialize(inst["repository_id"], inst["canonical_ref"])
-        if instance.repository_id != inst["repository_id"]:
-            raise ResolutionError("resolved Instance repository ID mismatch")
-        findings = validate_deployment(
-            RepositorySnapshot(control.root, control.repository_id, control.commit_sha),
-            RepositorySnapshot(core.root, core.repository_id, core.commit_sha),
-            RepositorySnapshot(instance.root, instance.repository_id, instance.commit_sha),
-            locator,
-        )
-        errors = [finding.render() for finding in findings if finding.severity == "error"]
-        if errors:
-            raise ResolutionError("deployment validation failed:\n" + "\n".join(errors))
-        dep = contract["deployment"]
-        epoch = dep.get("epoch")
-        if not isinstance(epoch, int) or isinstance(epoch, bool) or epoch < 1:
-            raise ResolutionError("deployment.epoch must be a positive integer")
-        context = SessionDeploymentContext(
-            deployment_id=_nonempty(dep.get("id"), "deployment.id"),
-            epoch=epoch,
-            core_repository_id=core_id,
-            core_commit=core_commit,
-            instance_repository_id=inst["repository_id"],
-            runtime_control_repository_id=rc["repository_id"],
-            runtime_control_ref=rc["canonical_ref"],
-            contract_path=rc["contract_path"],
-        )
-        return ResolvedDeployment(context, control, core, instance)
+            snapshots.append(control)
+            if control.repository_id != rc["repository_id"]:
+                raise ResolutionError(
+                    "resolved Runtime-Control repository ID mismatch"
+                )
+            contract_text, _, contract_commit = self.provider.read_text(
+                rc["repository_id"],
+                control.commit_sha,
+                rc["contract_path"],
+            )
+            if contract_commit != control.commit_sha:
+                raise ResolutionError(
+                    "Runtime-Control contract provenance changed during bootstrap"
+                )
+            contract = _load_contract(contract_text)
+            core_block = contract["core"]
+            core_id = _positive_id(
+                core_block.get("repository_id"), "core.repository_id"
+            )
+            core_commit = _nonempty(
+                core_block.get("commit"), "core.commit"
+            )
+            if not EXACT_COMMIT.fullmatch(core_commit):
+                raise ResolutionError(
+                    "core.commit must be an exact 40-lowercase-hex commit"
+                )
+            core = self.provider.materialize(core_id, core_commit)
+            snapshots.append(core)
+            if (
+                core.repository_id != core_id
+                or core.commit_sha != core_commit
+            ):
+                raise ResolutionError(
+                    "resolved Core provenance does not match the exact "
+                    "deployment pin"
+                )
+            instance = self.provider.materialize(
+                inst["repository_id"], inst["canonical_ref"]
+            )
+            snapshots.append(instance)
+            if instance.repository_id != inst["repository_id"]:
+                raise ResolutionError(
+                    "resolved Instance repository ID mismatch"
+                )
+            findings = validate_deployment(
+                RepositorySnapshot(
+                    control.root, control.repository_id, control.commit_sha
+                ),
+                RepositorySnapshot(
+                    core.root, core.repository_id, core.commit_sha
+                ),
+                RepositorySnapshot(
+                    instance.root,
+                    instance.repository_id,
+                    instance.commit_sha,
+                ),
+                locator,
+            )
+            errors = [
+                finding.render()
+                for finding in findings
+                if finding.severity == "error"
+            ]
+            if errors:
+                raise ResolutionError(
+                    "deployment validation failed:\n" + "\n".join(errors)
+                )
+            dep = contract["deployment"]
+            epoch = dep.get("epoch")
+            if (
+                not isinstance(epoch, int)
+                or isinstance(epoch, bool)
+                or epoch < 1
+            ):
+                raise ResolutionError(
+                    "deployment.epoch must be a positive integer"
+                )
+            context = SessionDeploymentContext(
+                deployment_id=_nonempty(
+                    dep.get("id"), "deployment.id"
+                ),
+                epoch=epoch,
+                core_repository_id=core_id,
+                core_commit=core_commit,
+                instance_repository_id=inst["repository_id"],
+                runtime_control_repository_id=rc["repository_id"],
+                runtime_control_ref=rc["canonical_ref"],
+                contract_path=rc["contract_path"],
+            )
+            return ResolvedDeployment(context, control, core, instance)
+        except Exception:
+            for snapshot in reversed(snapshots):
+                try:
+                    self.provider.release_materialization(snapshot)
+                except Exception:
+                    pass
+            raise
 
 
 class DeploymentGuard:
     def __init__(self, provider: RepositoryProvider):
         self.provider = provider
 
-    def check(self, session: SessionDeploymentContext) -> dict:
+    def check(
+        self,
+        session: SessionDeploymentContext,
+        *,
+        require_active: bool = True,
+    ) -> dict:
         try:
             text, _, _ = self.provider.read_text(
                 session.runtime_control_repository_id,
@@ -290,9 +438,28 @@ class DeploymentGuard:
             contract = _load_contract(text)
         except (ResolutionError, OSError, RuntimeError) as exc:
             raise GuardRejected(f"Runtime-Control fresh-read failed closed: {exc}") from None
+        findings = validate_deployment_contract_document(
+            contract,
+            path=session.contract_path,
+            raw_text=text,
+        )
+        errors = [
+            finding for finding in findings
+            if finding.severity == "error"
+        ]
+        if errors:
+            codes = ", ".join(
+                sorted({finding.code for finding in errors})
+            )
+            raise GuardRejected(
+                "Runtime-Control contract failed canonical validation: "
+                + codes
+            )
         dep, core = contract["deployment"], contract["core"]
+        write_state = dep["write_state"]
+        if require_active and write_state != "active":
+            raise GuardRejected("deployment is not active")
         for ok, message in (
-            (dep.get("write_state") == "active", "deployment is not active"),
             (dep.get("id") == session.deployment_id, "deployment id changed"),
             (dep.get("epoch") == session.epoch, "deployment epoch changed"),
             (core.get("repository_id") == session.core_repository_id, "Core repository changed"),
@@ -459,12 +626,44 @@ class GitCliProvider:
             prefix="learning-os-git-template-"
         )
         self._tempdirs: list[tempfile.TemporaryDirectory] = []
+        self._tempdirs_lock = threading.Lock()
+        self._closed = False
 
     def close(self) -> None:
-        while self._tempdirs:
-            self._tempdirs.pop().cleanup()
-        self._empty_git_template.cleanup()
-        self._isolated_home.cleanup()
+        first_error = None
+        with self._tempdirs_lock:
+            if self._closed:
+                return
+            self._closed = True
+            while self._tempdirs:
+                tempdir = self._tempdirs.pop()
+                try:
+                    tempdir.cleanup()
+                except Exception as exc:
+                    if first_error is None:
+                        first_error = exc
+        for tempdir in (self._empty_git_template, self._isolated_home):
+            try:
+                tempdir.cleanup()
+            except Exception as exc:
+                if first_error is None:
+                    first_error = exc
+        if first_error is not None:
+            raise ResolutionError("repository provider cleanup failed") from first_error
+
+    def release_materialization(
+        self, snapshot: MaterializedRepository
+    ) -> None:
+        target = snapshot.root.resolve()
+        owned = None
+        with self._tempdirs_lock:
+            for tempdir in self._tempdirs:
+                if Path(tempdir.name).resolve() == target:
+                    owned = tempdir
+                    self._tempdirs.remove(tempdir)
+                    break
+        if owned is not None:
+            owned.cleanup()
 
     @staticmethod
     def _absolute_host_path(
@@ -1685,6 +1884,9 @@ class GitCliProvider:
     def materialize(
         self, repository_id: int, ref: str
     ) -> MaterializedRepository:
+        with self._tempdirs_lock:
+            if self._closed:
+                raise ResolutionError("repository provider is closed")
         binding = self._binding(repository_id)
         checkout_td, repo, commit = self._checkout(binding, ref)
         snapshot_td = tempfile.TemporaryDirectory(prefix="learning-os-snapshot-")
@@ -1698,7 +1900,11 @@ class GitCliProvider:
             raise
         finally:
             checkout_td.cleanup()
-        self._tempdirs.append(snapshot_td)
+        with self._tempdirs_lock:
+            if self._closed:
+                snapshot_td.cleanup()
+                raise ResolutionError("repository provider closed during materialization")
+            self._tempdirs.append(snapshot_td)
         return MaterializedRepository(
             snapshot,
             binding.repository_id,
@@ -1863,10 +2069,38 @@ class GitHubApiProvider:
         self.token = token or os.environ.get("LEARNING_OS_GITHUB_TOKEN")
         self.api_url = api_url.rstrip("/")
         self._tempdirs: list[tempfile.TemporaryDirectory] = []
+        self._tempdirs_lock = threading.Lock()
+        self._closed = False
 
     def close(self) -> None:
-        while self._tempdirs:
-            self._tempdirs.pop().cleanup()
+        first_error = None
+        with self._tempdirs_lock:
+            if self._closed:
+                return
+            self._closed = True
+            while self._tempdirs:
+                tempdir = self._tempdirs.pop()
+                try:
+                    tempdir.cleanup()
+                except Exception as exc:
+                    if first_error is None:
+                        first_error = exc
+        if first_error is not None:
+            raise ResolutionError("repository provider cleanup failed") from first_error
+
+    def release_materialization(
+        self, snapshot: MaterializedRepository
+    ) -> None:
+        target = snapshot.root.resolve()
+        owned = None
+        with self._tempdirs_lock:
+            for tempdir in self._tempdirs:
+                if Path(tempdir.name).resolve() == target:
+                    owned = tempdir
+                    self._tempdirs.remove(tempdir)
+                    break
+        if owned is not None:
+            owned.cleanup()
 
     def _request(self, method: str, path: str, payload: dict | None = None) -> object:
         body = json.dumps(payload).encode() if payload is not None else None
@@ -1927,12 +2161,14 @@ class GitHubApiProvider:
         return output
 
     def materialize(self, repository_id: int, ref: str) -> MaterializedRepository:
+        with self._tempdirs_lock:
+            if self._closed:
+                raise ResolutionError("repository provider is closed")
         repo = self._repo(repository_id)
         full_name = _nonempty(repo.get("full_name"), "repository.full_name")
         commit = self._commit(full_name, ref)
         archive = self._request_bytes(f"/repos/{full_name}/zipball/{commit}")
         td = tempfile.TemporaryDirectory(prefix="learning-os-snapshot-")
-        self._tempdirs.append(td)
         root = Path(td.name)
         try:
             with zipfile.ZipFile(BytesIO(archive)) as bundle:
@@ -1951,7 +2187,16 @@ class GitHubApiProvider:
                     rel = PurePosixPath(*pure.parts[1:]).as_posix()
                     self._safe_output(root, rel).write_bytes(bundle.read(entry))
         except zipfile.BadZipFile:
+            td.cleanup()
             raise ResolutionError("GitHub archive is not a valid ZIP") from None
+        except Exception:
+            td.cleanup()
+            raise
+        with self._tempdirs_lock:
+            if self._closed:
+                td.cleanup()
+                raise ResolutionError("repository provider closed during materialization")
+            self._tempdirs.append(td)
         return MaterializedRepository(root, repository_id, commit, full_name)
 
     def read_text(self, repository_id: int, ref: str, path: str) -> tuple[str, str, str]:

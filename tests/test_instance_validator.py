@@ -357,6 +357,41 @@ class InstanceValidationTests(unittest.TestCase):
 
     # ===== Negative: FAIL =====
 
+    def test_fail_topic_goal_identity_must_match_canonical_path(self):
+        write_full_state(
+            self.instance,
+            curriculum_refs=self.valid_refs(f"{DOMAIN}.foundation"),
+            provenance=self.valid_legacy_provenance(),
+            handoff_ref=self.handoff_ref_ok(),
+        )
+        path = self.instance / "topics/modern-language-models/goal.yaml"
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data["topic"] = "other-topic"
+        path.write_text(
+            yaml.safe_dump(data, sort_keys=False),
+            encoding="utf-8",
+        )
+        self.assertIn("path.identity", self.errors())
+
+    def test_fail_local_curriculum_domain_must_match_canonical_path(self):
+        write_yaml(
+            self.instance,
+            "curriculum/local/local-domain/curriculum.yaml",
+            {
+                "schema_version": "0.3",
+                "document_type": "curriculum",
+                "domain": {
+                    "id": "other-domain",
+                    "title": "Other Domain",
+                },
+                "curriculum_version": "1.0",
+                "nodes": {},
+                "edges": [],
+                "aliases": {},
+            },
+        )
+        self.assertIn("path.identity", self.errors())
+
     def test_fail_state_schema_04(self):
         # 状态文档 schema_version 0.4：Core 仅支持 0.3（D2），fail closed。
         write_full_state(self.instance, curriculum_refs=self.valid_refs(f"{DOMAIN}.foundation"),
@@ -805,7 +840,10 @@ class SplitInstanceStorageRegistryTests(unittest.TestCase):
             ("coordination/hub/runtime.yaml", "hub_runtime"),
             ("topics/topic/coordination/topic-report.yaml", "topic_report"),
         ):
-            write_yaml(self.instance, path, {"schema_version": "0.3", "document_type": document_type})
+            doc = {"schema_version": "0.3", "document_type": document_type}
+            if document_type != "coordination_event":
+                doc["revision"] = 1
+            write_yaml(self.instance, path, doc)
         self.assert_pass()
 
     def test_five_previously_missing_types_fail_off_family(self):
@@ -826,8 +864,15 @@ class SplitInstanceStorageRegistryTests(unittest.TestCase):
     def test_hub_runtime_top_level_coordination_is_narrowly_allowed(self):
         write_yaml(self.instance, "coordination/hub/runtime.yaml", {
             "schema_version": "0.3", "document_type": "hub_runtime",
+            "revision": 1,
         })
         self.assert_pass()
+
+    def test_revisioned_family_requires_revision_even_when_other_fields_are_sparse(self):
+        write_yaml(self.instance, "learner/execution.yaml", {
+            "schema_version": "0.3", "document_type": "learner_execution",
+        })
+        self.assertIn("revision.invalid", self.errors())
 
     def test_both_learning_handoff_own_storage_families_pass(self):
         doc = {
