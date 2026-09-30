@@ -23,6 +23,7 @@ from scripts.runtime_broker import (
     DeploymentWriteGate,
     RuntimeCapabilityPolicy,
     RuntimeSessionBroker,
+    _candidate_output_path,
     _preflight_candidate_yaml,
 )
 
@@ -310,20 +311,20 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
 
     def test_writable_session_requires_shared_admission_gate(self):
         broker = RuntimeSessionBroker(self.provider, locator())
-        with self.assertRaisesRegex(GuardRejected, "write admission"):
+        with self.assertRaisesRegex(GuardRejected, "operation admission"):
             broker.open_session(
                 branch_runtime_path=RUNTIME_PATH,
                 policy=self.policy,
                 expected_generation=3,
             )
 
-    def test_read_only_session_does_not_require_admission_gate(self):
+    def test_read_only_session_requires_shared_admission_gate(self):
         broker = RuntimeSessionBroker(self.provider, locator())
-        session = broker.open_session(
-            branch_runtime_path=RUNTIME_PATH,
-            policy=RuntimeCapabilityPolicy(readable_roots=("learner",)),
-        )
-        self.assertEqual(3, session.binding.generation)
+        with self.assertRaisesRegex(GuardRejected, "operation admission"):
+            broker.open_session(
+                branch_runtime_path=RUNTIME_PATH,
+                policy=RuntimeCapabilityPolicy(readable_roots=("learner",)),
+            )
 
     def test_promotion_barrier_closes_new_write_admissions(self):
         gate = DeploymentWriteGate()
@@ -331,6 +332,41 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             with self.assertRaisesRegex(GuardRejected, "admissions are closed"):
                 with gate.write_lease():
                     pass
+
+    def test_promotion_barrier_closes_new_read_admissions(self):
+        gate = DeploymentWriteGate()
+        with gate.promotion_barrier():
+            with self.assertRaisesRegex(GuardRejected, "promotion is in progress"):
+                with gate.read_lease():
+                    pass
+
+    def test_promotion_barrier_drains_inflight_read(self):
+        gate = DeploymentWriteGate()
+        holder_ready = threading.Event()
+        release_holder = threading.Event()
+        promotion_entered = threading.Event()
+
+        def hold_read():
+            with gate.read_lease():
+                holder_ready.set()
+                release_holder.wait(2)
+
+        def promote():
+            with gate.promotion_barrier():
+                promotion_entered.set()
+
+        reader = threading.Thread(target=hold_read)
+        promoter = threading.Thread(target=promote)
+        reader.start()
+        self.assertTrue(holder_ready.wait(1))
+        promoter.start()
+        self.assertFalse(promotion_entered.wait(0.05))
+        release_holder.set()
+        self.assertTrue(promotion_entered.wait(1))
+        reader.join(1)
+        promoter.join(1)
+        self.assertFalse(reader.is_alive())
+        self.assertFalse(promoter.is_alive())
 
     def test_promotion_barrier_drains_inflight_write(self):
         gate = DeploymentWriteGate()
@@ -915,6 +951,28 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 message="test concurrent handoff",
             )
         self.assertEqual(WRITE_V1, self.provider.docs[WRITE_PATH])
+
+    def test_candidate_output_path_rejects_windows_escape_and_device_forms(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            root = Path(tempdir)
+            with mock.patch("scripts.runtime_broker.os.name", "nt"):
+                for path in (
+                    "learner/knowledge/D:outside.yaml",
+                    "learner/knowledge/state.yaml:ads",
+                    "learner/knowledge/CON.yaml",
+                    "learner/knowledge/name. ",
+                ):
+                    with self.subTest(path=path):
+                        with self.assertRaisesRegex(GuardRejected, "unsafe on Windows"):
+                            _candidate_output_path(root, path)
+
+    def test_candidate_output_path_remains_under_snapshot_root(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            root = Path(tempdir)
+            candidate = _candidate_output_path(
+                root, "learner/knowledge/synthetic.yaml"
+            )
+            candidate.relative_to(root.resolve(strict=True))
 
     def test_candidate_yaml_preflight_rejects_aliases_and_anchors(self):
         with self.assertRaisesRegex(GuardRejected, "aliases and anchors"):

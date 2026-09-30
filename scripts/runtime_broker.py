@@ -10,6 +10,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+import os
 import shutil
 import subprocess
 import sys
@@ -73,6 +74,11 @@ BRANCH_RUNTIME_REQUIRED_FIELDS = frozenset({
     "pending_successor",
     "generations",
 })
+WINDOWS_RESERVED_BASENAMES = frozenset({
+    "CON", "PRN", "AUX", "NUL",
+    *(f"COM{index}" for index in range(1, 10)),
+    *(f"LPT{index}" for index in range(1, 10)),
+})
 
 def _relative_path(value: object, where: str) -> str:
     if not isinstance(value, str) or not value:
@@ -87,6 +93,31 @@ def _relative_path(value: object, where: str) -> str:
     ):
         raise ResolutionError(f"{where} must be a canonical relative repository path")
     return value
+
+
+def _candidate_output_path(root: Path, path: str) -> Path:
+    pure = PurePosixPath(path)
+    if os.name == "nt":
+        for part in pure.parts:
+            normalized = part.rstrip(" .")
+            stem = normalized.split(".", 1)[0].upper()
+            if (
+                ":" in part
+                or normalized != part
+                or stem in WINDOWS_RESERVED_BASENAMES
+            ):
+                raise GuardRejected(
+                    "candidate repository path is unsafe on Windows"
+                )
+    base = root.resolve(strict=True)
+    candidate = root.joinpath(*pure.parts).resolve(strict=False)
+    try:
+        candidate.relative_to(base)
+    except ValueError:
+        raise GuardRejected(
+            "candidate repository path escapes the materialized Instance"
+        ) from None
+    return candidate
 
 
 def _normalized_roots(values: tuple[str, ...], where: str) -> tuple[str, ...]:
@@ -147,7 +178,9 @@ def _preflight_candidate_yaml(content: str) -> None:
 
 
 class DeploymentWriteAdmission(Protocol):
-    """Host admission authority shared by broker writes and promotion."""
+    """Host admission authority shared by broker reads/writes and promotion."""
+
+    def read_lease(self) -> ContextManager[None]: ...
 
     def write_lease(self) -> ContextManager[None]: ...
 
@@ -155,7 +188,7 @@ class DeploymentWriteAdmission(Protocol):
 
 
 class DeploymentWriteGate:
-    """Reference same-process admission/drain gate for Runtime writes.
+    """Reference same-process admission/drain gate for Runtime operations.
 
     Multi-process hosts must provide an equivalent cross-process implementation.
     The promotion path must hold promotion_barrier() across the entire
@@ -166,7 +199,21 @@ class DeploymentWriteGate:
         self._condition = threading.Condition()
         self._promotion_lock = threading.Lock()
         self._accepting = True
+        self._promotion_active = False
         self._holders = 0
+
+    @contextmanager
+    def read_lease(self) -> Iterator[None]:
+        with self._condition:
+            if self._promotion_active:
+                raise GuardRejected("deployment promotion is in progress")
+            self._holders += 1
+        try:
+            yield
+        finally:
+            with self._condition:
+                self._holders -= 1
+                self._condition.notify_all()
 
     @contextmanager
     def write_lease(self) -> Iterator[None]:
@@ -186,12 +233,14 @@ class DeploymentWriteGate:
         self._promotion_lock.acquire()
         try:
             with self._condition:
+                self._promotion_active = True
                 self._accepting = False
                 while self._holders:
                     self._condition.wait()
             yield
         finally:
             with self._condition:
+                self._promotion_active = False
                 self._accepting = True
                 self._condition.notify_all()
             self._promotion_lock.release()
@@ -460,6 +509,10 @@ class RuntimeSessionBroker:
         policy: RuntimeCapabilityPolicy,
         expected_generation: int | None = None,
     ) -> LearningRuntimeSession:
+        if self.write_admission is None:
+            raise GuardRejected(
+                "learning session requires shared deployment operation admission"
+            )
         resolved = DeploymentResolver(self.provider).resolve(self.locator)
         try:
             deployment = resolved.context
@@ -471,10 +524,6 @@ class RuntimeSessionBroker:
             ])
         instance_ref = self.locator["instance"]["canonical_ref"]
         runtime_path = _relative_path(branch_runtime_path, "branch_runtime_path")
-        if policy.writable_roots and self.write_admission is None:
-            raise GuardRejected(
-                "writable learning session requires shared deployment write admission"
-            )
         if policy.writable_roots and expected_generation is None:
             raise GuardRejected(
                 "writable learning session requires an established generation"
@@ -637,9 +686,7 @@ class RuntimeSessionBroker:
                 temp_root = Path(candidate_dir)
                 root = temp_root / "instance"
                 shutil.copytree(instance.root, root)
-                candidate_path = root.joinpath(
-                    *PurePosixPath(path).parts
-                )
+                candidate_path = _candidate_output_path(root, path)
                 candidate_path.parent.mkdir(
                     parents=True, exist_ok=True
                 )
@@ -704,29 +751,36 @@ class RuntimeSessionBroker:
         path = _relative_path(path, "path")
         if not session.policy.may_read(path):
             raise GuardRejected("Instance read is outside the session capability policy")
-        authority_head = self.assert_current(session)
-        content, blob_sha, read_head = self.provider.read_text(
-            session.deployment.instance_repository_id,
-            authority_head,
-            path,
-        )
-        if read_head != authority_head:
+        if self.write_admission is None:
             raise GuardRejected(
-                "Instance read provenance changed during the operation"
+                "learning session requires shared deployment operation admission"
             )
-        self.guard.check(session.deployment, require_active=False)
-        final_generation, final_authority_head = self._fresh_generation(session)
-        if final_generation != session.binding.generation:
-            raise GuardRejected("semantic generation changed during Instance read")
-        if final_authority_head != authority_head:
-            raise GuardRejected("Instance authority head changed during read")
-        # _fresh_generation may itself resolve immutable handoff references from
-        # the exact Instance authority head. Close the read with both authorities:
-        # Runtime-Control must still match, and the moving Instance canonical ref
-        # must still resolve to the same exact head after those final handoff reads.
-        self.guard.check(session.deployment, require_active=False)
-        self._assert_instance_authority_head_current(session, authority_head)
-        return InstanceText(content=content, version_token=blob_sha)
+        with self.write_admission.read_lease():
+            authority_head = self.assert_current(session)
+            content, blob_sha, read_head = self.provider.read_text(
+                session.deployment.instance_repository_id,
+                authority_head,
+                path,
+            )
+            if read_head != authority_head:
+                raise GuardRejected(
+                    "Instance read provenance changed during the operation"
+                )
+            self.guard.check(session.deployment, require_active=False)
+            final_generation, final_authority_head = self._fresh_generation(session)
+            if final_generation != session.binding.generation:
+                raise GuardRejected("semantic generation changed during Instance read")
+            if final_authority_head != authority_head:
+                raise GuardRejected("Instance authority head changed during read")
+            # Branch handoff can advance Instance independently of deployment
+            # promotion, so keep an exact-head recheck even while the read lease
+            # fences the entire operation against Runtime-Control promotion.
+            self._assert_instance_authority_head_current(session, authority_head)
+            # The shared read lease is the primary promotion fence. Recheck
+            # Runtime-Control last as defense in depth against a nonconforming
+            # external actor that mutates deployment authority without the gate.
+            self.guard.check(session.deployment, require_active=False)
+            return InstanceText(content=content, version_token=blob_sha)
 
     def guarded_update(
         self,
