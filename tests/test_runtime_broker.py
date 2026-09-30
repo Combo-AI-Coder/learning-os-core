@@ -166,7 +166,11 @@ class BrokerProvider:
 
     def read_text(self, repository_id, ref, path):
         self.calls.append(("read", repository_id, ref, path))
-        if repository_id == RC_ID and ref == "main" and path == "deployment.yaml":
+        if (
+            repository_id == RC_ID
+            and ref in {"main", RC_COMMIT}
+            and path == "deployment.yaml"
+        ):
             return yaml.safe_dump(self.contract, sort_keys=False), "1" * 40, RC_COMMIT
         if (
             repository_id == INSTANCE_ID

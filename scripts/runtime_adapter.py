@@ -249,7 +249,8 @@ class DeploymentResolver:
                 rc["repository_id"],
                 control.commit_sha,
                 rc["contract_path"],
-            )            if contract_commit != control.commit_sha:
+            )
+            if contract_commit != control.commit_sha:
                 raise ResolutionError(
                     "Runtime-Control contract provenance changed during bootstrap"
                 )
@@ -274,7 +275,8 @@ class DeploymentResolver:
                 raise ResolutionError(
                     "resolved Core provenance does not match the exact "
                     "deployment pin"
-                )            instance = self.provider.materialize(
+                )
+            instance = self.provider.materialize(
                 inst["repository_id"], inst["canonical_ref"]
             )
             snapshots.append(instance)
@@ -304,7 +306,8 @@ class DeploymentResolver:
             if errors:
                 raise ResolutionError(
                     "deployment validation failed:\n" + "\n".join(errors)
-                )            dep = contract["deployment"]
+                )
+            dep = contract["deployment"]
             epoch = dep.get("epoch")
             if (
                 not isinstance(epoch, int)
