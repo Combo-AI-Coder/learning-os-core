@@ -805,7 +805,10 @@ class SplitInstanceStorageRegistryTests(unittest.TestCase):
             ("coordination/hub/runtime.yaml", "hub_runtime"),
             ("topics/topic/coordination/topic-report.yaml", "topic_report"),
         ):
-            write_yaml(self.instance, path, {"schema_version": "0.3", "document_type": document_type})
+            doc = {"schema_version": "0.3", "document_type": document_type}
+            if document_type != "coordination_event":
+                doc["revision"] = 1
+            write_yaml(self.instance, path, doc)
         self.assert_pass()
 
     def test_five_previously_missing_types_fail_off_family(self):
@@ -826,8 +829,15 @@ class SplitInstanceStorageRegistryTests(unittest.TestCase):
     def test_hub_runtime_top_level_coordination_is_narrowly_allowed(self):
         write_yaml(self.instance, "coordination/hub/runtime.yaml", {
             "schema_version": "0.3", "document_type": "hub_runtime",
+            "revision": 1,
         })
         self.assert_pass()
+
+    def test_revisioned_family_requires_revision_even_when_other_fields_are_sparse(self):
+        write_yaml(self.instance, "learner/execution.yaml", {
+            "schema_version": "0.3", "document_type": "learner_execution",
+        })
+        self.assertIn("revision.invalid", self.errors())
 
     def test_both_learning_handoff_own_storage_families_pass(self):
         doc = {

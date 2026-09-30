@@ -11,11 +11,13 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import os
+import secrets
 import shutil
 import subprocess
 import sys
 import tempfile
 import threading
+import weakref
 from typing import ContextManager, Iterator, Protocol
 
 import yaml
@@ -294,6 +296,13 @@ class LearningSessionBinding:
 
 @dataclass(frozen=True)
 class LearningRuntimeSession:
+    """Opaque handle issued by RuntimeSessionBroker."""
+
+    session_id: str
+
+
+@dataclass(frozen=True)
+class _LearningRuntimeSessionState:
     deployment: SessionDeploymentContext
     binding: LearningSessionBinding
     policy: RuntimeCapabilityPolicy
@@ -313,6 +322,30 @@ class RuntimeSessionBroker:
         self.locator = load_locator(locator_source)
         self.guard = DeploymentGuard(provider)
         self.write_admission = write_admission
+        self._session_lock = threading.Lock()
+        self._issued_sessions: dict[str, _LearningRuntimeSessionState] = {}
+
+    @staticmethod
+    def _expire_session(
+        broker_ref: weakref.ReferenceType["RuntimeSessionBroker"],
+        session_id: str,
+    ) -> None:
+        broker = broker_ref()
+        if broker is None:
+            return
+        with broker._session_lock:
+            broker._issued_sessions.pop(session_id, None)
+
+    def _session_state(
+        self, session: LearningRuntimeSession
+    ) -> _LearningRuntimeSessionState:
+        if not isinstance(session, LearningRuntimeSession):
+            raise GuardRejected("session capability is not broker-issued")
+        with self._session_lock:
+            state = self._issued_sessions.get(session.session_id)
+        if state is None:
+            raise GuardRejected("session capability is not broker-issued")
+        return state
 
     @staticmethod
     def _parse_branch_runtime(text: str) -> dict:
@@ -368,7 +401,26 @@ class RuntimeSessionBroker:
         if data.get("pending_successor") is not None:
             raise ResolutionError("Branch runtime is handing off")
         active_generations: list[int] = []
+        seen_generations: set[int] = set()
         for key, value in generations.items():
+            if isinstance(key, int) and not isinstance(key, bool) and key >= 1:
+                normalized_generation = key
+            elif (
+                isinstance(key, str)
+                and key.isdigit()
+                and not key.startswith("0")
+                and int(key) >= 1
+            ):
+                normalized_generation = int(key)
+            else:
+                raise ResolutionError(
+                    "Branch runtime contains an invalid generation key"
+                )
+            if normalized_generation in seen_generations:
+                raise ResolutionError(
+                    "Branch runtime contains duplicate generation identities"
+                )
+            seen_generations.add(normalized_generation)
             if not isinstance(value, dict):
                 raise ResolutionError(
                     "Branch runtime generation record is invalid"
@@ -378,16 +430,8 @@ class RuntimeSessionBroker:
                 raise ResolutionError(
                     "Branch runtime generation lifecycle is invalid"
                 )
-            if lifecycle != "active":
-                continue
-            if isinstance(key, int) and not isinstance(key, bool) and key >= 1:
-                active_generations.append(key)
-            elif isinstance(key, str) and key.isdigit() and int(key) >= 1:
-                active_generations.append(int(key))
-            else:
-                raise ResolutionError(
-                    "Branch runtime contains an invalid active generation key"
-                )
+            if lifecycle == "active":
+                active_generations.append(normalized_generation)
         if active_generations != [generation]:
             raise ResolutionError(
                 "Branch runtime must contain exactly one active generation"
@@ -536,58 +580,77 @@ class RuntimeSessionBroker:
         generation = runtime["active_generation"]
         if expected_generation is not None and generation != expected_generation:
             raise GuardRejected("requested learning generation is not active")
-        return LearningRuntimeSession(
+        binding = LearningSessionBinding(
+            instance_ref=instance_ref,
+            branch_runtime_path=runtime_path,
+            topic=runtime["topic"],
+            branch_id=runtime["branch_id"],
+            lineage_id=runtime["lineage_id"],
+            generation=generation,
+        )
+        state = _LearningRuntimeSessionState(
             deployment=deployment,
-            binding=LearningSessionBinding(
-                instance_ref=instance_ref,
-                branch_runtime_path=runtime_path,
-                topic=runtime["topic"],
-                branch_id=runtime["branch_id"],
-                lineage_id=runtime["lineage_id"],
-                generation=generation,
-            ),
+            binding=binding,
             policy=policy,
         )
+        with self._session_lock:
+            session_id = secrets.token_urlsafe(32)
+            while session_id in self._issued_sessions:
+                session_id = secrets.token_urlsafe(32)
+            self._issued_sessions[session_id] = state
+        session = LearningRuntimeSession(session_id=session_id)
+        weakref.finalize(
+            session,
+            RuntimeSessionBroker._expire_session,
+            weakref.ref(self),
+            session_id,
+        )
+        return session
 
     def _fresh_generation(
-        self, session: LearningRuntimeSession
+        self, state: _LearningRuntimeSessionState
     ) -> tuple[int, str]:
         try:
             runtime, commit_sha = self._read_branch_runtime(
-                instance_repository_id=session.deployment.instance_repository_id,
-                instance_ref=session.binding.instance_ref,
-                runtime_path=session.binding.branch_runtime_path,
+                instance_repository_id=state.deployment.instance_repository_id,
+                instance_ref=state.binding.instance_ref,
+                runtime_path=state.binding.branch_runtime_path,
             )
         except ResolutionError as exc:
             raise GuardRejected(
                 f"Branch runtime fresh-read failed closed: {exc}"
             ) from None
         for field, expected in (
-            ("topic", session.binding.topic),
-            ("branch_id", session.binding.branch_id),
-            ("lineage_id", session.binding.lineage_id),
+            ("topic", state.binding.topic),
+            ("branch_id", state.binding.branch_id),
+            ("lineage_id", state.binding.lineage_id),
         ):
             if runtime[field] != expected:
                 raise GuardRejected(f"Branch runtime {field} changed")
         return runtime["active_generation"], commit_sha
 
-    def assert_current(self, session: LearningRuntimeSession) -> str:
-        self.guard.check(session.deployment, require_active=False)
-        generation, authority_head = self._fresh_generation(session)
-        if generation != session.binding.generation:
+    def _assert_state_current(
+        self, state: _LearningRuntimeSessionState
+    ) -> str:
+        self.guard.check(state.deployment, require_active=False)
+        generation, authority_head = self._fresh_generation(state)
+        if generation != state.binding.generation:
             raise GuardRejected("semantic generation changed")
         return authority_head
 
+    def assert_current(self, session: LearningRuntimeSession) -> str:
+        return self._assert_state_current(self._session_state(session))
+
     def _assert_instance_authority_head_current(
         self,
-        session: LearningRuntimeSession,
+        state: _LearningRuntimeSessionState,
         expected_head: str,
     ) -> None:
         try:
             _, _, current_head = self.provider.read_text(
-                session.deployment.instance_repository_id,
-                session.binding.instance_ref,
-                session.binding.branch_runtime_path,
+                state.deployment.instance_repository_id,
+                state.binding.instance_ref,
+                state.binding.branch_runtime_path,
             )
         except ResolutionError as exc:
             raise GuardRejected(
@@ -612,19 +675,19 @@ class RuntimeSessionBroker:
             ) from first_error
 
     def _assert_deployed_write_policy_compatible(
-        self, session: LearningRuntimeSession
+        self, state: _LearningRuntimeSessionState
     ) -> None:
         try:
             text, _, commit_sha = self.provider.read_text(
-                session.deployment.core_repository_id,
-                session.deployment.core_commit,
+                state.deployment.core_repository_id,
+                state.deployment.core_commit,
                 "config/core.yaml",
             )
         except ResolutionError as exc:
             raise GuardRejected(
                 f"deployed Core write policy is unavailable: {exc}"
             ) from None
-        if commit_sha != session.deployment.core_commit:
+        if commit_sha != state.deployment.core_commit:
             raise GuardRejected(
                 "deployed Core write policy provenance changed during validation"
             )
@@ -652,7 +715,7 @@ class RuntimeSessionBroker:
 
     def _validate_candidate(
         self,
-        session: LearningRuntimeSession,
+        state: _LearningRuntimeSessionState,
         *,
         authority_head: str,
         path: str,
@@ -663,13 +726,13 @@ class RuntimeSessionBroker:
         snapshots: list = []
         try:
             instance = self.provider.materialize(
-                session.deployment.instance_repository_id,
+                state.deployment.instance_repository_id,
                 authority_head,
             )
             snapshots.append(instance)
             core = self.provider.materialize(
-                session.deployment.core_repository_id,
-                session.deployment.core_commit,
+                state.deployment.core_repository_id,
+                state.deployment.core_commit,
             )
             snapshots.append(core)
             binding = DeploymentBinding.from_contract(
@@ -748,17 +811,18 @@ class RuntimeSessionBroker:
     def read_instance_text(
         self, session: LearningRuntimeSession, path: str
     ) -> InstanceText:
+        state = self._session_state(session)
         path = _relative_path(path, "path")
-        if not session.policy.may_read(path):
+        if not state.policy.may_read(path):
             raise GuardRejected("Instance read is outside the session capability policy")
         if self.write_admission is None:
             raise GuardRejected(
                 "learning session requires shared deployment operation admission"
             )
         with self.write_admission.read_lease():
-            authority_head = self.assert_current(session)
+            authority_head = self._assert_state_current(state)
             content, blob_sha, read_head = self.provider.read_text(
-                session.deployment.instance_repository_id,
+                state.deployment.instance_repository_id,
                 authority_head,
                 path,
             )
@@ -766,20 +830,20 @@ class RuntimeSessionBroker:
                 raise GuardRejected(
                     "Instance read provenance changed during the operation"
                 )
-            self.guard.check(session.deployment, require_active=False)
-            final_generation, final_authority_head = self._fresh_generation(session)
-            if final_generation != session.binding.generation:
+            self.guard.check(state.deployment, require_active=False)
+            final_generation, final_authority_head = self._fresh_generation(state)
+            if final_generation != state.binding.generation:
                 raise GuardRejected("semantic generation changed during Instance read")
             if final_authority_head != authority_head:
                 raise GuardRejected("Instance authority head changed during read")
             # Branch handoff can advance Instance independently of deployment
             # promotion, so keep an exact-head recheck even while the read lease
             # fences the entire operation against Runtime-Control promotion.
-            self._assert_instance_authority_head_current(session, authority_head)
+            self._assert_instance_authority_head_current(state, authority_head)
             # The shared read lease is the primary promotion fence. Recheck
             # Runtime-Control last as defense in depth against a nonconforming
             # external actor that mutates deployment authority without the gate.
-            self.guard.check(session.deployment, require_active=False)
+            self.guard.check(state.deployment, require_active=False)
             return InstanceText(content=content, version_token=blob_sha)
 
     def guarded_update(
@@ -791,16 +855,17 @@ class RuntimeSessionBroker:
         expected_blob_sha: str,
         message: str,
     ) -> InstanceWriteAck:
+        state = self._session_state(session)
         path = _relative_path(path, "path")
-        if not session.policy.may_write(path):
+        if not state.policy.may_write(path):
             raise GuardRejected("Instance write is outside the session capability policy")
         if self.write_admission is None:
             raise GuardRejected(
                 "writable learning session requires shared deployment write admission"
             )
         with self.write_admission.write_lease():
-            contract = self.guard.check(session.deployment)
-            self._assert_deployed_write_policy_compatible(session)
+            contract = self.guard.check(state.deployment)
+            self._assert_deployed_write_policy_compatible(state)
 
             types = instance_expected_types(path)
             if len(types) != 1:
@@ -832,11 +897,11 @@ class RuntimeSessionBroker:
                     "deployed Core generic write mode is unsupported"
                 )
 
-            generation, authority_head = self._fresh_generation(session)
-            if generation != session.binding.generation:
+            generation, authority_head = self._fresh_generation(state)
+            if generation != state.binding.generation:
                 raise GuardRejected("semantic generation changed")
             self._validate_candidate(
-                session,
+                state,
                 authority_head=authority_head,
                 path=path,
                 content=content,
@@ -847,20 +912,20 @@ class RuntimeSessionBroker:
             # closing/finalizing Runtime-Control while validation is in flight.
             # Re-read both authorities after validation as an additional
             # fail-closed check against an external actor that ignored the gate.
-            self.guard.check(session.deployment)
-            self._assert_deployed_write_policy_compatible(session)
+            self.guard.check(state.deployment)
+            self._assert_deployed_write_policy_compatible(state)
             final_generation, final_authority_head = self._fresh_generation(
-                session
+                state
             )
-            if final_generation != session.binding.generation:
+            if final_generation != state.binding.generation:
                 raise GuardRejected("semantic generation changed")
             if final_authority_head != authority_head:
                 raise GuardRejected("Instance authority head changed")
 
             try:
                 self.provider.update_text(
-                    session.deployment.instance_repository_id,
-                    session.binding.instance_ref,
+                    state.deployment.instance_repository_id,
+                    state.binding.instance_ref,
                     path,
                     content,
                     expected_blob_sha,

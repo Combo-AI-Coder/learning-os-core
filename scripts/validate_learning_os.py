@@ -445,13 +445,15 @@ class CoreValidator:
         sv=m.get("supported_instance_state_schema_versions")
         if not (isinstance(sv,list) and sv and all(isinstance(x,str) and x for x in sv)): self.error("core.instance_schema_support",p,"manifest.supported_instance_state_schema_versions must be a non-empty string list")
         write_policy=m.get("runtime_session_write_policy_fingerprint")
-        expected_policy=instance_write_policy_fingerprint()
-        if write_policy!=expected_policy:
+        if not (
+            isinstance(write_policy,str)
+            and re.fullmatch(r"[0-9a-f]{64}",write_policy)
+        ):
             self.error(
                 "core.runtime_session_write_policy",
                 p,
-                "manifest.runtime_session_write_policy_fingerprint must match "
-                f"the Core path/mutation policy fingerprint {expected_policy}",
+                "manifest.runtime_session_write_policy_fingerprint must be a "
+                "64-hex semantic fingerprint",
             )
         for field in ("canonical_status","deployment_status"):
             if field in m:
@@ -528,6 +530,7 @@ INSTANCE_CONFIG_FORBIDDEN={"core.yaml":"Core plane contract","project.yaml":"leg
 # Instance 中被拒绝的 Instance/Control 之外的 plane 文档类型
 INSTANCE_FORBIDDEN_DOC_TYPES={"lineage_control":"private project-design Control lineage","project_config":"legacy canonical project configuration","deployment_binding":"Runtime-Control deployment binding","migration_transaction":"Control migration transaction","core_config":"Core plane contract document"}
 INSTANCE_STATE_TYPES={"learner_background","learner_model","learner_calibration","learner_costs","learner_execution","learner_knowledge","topic_goal","topic_plan","topic_progress","topic_deferred","subtopic_definition","subtopic_plan","subtopic_progress","evidence","weekly_execution","daily_execution","execution_session","branch_registry","branch_runtime","learning_handoff","topic_report","branch_report","hub_runtime","coordination_event","conversation_sequence_registry"}
+INSTANCE_REVISIONED_TYPES={"learner_execution","learner_knowledge","topic_goal","topic_plan","topic_progress","subtopic_plan","subtopic_progress","weekly_execution","daily_execution","branch_registry","branch_runtime","branch_report","hub_runtime","topic_report"}
 INSTANCE_CONTRACT_TYPES={"instance_config","curriculum_extension"}
 INSTANCE_CURRICULUM_TYPES={"curriculum"}
 # V0.4-R2B protocol/schema.md §2.1: complete split Instance physical registry.
@@ -908,13 +911,13 @@ class InstanceValidator:
             if t not in INSTANCE_ALL_TYPES: continue
             for k in req.get(t,()):
                 if k not in d:self.error("document.required",p,f"missing {k}")
-            if "revision" in d:
+            if t in INSTANCE_REVISIONED_TYPES:
                 revision=d.get("revision")
                 if not isinstance(revision,int) or isinstance(revision,bool) or revision<1:
                     self.error(
                         "revision.invalid",
                         p,
-                        "revision must be a positive integer",
+                        "revisioned document requires a positive integer revision",
                     )
             if t=="topic_plan":self.enum(p,"plan.status",(d.get("plan")or{}).get("status"),{"awaiting_intake","provisional","active","paused"})
             elif t=="topic_progress":

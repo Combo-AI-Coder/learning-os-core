@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import threading
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
@@ -266,10 +267,11 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
 
     def test_open_session_binds_active_branch_generation(self):
         session = self.open(expected_generation=3)
-        self.assertEqual(3, session.binding.generation)
-        self.assertEqual("synthetic", session.binding.topic)
-        self.assertEqual("main", session.binding.branch_id)
-        self.assertEqual("synthetic-main-lineage", session.binding.lineage_id)
+        state = self.broker._session_state(session)
+        self.assertEqual(3, state.binding.generation)
+        self.assertEqual("synthetic", state.binding.topic)
+        self.assertEqual("main", state.binding.branch_id)
+        self.assertEqual("synthetic-main-lineage", state.binding.lineage_id)
 
     def test_resolver_releases_partial_materializations_on_failure(self):
         self.provider.calls.clear()
@@ -307,7 +309,10 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             policy=self.policy,
             expected_generation=3,
         )
-        self.assertEqual(INSTANCE_ID, session.deployment.instance_repository_id)
+        self.assertEqual(
+            INSTANCE_ID,
+            broker._session_state(session).deployment.instance_repository_id,
+        )
 
     def test_writable_session_requires_shared_admission_gate(self):
         broker = RuntimeSessionBroker(self.provider, locator())
@@ -325,6 +330,42 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 branch_runtime_path=RUNTIME_PATH,
                 policy=RuntimeCapabilityPolicy(readable_roots=("learner",)),
             )
+
+    def test_opaque_session_copy_cannot_expand_capabilities(self):
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=RuntimeCapabilityPolicy(readable_roots=("learner",)),
+        )
+        self.assertFalse(hasattr(session, "policy"))
+        self.assertFalse(hasattr(session, "deployment"))
+        self.assertFalse(hasattr(session, "binding"))
+        copied = replace(session)
+        self.provider.calls.clear()
+        with self.assertRaisesRegex(GuardRejected, "outside"):
+            self.broker.guarded_update(
+                copied,
+                path=WRITE_PATH,
+                content=WRITE_V2,
+                expected_blob_sha="f" * 40,
+                message="copied read-only capability must remain read-only",
+            )
+        self.assertFalse(any(call[0] == "update" for call in self.provider.calls))
+
+    def test_forged_session_handle_is_rejected(self):
+        session = self.open()
+        forged = replace(session, session_id="forged-session-token")
+        with self.assertRaisesRegex(GuardRejected, "not broker-issued"):
+            self.broker.read_instance_text(forged, READ_PATH)
+
+    def test_session_capability_is_bound_to_issuing_broker(self):
+        session = self.open()
+        other = RuntimeSessionBroker(
+            self.provider,
+            locator(),
+            write_admission=self.write_gate,
+        )
+        with self.assertRaisesRegex(GuardRejected, "not broker-issued"):
+            other.read_instance_text(session, READ_PATH)
 
     def test_promotion_barrier_closes_new_write_admissions(self):
         gate = DeploymentWriteGate()
@@ -436,7 +477,9 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             branch_runtime_path=RUNTIME_PATH,
             policy=policy,
         )
-        self.assertEqual(3, session.binding.generation)
+        self.assertEqual(
+            3, self.broker._session_state(session).binding.generation
+        )
         with self.assertRaisesRegex(GuardRejected, "outside"):
             self.broker.guarded_update(
                 session,
@@ -673,6 +716,16 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             runtime, sort_keys=False
         )
         with self.assertRaisesRegex(GuardRejected, "lifecycle"):
+            self.broker.read_instance_text(session, READ_PATH)
+
+    def test_invalid_archived_generation_key_fails_closed(self):
+        session = self.open()
+        runtime = branch_runtime()
+        runtime["generations"]["legacy"] = {"lifecycle": "archived"}
+        self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(
+            runtime, sort_keys=False
+        )
+        with self.assertRaisesRegex(GuardRejected, "generation key"):
             self.broker.read_instance_text(session, READ_PATH)
 
     def test_deployment_change_blocks_subsequent_read(self):
@@ -1035,7 +1088,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             "scripts.runtime_broker.subprocess.run", side_effect=run
         ):
             self.broker._validate_candidate(
-                session,
+                self.broker._session_state(session),
                 authority_head=self.provider.instance_head,
                 path=WRITE_PATH,
                 content=WRITE_V2,
@@ -1066,7 +1119,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 GuardRejected, "materialization cleanup failed"
             ):
                 self.broker._validate_candidate(
-                    session,
+                    self.broker._session_state(session),
                     authority_head=self.provider.instance_head,
                     path=WRITE_PATH,
                     content=WRITE_V2,

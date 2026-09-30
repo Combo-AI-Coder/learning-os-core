@@ -226,12 +226,26 @@ class CoreValidatorTests(unittest.TestCase):
         config["manifest"]["supported_instance_state_schema_versions"] = []
         self.assertIn("core.instance_schema_support", core_errors(self.make_snapshot(config=config)))
 
-    def test_fail_runtime_session_write_policy_fingerprint_drift(self):
+    def test_fail_runtime_session_write_policy_fingerprint_format(self):
         config = core_config()
-        config["manifest"]["runtime_session_write_policy_fingerprint"] = "0" * 64
+        config["manifest"]["runtime_session_write_policy_fingerprint"] = "invalid"
         self.assertIn(
             "core.runtime_session_write_policy",
             core_errors(self.make_snapshot(config=config)),
+        )
+
+    def test_core_validation_allows_different_valid_write_policy_fingerprint(self):
+        config = core_config()
+        config["manifest"]["runtime_session_write_policy_fingerprint"] = "0" * 64
+        self.assert_valid(self.make_snapshot(config=config))
+
+    def test_repository_core_write_policy_fingerprint_matches_local_semantics(self):
+        config = yaml.safe_load(
+            (CORE_REPO_ROOT / "config/core.yaml").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            instance_write_policy_fingerprint(),
+            config["manifest"]["runtime_session_write_policy_fingerprint"],
         )
 
     # ===== Negative: structural credentials/secrets =====
