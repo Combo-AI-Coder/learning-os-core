@@ -540,10 +540,6 @@ INSTANCE_GENERIC_WRITE_VERSION_RULES={
         "field":"extension_revision",
         "ordering":"positive_int",
     },
-    "curriculum":{
-        "field":"curriculum_version",
-        "ordering":"dotted_int_v1",
-    },
 }
 INSTANCE_CONTRACT_TYPES={"instance_config","curriculum_extension"}
 INSTANCE_CURRICULUM_TYPES={"curriculum"}
@@ -591,6 +587,7 @@ INSTANCE_GENERIC_WRITE_MODE_OVERRIDES={
     "learning_handoff":"immutable_create_only",
     "branch_registry":"protocol_transition",
     "conversation_sequence_registry":"protocol_transition",
+    "curriculum":"protocol_transition",
     "topic_plan":"hub_transition",
     "topic_progress":"hub_transition",
     "topic_deferred":"hub_transition",

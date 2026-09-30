@@ -11,7 +11,6 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import os
-import re
 import secrets
 import shutil
 import subprocess
@@ -963,26 +962,6 @@ class RuntimeSessionBroker:
         raise GuardRejected("deployed Core role-write scope is unsupported")
 
     @staticmethod
-    def _dotted_integer_version(
-        value: object, label: str
-    ) -> tuple[tuple[int, str], ...]:
-        if (
-            not isinstance(value, str)
-            or re.fullmatch(r"[0-9]+(?:\.[0-9]+)*", value) is None
-        ):
-            raise GuardRejected(
-                f"{label} replacement curriculum_version is not an "
-                "orderable dotted-integer version"
-            )
-        parts = []
-        for part in value.split("."):
-            normalized = part.lstrip("0") or "0"
-            parts.append((len(normalized), normalized))
-        while len(parts) > 1 and parts[-1][1] == "0":
-            parts.pop()
-        return tuple(parts)
-
-    @staticmethod
     def _load_transition_documents(
         instance_root: Path, path: str, content: str
     ) -> tuple[dict, dict]:
@@ -1060,13 +1039,6 @@ class RuntimeSessionBroker:
                     )
             current_order = (current_revision,)
             candidate_order = (candidate_revision,)
-        elif ordering == "dotted_int_v1":
-            current_order = RuntimeSessionBroker._dotted_integer_version(
-                current_revision, "current"
-            )
-            candidate_order = RuntimeSessionBroker._dotted_integer_version(
-                candidate_revision, "candidate"
-            )
         else:
             raise GuardRejected(
                 "deployed Core semantic-version ordering is unsupported"
