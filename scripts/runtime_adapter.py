@@ -34,6 +34,7 @@ from yaml.events import (
     SequenceEndEvent,
     SequenceStartEvent,
 )
+from yaml.nodes import MappingNode, ScalarNode, SequenceNode
 
 from scripts.validate_learning_os import (
     RepositorySnapshot,
@@ -112,6 +113,34 @@ def _preflight_bounded_yaml(content: str, where: str) -> None:
                 depth = max(0, depth - 1)
             if nodes > BOUNDED_YAML_MAX_NODES:
                 raise ResolutionError(f"{where} exceeds the node limit")
+
+        root = yaml.compose(content, Loader=yaml.SafeLoader)
+        if root is not None:
+            key_loader = yaml.SafeLoader("")
+            try:
+                def reject_duplicate_keys(node) -> None:
+                    if isinstance(node, MappingNode):
+                        seen = set()
+                        for key_node, value_node in node.value:
+                            if not isinstance(key_node, ScalarNode):
+                                raise ResolutionError(
+                                    f"{where} mapping keys must be scalars"
+                                )
+                            key = key_loader.construct_object(
+                                key_node, deep=True
+                            )
+                            if key in seen:
+                                raise ResolutionError(
+                                    f"{where} contains a duplicate mapping key"
+                                )
+                            seen.add(key)
+                            reject_duplicate_keys(value_node)
+                    elif isinstance(node, SequenceNode):
+                        for item in node.value:
+                            reject_duplicate_keys(item)
+                reject_duplicate_keys(root)
+            finally:
+                key_loader.dispose()
     except yaml.YAMLError as exc:
         raise ResolutionError(
             f"{where} preflight failed: {exc.__class__.__name__}"

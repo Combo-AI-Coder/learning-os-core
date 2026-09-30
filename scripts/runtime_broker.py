@@ -41,6 +41,7 @@ from scripts.validate_learning_os import (
     instance_expected_types,
     instance_generic_write_mode,
     instance_generic_write_role_rule,
+    instance_generic_write_transition_rule,
     instance_generic_write_version_rule,
     instance_write_policy_fingerprint,
     learning_handoff_identity_mismatches,
@@ -982,6 +983,46 @@ class RuntimeSessionBroker:
         return tuple(parts)
 
     @staticmethod
+    def _load_transition_documents(
+        instance_root: Path, path: str, content: str
+    ) -> tuple[dict, dict]:
+        current_path = instance_root.joinpath(*PurePosixPath(path).parts)
+        try:
+            if not current_path.is_file():
+                raise GuardRejected(
+                    "replacement target is missing from the exact "
+                    "Instance authority snapshot"
+                )
+            current_text = current_path.read_text(encoding="utf-8")
+        except GuardRejected:
+            raise
+        except (OSError, UnicodeError) as exc:
+            raise GuardRejected(
+                "replacement target is unreadable: "
+                f"{exc.__class__.__name__}"
+            ) from None
+
+        try:
+            _preflight_bounded_yaml(
+                current_text, "current replacement Instance YAML"
+            )
+        except ResolutionError as exc:
+            raise GuardRejected(str(exc)) from None
+        try:
+            current = yaml.safe_load(current_text)
+            candidate = yaml.safe_load(content)
+        except yaml.YAMLError as exc:
+            raise GuardRejected(
+                "replacement YAML is malformed: "
+                f"{exc.__class__.__name__}"
+            ) from None
+        if not isinstance(current, dict) or not isinstance(candidate, dict):
+            raise GuardRejected(
+                "replacement documents must be mappings"
+            )
+        return current, candidate
+
+    @staticmethod
     def _assert_semantic_version_transition(
         instance_root: Path,
         *,
@@ -994,41 +1035,9 @@ class RuntimeSessionBroker:
             return
         revision_field = version_rule["field"]
 
-        current_path = instance_root.joinpath(*PurePosixPath(path).parts)
-        try:
-            if not current_path.is_file():
-                raise GuardRejected(
-                    "revisioned replacement target is missing from the exact "
-                    "Instance authority snapshot"
-                )
-            current_text = current_path.read_text(encoding="utf-8")
-        except GuardRejected:
-            raise
-        except (OSError, UnicodeError) as exc:
-            raise GuardRejected(
-                "revisioned replacement target is unreadable: "
-                f"{exc.__class__.__name__}"
-            ) from None
-
-        try:
-            _preflight_bounded_yaml(
-                current_text, "current revisioned Instance YAML"
-            )
-        except ResolutionError as exc:
-            raise GuardRejected(str(exc)) from None
-        try:
-            current = yaml.safe_load(current_text)
-            candidate = yaml.safe_load(content)
-        except yaml.YAMLError as exc:
-            raise GuardRejected(
-                "revisioned replacement YAML is malformed: "
-                f"{exc.__class__.__name__}"
-            ) from None
-        if not isinstance(current, dict) or not isinstance(candidate, dict):
-            raise GuardRejected(
-                "revisioned replacement documents must be mappings"
-            )
-
+        current, candidate = RuntimeSessionBroker._load_transition_documents(
+            instance_root, path, content
+        )
         current_revision = current.get(revision_field)
         candidate_revision = candidate.get(revision_field)
         ordering = version_rule["ordering"]
@@ -1067,6 +1076,67 @@ class RuntimeSessionBroker:
                 f"replacement must advance semantic {revision_field}"
             )
 
+    @staticmethod
+    def _daily_baseline_ids(value: object, label: str) -> frozenset[str]:
+        if value is None:
+            return frozenset()
+        if not isinstance(value, list):
+            raise GuardRejected(
+                f"{label} locked Daily baseline_objectives must be a list"
+            )
+        ids = []
+        for item in value:
+            if isinstance(item, str):
+                objective_id = item
+            elif isinstance(item, dict):
+                objective_id = item.get("id")
+            else:
+                objective_id = None
+            if not isinstance(objective_id, str) or not objective_id.strip():
+                raise GuardRejected(
+                    f"{label} locked Daily baseline objective lacks an id"
+                )
+            ids.append(objective_id)
+        if len(set(ids)) != len(ids):
+            raise GuardRejected(
+                f"{label} locked Daily baseline objective ids are duplicated"
+            )
+        return frozenset(ids)
+
+    @staticmethod
+    def _assert_document_transition(
+        instance_root: Path,
+        *,
+        path: str,
+        document_type: str,
+        content: str,
+    ) -> None:
+        rule = instance_generic_write_transition_rule(document_type)
+        if rule is None:
+            return
+        if rule != "preserve_locked_daily_baseline_v1":
+            raise GuardRejected(
+                "deployed Core document-transition rule is unsupported"
+            )
+        current, candidate = RuntimeSessionBroker._load_transition_documents(
+            instance_root, path, content
+        )
+        if current.get("baseline_locked") is True:
+            if candidate.get("baseline_locked") is not True:
+                raise GuardRejected(
+                    "locked Daily baseline cannot be unlocked by generic replacement"
+                )
+            current_ids = RuntimeSessionBroker._daily_baseline_ids(
+                current.get("baseline_objectives"), "current"
+            )
+            candidate_ids = RuntimeSessionBroker._daily_baseline_ids(
+                candidate.get("baseline_objectives"), "candidate"
+            )
+            if candidate_ids != current_ids:
+                raise GuardRejected(
+                    "locked Daily baseline objective membership cannot change"
+                )
+
     def _validate_candidate(
         self,
         state: _LearningRuntimeSessionState,
@@ -1098,6 +1168,12 @@ class RuntimeSessionBroker:
                     "candidate Instance update path is unclassified or ambiguous"
                 )
             self._assert_semantic_version_transition(
+                instance.root,
+                path=path,
+                document_type=types[0],
+                content=content,
+            )
+            self._assert_document_transition(
                 instance.root,
                 path=path,
                 document_type=types[0],
@@ -1158,10 +1234,8 @@ class RuntimeSessionBroker:
                 try:
                     result = subprocess.run(
                         command,
-                        capture_output=True,
-                        text=True,
-                        encoding="utf-8",
-                        errors="replace",
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
                         timeout=CANDIDATE_VALIDATION_TIMEOUT_SECONDS,
                         check=False,
                         cwd=core.root,

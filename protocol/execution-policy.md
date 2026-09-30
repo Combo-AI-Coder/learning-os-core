@@ -54,7 +54,7 @@ Study Branches SHOULD NOT continually mutate shared Weekly files to accumulate t
 
 Daily planning is Topic-local, e.g. `topics/<topic>/execution/daily/<date>.yaml`, so different Topics do not contend for one shared daily file.
 
-A Daily baseline MAY be adjusted while still draft. Once meaningful execution begins, its baseline denominator is normally frozen. Unexpected prerequisite repair or detours MUST NOT silently enlarge that baseline; track them separately as temporary work.
+A Daily baseline MAY be adjusted while still draft. Once meaningful execution begins, its baseline denominator is normally frozen. When `baseline_locked: true`, ordinary generic replacement MUST keep it locked and preserve the membership of `baseline_objectives` by stable objective ID; status/details of those same objectives may advance, while adding/removing/replacing baseline objective IDs requires an owning planning transition. Unexpected prerequisite repair or detours MUST NOT silently enlarge that baseline; track them separately as temporary work.
 
 Current explicit learner overrides take precedence over stale daily agenda. A one-day override does not rewrite long-term defaults.
 

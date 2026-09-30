@@ -215,6 +215,27 @@ core:
                 session, require_active=False
             )
 
+    def test_fresh_guard_rejects_runtime_control_duplicate_keys(self):
+        session = self.session()
+        raw = yaml.safe_dump(contract(), sort_keys=False) + (
+            "deployment:\n"
+            "  id: dep-runtime-test\n"
+            "  topology: split\n"
+            "  epoch: 1\n"
+            "  write_state: active\n"
+        )
+        self.provider.read_text = lambda *args: (
+            raw,
+            "e" * 40,
+            RC_COMMIT,
+        )
+        with self.assertRaisesRegex(
+            GuardRejected, "duplicate mapping key"
+        ):
+            DeploymentGuard(self.provider).check(
+                session, require_active=False
+            )
+
     def test_fresh_guard_rejects_implicit_null_node_overflow(self):
         session = self.session()
         raw = (

@@ -25,7 +25,7 @@ manifest:
   release: "0.4.0"
   # Runtime broker may use host-local classification only when this exact
   # deployed-Core semantic fingerprint matches; policy drift fails closed.
-  runtime_session_write_policy_fingerprint: "261690930ca7eee3b0797aed794d497e3b6f00df7b2803cfdc2ff23c01a4a962"
+  runtime_session_write_policy_fingerprint: "594365f69d89652c806898c647d3091fbabe6d899fd22513f0782147d133051e"
   # Version-axis glossary (V0.4-B2-B, G8 decisions D1/D3):
   #   schema_version (top level)      = Core config CONTRACT schema (this
   #                                     document; V0.4-only contract -> 0.4).

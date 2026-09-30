@@ -357,6 +357,41 @@ class InstanceValidationTests(unittest.TestCase):
 
     # ===== Negative: FAIL =====
 
+    def test_fail_topic_goal_identity_must_match_canonical_path(self):
+        write_full_state(
+            self.instance,
+            curriculum_refs=self.valid_refs(f"{DOMAIN}.foundation"),
+            provenance=self.valid_legacy_provenance(),
+            handoff_ref=self.handoff_ref_ok(),
+        )
+        path = self.instance / "topics/modern-language-models/goal.yaml"
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data["topic"] = "other-topic"
+        path.write_text(
+            yaml.safe_dump(data, sort_keys=False),
+            encoding="utf-8",
+        )
+        self.assertIn("path.identity", self.errors())
+
+    def test_fail_local_curriculum_domain_must_match_canonical_path(self):
+        write_yaml(
+            self.instance,
+            "curriculum/local/local-domain/curriculum.yaml",
+            {
+                "schema_version": "0.3",
+                "document_type": "curriculum",
+                "domain": {
+                    "id": "other-domain",
+                    "title": "Other Domain",
+                },
+                "curriculum_version": "1.0",
+                "nodes": {},
+                "edges": [],
+                "aliases": {},
+            },
+        )
+        self.assertIn("path.identity", self.errors())
+
     def test_fail_state_schema_04(self):
         # 状态文档 schema_version 0.4：Core 仅支持 0.3（D2），fail closed。
         write_full_state(self.instance, curriculum_refs=self.valid_refs(f"{DOMAIN}.foundation"),

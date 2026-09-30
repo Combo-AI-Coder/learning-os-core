@@ -179,6 +179,11 @@ class BrokerProvider:
                     or "/handoffs/" in path
                     or path.startswith("curriculum/extensions/")
                     or path.startswith("curriculum/local/")
+                    or "/execution/daily/" in path
+                    or (
+                        path.startswith("topics/")
+                        and path.endswith("/goal.yaml")
+                    )
                 )
             }
             for path, content in snapshot_docs.items():
@@ -742,6 +747,17 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         with self.assertRaisesRegex(
             GuardRejected,
             "authority head changed|Branch registry fresh-read failed closed",
+        ):
+            self.broker.read_instance_text(session, READ_PATH)
+
+    def test_fresh_branch_runtime_rejects_duplicate_keys(self):
+        session = self.open()
+        self.provider.docs[RUNTIME_PATH] = (
+            yaml.safe_dump(branch_runtime(), sort_keys=False)
+            + "active_generation: 4\n"
+        )
+        with self.assertRaisesRegex(
+            GuardRejected, "duplicate mapping key"
         ):
             self.broker.read_instance_text(session, READ_PATH)
 
@@ -1398,6 +1414,44 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 message="legacy path must fail closed",
             )
 
+    def test_candidate_topic_identity_must_match_canonical_path(self):
+        path = "topics/synthetic/goal.yaml"
+        current = yaml.safe_dump({
+            "schema_version": "0.3",
+            "document_type": "topic_goal",
+            "revision": 1,
+            "topic": "synthetic",
+            "goal": {"statement": "synthetic"},
+        }, sort_keys=False)
+        self.provider.docs[path] = current
+        self.provider.blobs[path] = "6" * 40
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(path,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        candidate = yaml.safe_load(current)
+        candidate["revision"] = 2
+        candidate["topic"] = "physics"
+        self.provider.calls.clear()
+        with self.assertRaisesRegex(
+            GuardRejected, "canonical validation"
+        ):
+            self.broker.guarded_update(
+                session,
+                path=path,
+                content=yaml.safe_dump(candidate, sort_keys=False),
+                expected_blob_sha="6" * 40,
+                message="must bind candidate topic to canonical path",
+            )
+        self.assertFalse(
+            any(call[0] == "update" for call in self.provider.calls)
+        )
+
     def test_branch_head_advance_after_generation_check_blocks_write(self):
         session = self.open()
         self.provider.advance_on_update = True
@@ -1502,6 +1556,9 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             )
         self.assertEqual(str(validator_path), calls[0][0][1])
         self.assertEqual(core_root, calls[0][1]["cwd"])
+        self.assertEqual(subprocess.DEVNULL, calls[0][1]["stdout"])
+        self.assertEqual(subprocess.DEVNULL, calls[0][1]["stderr"])
+        self.assertNotIn("capture_output", calls[0][1])
 
     def test_candidate_cleanup_attempts_all_releases_when_one_fails(self):
         session = self.open()
@@ -1650,6 +1707,73 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 self.assertFalse(
                     any(call[0] == "update" for call in self.provider.calls)
                 )
+
+    def test_locked_daily_baseline_preserves_objective_membership(self):
+        path = "topics/synthetic/execution/daily/2026-09-30.yaml"
+        current = yaml.safe_dump({
+            "schema_version": "0.3",
+            "document_type": "daily_execution",
+            "revision": 1,
+            "topic": "synthetic",
+            "baseline_locked": True,
+            "baseline_objectives": [
+                {"id": "objective-a", "status": "planned"},
+            ],
+        }, sort_keys=False)
+        self.provider.docs[path] = current
+        self.provider.blobs[path] = "7" * 40
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic/execution",),
+            writable_roots=(path,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+
+        for mutation in ("add", "replace", "unlock"):
+            with self.subTest(mutation=mutation):
+                candidate = yaml.safe_load(current)
+                candidate["revision"] = 2
+                if mutation == "add":
+                    candidate["baseline_objectives"].append(
+                        {"id": "objective-b", "status": "planned"}
+                    )
+                elif mutation == "replace":
+                    candidate["baseline_objectives"] = [
+                        {"id": "objective-b", "status": "planned"}
+                    ]
+                else:
+                    candidate["baseline_locked"] = False
+                self.provider.calls.clear()
+                with self.assertRaisesRegex(
+                    GuardRejected, "locked Daily baseline"
+                ):
+                    self.broker.guarded_update(
+                        session,
+                        path=path,
+                        content=yaml.safe_dump(
+                            candidate, sort_keys=False
+                        ),
+                        expected_blob_sha="7" * 40,
+                        message="must preserve locked Daily denominator",
+                    )
+                self.assertFalse(
+                    any(call[0] == "update" for call in self.provider.calls)
+                )
+
+        candidate = yaml.safe_load(current)
+        candidate["revision"] = 2
+        candidate["baseline_objectives"][0]["status"] = "completed"
+        result = self.broker.guarded_update(
+            session,
+            path=path,
+            content=yaml.safe_dump(candidate, sort_keys=False),
+            expected_blob_sha="7" * 40,
+            message="allow status change within locked Daily baseline",
+        )
+        self.assertTrue(result.applied)
 
     def test_dotted_curriculum_version_orders_numeric_segments(self):
         parse = RuntimeSessionBroker._dotted_integer_version

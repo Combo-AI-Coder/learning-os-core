@@ -3,7 +3,7 @@
 from __future__ import annotations
 import argparse, hashlib, json, re, stat
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import yaml
 
 ROOTS={"config","runtime","learner","domains","topics","execution","coordination","evidence"}
@@ -609,11 +609,67 @@ INSTANCE_GENERIC_WRITE_ROLE_RULES={
         "scope": "bound_branch",
     },
 }
+INSTANCE_GENERIC_WRITE_TRANSITION_RULES={
+    "daily_execution":"preserve_locked_daily_baseline_v1",
+}
 
 def instance_expected_types(p,rules=None):
     """Return every split Instance document type whose canonical family matches p."""
     if rules is None: rules=INSTANCE_CANONICAL_PATH_RULES
     return tuple(t for rx,t in rules if rx.fullmatch(p))
+
+def _semantic_id(value):
+    if isinstance(value,dict):
+        return value.get("id")
+    return value
+
+def instance_path_identity_mismatches(p,d,t):
+    """Return canonical path/document identity mismatches for one Instance doc."""
+    parts=PurePosixPath(p).parts
+    out=[]
+    def require(value,expected,label):
+        actual=_semantic_id(value)
+        if actual!=expected:
+            out.append(f"{label} {actual!r} != path identity {expected!r}")
+    def optional(value,expected,label):
+        if value is not None:
+            require(value,expected,label)
+
+    if t=="curriculum":
+        require(d.get("domain"),parts[2],"domain")
+    elif t=="topic_goal":
+        require(d.get("topic"),parts[1],"topic")
+    elif t in {"topic_plan","topic_progress"}:
+        require(d.get("topic"),parts[1],"topic")
+    elif t=="topic_deferred":
+        optional(d.get("topic"),parts[1],"topic")
+    elif t=="subtopic_definition":
+        require(d.get("subtopic"),parts[3],"subtopic")
+    elif t in {"subtopic_plan","subtopic_progress"}:
+        require(d.get("topic"),parts[1],"topic")
+        require(d.get("subtopic"),parts[3],"subtopic")
+    elif t=="daily_execution":
+        optional(d.get("topic"),parts[1],"topic")
+    elif t=="execution_session":
+        require(d.get("topic"),parts[1],"topic")
+        require(d.get("id"),PurePosixPath(p).stem,"session id")
+    elif t=="branch_registry":
+        require(d.get("topic"),parts[1],"topic")
+    elif t=="branch_runtime":
+        require(d.get("topic"),parts[1],"topic")
+        require(d.get("branch_id"),parts[4],"branch_id")
+    elif t=="branch_report":
+        optional(d.get("topic"),parts[1],"topic")
+        optional(d.get("branch_id"),parts[4],"branch_id")
+    elif t=="coordination_event":
+        optional(d.get("id"),PurePosixPath(p).stem,"event id")
+    elif t=="topic_report":
+        optional(d.get("topic"),parts[1],"topic")
+    elif t=="learning_handoff":
+        require(d.get("topic"),parts[1],"topic")
+    elif t=="evidence":
+        require(d.get("id"),PurePosixPath(p).stem,"evidence id")
+    return out
 
 def instance_generic_write_mode(document_type):
     """Return the generic Runtime mutation mode owned by the deployed Core."""
@@ -628,6 +684,10 @@ def instance_generic_write_role_rule(document_type):
 def instance_generic_write_version_rule(document_type):
     """Return the semantic-version transition rule for generic replacement."""
     return INSTANCE_GENERIC_WRITE_VERSION_RULES.get(document_type)
+
+def instance_generic_write_transition_rule(document_type):
+    """Return a non-version old-to-candidate transition rule, if any."""
+    return INSTANCE_GENERIC_WRITE_TRANSITION_RULES.get(document_type)
 
 def instance_write_policy_fingerprint():
     """Stable semantic fingerprint for path classification + generic mutation modes."""
@@ -656,6 +716,12 @@ def instance_write_policy_fingerprint():
                 )
             },
             "rule":"candidate_semantic_version_must_exceed_current",
+        },
+        "document_transition_rules":{
+            t:rule
+            for t,rule in sorted(
+                INSTANCE_GENERIC_WRITE_TRANSITION_RULES.items()
+            )
         },
     }
     encoded=json.dumps(
@@ -888,6 +954,9 @@ class InstanceValidator:
             if not matches: self.error("path.unregistered",p,f"no canonical split Instance storage family registered for {p}")
             elif len(matches)>1: self.error("path.ambiguous",p,f"multiple split Instance storage families match {p}: {list(matches)}")
             elif t is not None and t!=matches[0]: self.error("path.document_type",p,f"expected {matches[0]}, found {t}")
+            if len(matches)==1 and t==matches[0]:
+                for mismatch in instance_path_identity_mismatches(p,d,t):
+                    self.error("path.identity",p,mismatch)
             if "schema_version" not in d: self.error("yaml.schema_version",p,"missing schema_version")
             elif t in INSTANCE_STATE_TYPES and self.supported_state_schemas is not None and d["schema_version"] not in self.supported_state_schemas:
                 self.error("instance.state_schema_unsupported",p,f"state schema_version {d['schema_version']!r} not in Core supported_instance_state_schema_versions {sorted(self.supported_state_schemas)}")
