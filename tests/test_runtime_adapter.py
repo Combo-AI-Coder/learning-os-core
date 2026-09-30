@@ -4,8 +4,10 @@ import base64
 import io
 import os
 import subprocess
+import sys
 import tempfile
 import threading
+import time
 import unittest
 from unittest import mock
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -501,6 +503,100 @@ class GitCliProviderTests(unittest.TestCase):
         ):
             GitCliProvider._terminate_process_tree(FinishedProcess())
         killpg.assert_called_once_with(12345, 9)
+
+    @unittest.skipUnless(os.name == "nt", "Windows process-tree behavior")
+    def test_windows_cleanup_kills_child_after_leader_exit(self):
+        parent = subprocess.Popen(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import subprocess,sys;"
+                    "c=subprocess.Popen([sys.executable,'-c',"
+                    "'import time; time.sleep(60)'],"
+                    "stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL);"
+                    "print(c.pid,flush=True)"
+                ),
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        self.addCleanup(
+            lambda: parent.poll() is None and parent.kill()
+        )
+        assert parent.stdout is not None
+        child_pid = int(parent.stdout.readline().strip())
+        parent.stdout.close()
+        parent.wait(timeout=10)
+        self.assertIn(
+            child_pid,
+            GitCliProvider._windows_descendant_pids(parent.pid),
+        )
+        GitCliProvider._terminate_process_tree(parent)
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            if child_pid not in GitCliProvider._windows_descendant_pids(parent.pid):
+                break
+            time.sleep(0.05)
+        self.assertNotIn(
+            child_pid,
+            GitCliProvider._windows_descendant_pids(parent.pid),
+        )
+
+    def test_http_remote_userinfo_fails_closed(self):
+        with self.assertRaisesRegex(ResolutionError, "must not embed credentials"):
+            GitCliProvider([
+                GitRepositoryBinding(
+                    self.REPO_ID,
+                    "https://token@example.invalid/private.git",
+                )
+            ])
+
+    def test_blob_fetch_cap_scales_with_blob_count(self):
+        objects = [
+            (f"f{index}.txt", str(index + 1) * 40, "100644", "blob")
+            for index in range(4)
+        ]
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_TOTAL_BLOB_BYTES", 100
+        ), mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_BLOB_BYTES", 80
+        ):
+            self.assertEqual(
+                25,
+                GitCliProvider._bounded_blob_fetch_cap(objects),
+            )
+
+    def test_aggregate_budget_is_enforced_by_second_fetch_filter(self):
+        (self.seed / "a.bin").write_bytes(b"a" * 80)
+        (self.seed / "b.bin").write_bytes(b"b" * 80)
+        self._git("add", "a.bin", "b.bin", cwd=self.seed)
+        self._git("commit", "-q", "-m", "aggregate budget fixture", cwd=self.seed)
+        self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_TOTAL_BLOB_BYTES", 100
+        ), mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_BLOB_BYTES", 100
+        ):
+            with self.assertRaisesRegex(
+                ResolutionError, "omitted by bounded fetch"
+            ):
+                self.provider().materialize(self.REPO_ID, "main")
+
+    def test_unique_subtree_budget_fails_closed(self):
+        (self.seed / "a").mkdir()
+        (self.seed / "b").mkdir()
+        (self.seed / "a" / "one.txt").write_text("1\n")
+        (self.seed / "b" / "two.txt").write_text("2\n")
+        self._git("add", "a/one.txt", "b/two.txt", cwd=self.seed)
+        self._git("commit", "-q", "-m", "subtree budget fixture", cwd=self.seed)
+        self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_TREE_OBJECTS", 1
+        ):
+            with self.assertRaisesRegex(ResolutionError, "subtree budget"):
+                self.provider().materialize(self.REPO_ID, "main")
 
     def test_tree_path_expansion_budgets_fail_closed(self):
         provider = self.provider()
@@ -1349,9 +1445,15 @@ class GitCliProviderTests(unittest.TestCase):
         provider = self.provider()
         with mock.patch(
             "scripts.runtime_adapter.MAX_SNAPSHOT_TOTAL_BLOB_BYTES", 1
-        ):
-            with self.assertRaisesRegex(ResolutionError, "total-size budget"):
+        ), mock.patch.object(
+            provider, "_materialize_blobs"
+        ) as materialize_blobs:
+            with self.assertRaisesRegex(
+                ResolutionError,
+                "bounded fetch|total-size budget",
+            ):
                 provider.materialize(self.REPO_ID, "main")
+        materialize_blobs.assert_not_called()
 
     def test_snapshot_single_blob_budget_fails_before_materialization(self):
         provider = self.provider()

@@ -32,6 +32,7 @@ from scripts.validate_learning_os import RepositorySnapshot, validate_deployment
 EXACT_COMMIT = re.compile(r"[0-9a-f]{40}")
 MAX_TEXT_BLOB_BYTES = 8 * 1024 * 1024
 MAX_SNAPSHOT_TREE_ENTRIES = 50_000
+MAX_SNAPSHOT_TREE_OBJECTS = 256
 MAX_SNAPSHOT_TREE_LIST_BYTES = 16 * 1024 * 1024
 MAX_SNAPSHOT_BLOB_BYTES = 64 * 1024 * 1024
 MAX_SNAPSHOT_TOTAL_BLOB_BYTES = 256 * 1024 * 1024
@@ -372,6 +373,18 @@ class GitCliProvider:
             remote = _nonempty(binding.remote, "binding.remote")
             if remote.startswith("-") or any(char in remote for char in "\x00\r\n"):
                 raise ResolutionError("Git repository remote is unsafe")
+            if "://" in remote:
+                parsed_remote = urllib.parse.urlsplit(remote)
+                if parsed_remote.scheme.lower() in {"http", "https"} and (
+                    parsed_remote.username is not None
+                    or parsed_remote.password is not None
+                    or bool(parsed_remote.query)
+                    or bool(parsed_remote.fragment)
+                ):
+                    raise ResolutionError(
+                        "Git HTTP(S) remote must not embed credentials "
+                        "or opaque URL parameters"
+                    )
             if re.match(r"^[A-Za-z]:[^/\\]", remote):
                 raise ResolutionError("drive-relative Git repository remote is unsafe")
             windows_root_relative = (
@@ -503,20 +516,101 @@ class GitCliProvider:
         return {"start_new_session": True}
 
     @staticmethod
+    def _windows_descendant_pids(root_pid: int) -> tuple[int, ...]:
+        if os.name != "nt":
+            return ()
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            class PROCESSENTRY32W(ctypes.Structure):
+                _fields_ = [
+                    ("dwSize", wintypes.DWORD),
+                    ("cntUsage", wintypes.DWORD),
+                    ("th32ProcessID", wintypes.DWORD),
+                    ("th32DefaultHeapID", ctypes.c_size_t),
+                    ("th32ModuleID", wintypes.DWORD),
+                    ("cntThreads", wintypes.DWORD),
+                    ("th32ParentProcessID", wintypes.DWORD),
+                    ("pcPriClassBase", wintypes.LONG),
+                    ("dwFlags", wintypes.DWORD),
+                    ("szExeFile", wintypes.WCHAR * 260),
+                ]
+
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            kernel32.CreateToolhelp32Snapshot.argtypes = [
+                wintypes.DWORD, wintypes.DWORD
+            ]
+            kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+            kernel32.Process32FirstW.argtypes = [
+                wintypes.HANDLE, ctypes.POINTER(PROCESSENTRY32W)
+            ]
+            kernel32.Process32FirstW.restype = wintypes.BOOL
+            kernel32.Process32NextW.argtypes = [
+                wintypes.HANDLE, ctypes.POINTER(PROCESSENTRY32W)
+            ]
+            kernel32.Process32NextW.restype = wintypes.BOOL
+            kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+            kernel32.CloseHandle.restype = wintypes.BOOL
+            snapshot = kernel32.CreateToolhelp32Snapshot(0x00000002, 0)
+            invalid = ctypes.c_void_p(-1).value
+            if snapshot == invalid:
+                return ()
+            pairs: list[tuple[int, int]] = []
+            entry = PROCESSENTRY32W()
+            entry.dwSize = ctypes.sizeof(PROCESSENTRY32W)
+            try:
+                if kernel32.Process32FirstW(snapshot, ctypes.byref(entry)):
+                    while True:
+                        pairs.append((
+                            int(entry.th32ProcessID),
+                            int(entry.th32ParentProcessID),
+                        ))
+                        if not kernel32.Process32NextW(
+                            snapshot, ctypes.byref(entry)
+                        ):
+                            break
+            finally:
+                kernel32.CloseHandle(snapshot)
+        except (AttributeError, OSError, ValueError):
+            return ()
+
+        descendants: list[int] = []
+        frontier = {root_pid}
+        seen = {root_pid}
+        while frontier:
+            next_frontier = {
+                pid for pid, parent in pairs
+                if parent in frontier
+                and pid not in seen
+                and pid not in {0, os.getpid()}
+            }
+            if not next_frontier:
+                break
+            descendants.extend(sorted(next_frontier))
+            seen.update(next_frontier)
+            frontier = next_frontier
+        return tuple(descendants)
+
+    @staticmethod
     def _terminate_process_tree(process: subprocess.Popen) -> None:
         leader_running = process.poll() is None
         if os.name == "nt":
-            try:
-                subprocess.run(
-                    ["taskkill", "/PID", str(process.pid), "/T", "/F"],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    timeout=10,
-                    check=False,
-                )
-            except (OSError, subprocess.SubprocessError):
-                if leader_running:
-                    process.kill()
+            descendants = GitCliProvider._windows_descendant_pids(process.pid)
+            targets = (process.pid, *reversed(descendants))
+            for pid in targets:
+                try:
+                    subprocess.run(
+                        ["taskkill", "/PID", str(pid), "/T", "/F"],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        timeout=10,
+                        check=False,
+                    )
+                except (OSError, subprocess.SubprocessError):
+                    continue
+            if leader_running and process.poll() is None:
+                process.kill()
         else:
             try:
                 os.killpg(process.pid, signal.SIGKILL)
@@ -1065,6 +1159,7 @@ class GitCliProvider:
         listing_bytes = 0
         expanded_path_bytes = 0
         tree_cache: dict[str, bytes] = {}
+        unique_trees = {root_tree}
 
         while pending_trees:
             prefix, tree_sha, depth = pending_trees.pop()
@@ -1101,6 +1196,12 @@ class GitCliProvider:
                         "Git tree exceeds Runtime entry budget"
                     )
                 if kind == "tree":
+                    if sha not in unique_trees:
+                        unique_trees.add(sha)
+                        if len(unique_trees) > MAX_SNAPSHOT_TREE_OBJECTS:
+                            raise ResolutionError(
+                                "Git tree exceeds Runtime subtree budget"
+                            )
                     pending_trees.append((full_path, sha, entry_depth))
         return objects
 
@@ -1133,12 +1234,14 @@ class GitCliProvider:
         self,
         repo: Path,
         objects: list[tuple[str, str, str, str]],
-    ) -> None:
+        *,
+        fetched_blob_cap: int | None = None,
+    ) -> int:
         blob_shas = [
             sha for _, sha, _, kind in objects if kind == "blob"
         ]
         if not blob_shas:
-            return
+            return 0
         unique_shas = list(dict.fromkeys(blob_shas))
         query = ("\n".join(unique_shas) + "\n").encode("ascii")
         raw = self._git_bytes(
@@ -1183,6 +1286,10 @@ class GitCliProvider:
             if size > MAX_SNAPSHOT_BLOB_BYTES:
                 raise ResolutionError(
                     "Git snapshot blob exceeds Runtime size budget"
+                )
+            if fetched_blob_cap is not None and size > fetched_blob_cap:
+                raise ResolutionError(
+                    "Git snapshot blob exceeds conservative bounded-fetch budget"
                 )
             total += size
             if total > MAX_SNAPSHOT_TOTAL_BLOB_BYTES:
@@ -1271,6 +1378,8 @@ class GitCliProvider:
         self,
         binding: GitRepositoryBinding,
         ref: str,
+        *,
+        repo: Path | None = None,
     ) -> tuple[str, str | None]:
         ref = _nonempty(ref, "ref")
         if any(char in ref for char in "\x00\r\n") or ref.startswith("-"):
@@ -1288,8 +1397,9 @@ class GitCliProvider:
         branch_ref = f"refs/heads/{ref}"
         tag_ref = f"refs/tags/{ref}"
         output = self._git(
-            "ls-remote", binding.remote,
+            "ls-remote", "origin" if repo is not None else binding.remote,
             branch_ref, tag_ref, f"{tag_ref}^{{}}",
+            cwd=repo,
             binding=binding,
         )
         rows = self._parse_ls_remote(output)
@@ -1347,19 +1457,71 @@ class GitCliProvider:
                 continue
         return total
 
+    @staticmethod
+    def _bounded_blob_fetch_cap(
+        objects: list[tuple[str, str, str, str]],
+    ) -> int | None:
+        blob_count = sum(1 for _, _, _, kind in objects if kind == "blob")
+        if blob_count == 0:
+            return None
+        cap = min(
+            MAX_SNAPSHOT_BLOB_BYTES,
+            MAX_SNAPSHOT_TOTAL_BLOB_BYTES // blob_count,
+        )
+        if cap < 1:
+            raise ResolutionError(
+                "Git snapshot blob count exceeds Runtime aggregate budget"
+            )
+        return cap
+
+    def _require_blob_free_metadata_fetch(
+        self,
+        repo: Path,
+        objects: list[tuple[str, str, str, str]],
+    ) -> None:
+        unique = list(dict.fromkeys(
+            sha for _, sha, _, kind in objects if kind == "blob"
+        ))
+        if not unique:
+            return
+        raw = self._git_bytes(
+            "cat-file",
+            "--batch-check=%(objectname) %(objecttype) %(objectsize)",
+            cwd=repo,
+            input_bytes=(("\n".join(unique) + "\n").encode("ascii")),
+            extra_env={"GIT_NO_LAZY_FETCH": "1"},
+        )
+        lines = raw.decode("ascii", errors="strict").splitlines()
+        if len(lines) != len(unique):
+            raise ResolutionError(
+                "Git metadata fetch returned unexpected blob state"
+            )
+        for sha, line in zip(unique, lines):
+            if line != f"{sha} missing":
+                raise ResolutionError(
+                    "Git remote did not enforce bounded object filtering: "
+                    "metadata fetch hydrated a selected blob"
+                )
+
     def _fetch_ref(
         self,
         repo: Path,
         binding: GitRepositoryBinding,
         fetch_ref: str,
+        *,
+        filter_spec: str,
+        refetch: bool = False,
     ) -> None:
-        filtered = self._requires_filtered_fetch(binding.remote)
-        args = ["git", "fetch", "-q", "--no-tags", "--depth=1"]
-        if filtered:
-            args.append(
-                f"--filter=blob:limit={MAX_SNAPSHOT_BLOB_BYTES + 1}"
-            )
-        args.extend(["origin", fetch_ref])
+        args = [
+            "git", "-c", "protocol.version=2",
+            "fetch", "-q", "--no-tags", "--depth=1",
+        ]
+        if refetch:
+            args.append("--refetch")
+        args.extend([
+            f"--filter={filter_spec}",
+            "origin", fetch_ref,
+        ])
         try:
             process = subprocess.Popen(
                 args,
@@ -1432,29 +1594,22 @@ class GitCliProvider:
             raise ResolutionError(
                 "Git remote does not support bounded fetch semantics"
             )
-        if filtered:
-            warning = (stderr or b"").lower()
-            if (
-                b"filtering not recognized" in warning
-                or b"filtering not supported" in warning
-            ):
-                raise ResolutionError(
-                    "Git remote does not support bounded object filtering"
-                )
 
     def _checkout(
         self,
         binding: GitRepositoryBinding,
         ref: str,
     ) -> tuple[tempfile.TemporaryDirectory, Path, str]:
-        fetch_ref, _ = self._resolve_fetch_ref(binding, ref)
         td = tempfile.TemporaryDirectory(prefix="learning-os-git-")
         repo = Path(td.name) / "repo"
         repo.mkdir()
         try:
             self._init_repo(repo)
             self._git("remote", "add", "origin", binding.remote, cwd=repo)
-            self._fetch_ref(repo, binding, fetch_ref)
+            fetch_ref, _ = self._resolve_fetch_ref(binding, ref, repo=repo)
+            self._fetch_ref(
+                repo, binding, fetch_ref, filter_spec="blob:none"
+            )
             fetched = self._resolve_fetched_commit(repo)
             if EXACT_COMMIT.fullmatch(ref) and fetched != ref:
                 raise ResolutionError(
@@ -1463,7 +1618,19 @@ class GitCliProvider:
             if not EXACT_COMMIT.fullmatch(fetched):
                 raise ResolutionError("Git did not resolve an exact commit")
             objects = self._verify_regular_tree(repo, fetched)
-            self._validate_snapshot_budget(repo, objects)
+            self._require_blob_free_metadata_fetch(repo, objects)
+            blob_cap = self._bounded_blob_fetch_cap(objects)
+            if blob_cap is not None:
+                self._fetch_ref(
+                    repo,
+                    binding,
+                    fetch_ref,
+                    filter_spec=f"blob:limit={blob_cap + 1}",
+                    refetch=True,
+                )
+            self._validate_snapshot_budget(
+                repo, objects, fetched_blob_cap=blob_cap
+            )
             return td, repo, fetched
         except Exception:
             td.cleanup()
@@ -1481,12 +1648,26 @@ class GitCliProvider:
         try:
             self._init_repo(repo)
             self._git("remote", "add", "origin", binding.remote, cwd=repo)
-            self._fetch_ref(repo, binding, branch_ref)
+            self._fetch_ref(
+                repo, binding, branch_ref, filter_spec="blob:none"
+            )
             fetched = self._resolve_fetched_commit(repo)
             if not EXACT_COMMIT.fullmatch(fetched):
                 raise ResolutionError("Git did not resolve an exact branch head")
             objects = self._verify_regular_tree(repo, fetched)
-            snapshot_total = self._validate_snapshot_budget(repo, objects)
+            self._require_blob_free_metadata_fetch(repo, objects)
+            blob_cap = self._bounded_blob_fetch_cap(objects)
+            if blob_cap is not None:
+                self._fetch_ref(
+                    repo,
+                    binding,
+                    branch_ref,
+                    filter_spec=f"blob:limit={blob_cap + 1}",
+                    refetch=True,
+                )
+            snapshot_total = self._validate_snapshot_budget(
+                repo, objects, fetched_blob_cap=blob_cap
+            )
             self._git("reset", "-q", "--mixed", fetched, cwd=repo)
             return td, repo, fetched, branch_ref, snapshot_total
         except Exception:
