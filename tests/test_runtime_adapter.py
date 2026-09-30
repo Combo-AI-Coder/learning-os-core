@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import io
 import os
 import subprocess
 import tempfile
@@ -390,6 +391,38 @@ class GitCliProviderTests(unittest.TestCase):
             (snapshot.root / "state.txt").read_text(encoding="utf-8"),
         )
 
+    def test_non_fetch_remote_output_is_bounded(self):
+        provider = self.provider()
+
+        class FakeProcess:
+            def __init__(self):
+                self.pid = 12345
+                self.returncode = 0
+                self.stdout = io.BytesIO(b"xx")
+                self.stderr = io.BytesIO(b"")
+
+            def poll(self):
+                return self.returncode
+
+            def wait(self, timeout=None):
+                return self.returncode
+
+            def kill(self):
+                self.returncode = -9
+
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_REMOTE_GIT_STREAM_BYTES", 1
+        ), mock.patch(
+            "scripts.runtime_adapter.subprocess.Popen",
+            return_value=FakeProcess(),
+        ):
+            with self.assertRaisesRegex(ResolutionError, "output exceeded"):
+                provider._git(
+                    "ls-remote",
+                    "origin",
+                    binding=provider._binding(self.REPO_ID),
+                )
+
     def test_remote_transport_requires_bounded_filtering(self):
         provider = self.provider()
         self.assertTrue(
@@ -405,6 +438,33 @@ class GitCliProviderTests(unittest.TestCase):
         self.assertFalse(
             provider._requires_filtered_fetch(str(self.remote))
         )
+
+    def test_tree_path_expansion_budgets_fail_closed(self):
+        provider = self.provider()
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_PATH_COMPONENT_BYTES", 1
+        ):
+            with self.assertRaisesRegex(ResolutionError, "component"):
+                provider._expanded_tree_path("", "ab", 0, 0)
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_PATH_DEPTH", 1
+        ):
+            with self.assertRaisesRegex(ResolutionError, "depth"):
+                provider._expanded_tree_path("a", "b", 1, 0)
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_PATH_BYTES", 1
+        ):
+            with self.assertRaisesRegex(ResolutionError, "path exceeds"):
+                provider._expanded_tree_path("a", "b", 0, 0)
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_EXPANDED_PATH_BYTES", 1
+        ):
+            with self.assertRaisesRegex(ResolutionError, "aggregate"):
+                provider._expanded_tree_path("", "ab", 0, 0)
+
+    def test_win32_git_sentinel_alias_fails_closed(self):
+        with self.assertRaisesRegex(ResolutionError, "unsafe"):
+            self.provider()._safe_path(".g\u0131t/config")
 
     def test_metadata_object_budget_fails_before_recursive_traversal(self):
         provider = self.provider()

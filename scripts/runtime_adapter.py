@@ -39,6 +39,11 @@ MAX_FETCH_OBJECT_BYTES = 320 * 1024 * 1024
 MAX_FETCH_STDERR_BYTES = 1024 * 1024
 MAX_GIT_METADATA_OBJECT_BYTES = 8 * 1024 * 1024
 MAX_TAG_PEEL_DEPTH = 16
+MAX_REMOTE_GIT_STREAM_BYTES = 1024 * 1024
+MAX_SNAPSHOT_PATH_COMPONENT_BYTES = 255
+MAX_SNAPSHOT_PATH_BYTES = 4096
+MAX_SNAPSHOT_PATH_DEPTH = 128
+MAX_SNAPSHOT_EXPANDED_PATH_BYTES = 16 * 1024 * 1024
 FETCH_POLL_SECONDS = 0.02
 
 
@@ -589,6 +594,108 @@ class GitCliProvider:
         })
         return env
 
+    def _run_remote_git_bounded(
+        self,
+        args: tuple[str, ...],
+        *,
+        cwd: Path | None,
+        env: dict[str, str],
+        timeout: int,
+        cas: bool,
+    ) -> bytes:
+        try:
+            process = subprocess.Popen(
+                ["git", *args],
+                cwd=cwd,
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                **self._fetch_process_kwargs(),
+            )
+        except OSError:
+            if cas:
+                raise CasConflict(
+                    "Git transport failed during compare-and-swap"
+                ) from None
+            raise ResolutionError("Git remote transport failed") from None
+
+        stdout_buffer = bytearray()
+        stderr_buffer = bytearray()
+        overflow = threading.Event()
+
+        def drain(stream, buffer: bytearray) -> None:
+            if stream is None:
+                return
+            while True:
+                chunk = stream.read(64 * 1024)
+                if not chunk:
+                    break
+                remaining = MAX_REMOTE_GIT_STREAM_BYTES - len(buffer)
+                if remaining > 0:
+                    buffer.extend(chunk[:remaining])
+                if len(chunk) > remaining:
+                    overflow.set()
+
+        stdout_thread = threading.Thread(
+            target=drain, args=(process.stdout, stdout_buffer),
+            name="learning-os-git-remote-stdout", daemon=True,
+        )
+        stderr_thread = threading.Thread(
+            target=drain, args=(process.stderr, stderr_buffer),
+            name="learning-os-git-remote-stderr", daemon=True,
+        )
+        stdout_thread.start()
+        stderr_thread.start()
+
+        deadline = time.monotonic() + timeout
+        timed_out = False
+        while process.poll() is None:
+            if overflow.is_set():
+                self._terminate_process_tree(process)
+                break
+            if time.monotonic() > deadline:
+                timed_out = True
+                self._terminate_process_tree(process)
+                break
+            time.sleep(FETCH_POLL_SECONDS)
+
+        if process.poll() is None:
+            process.wait()
+        stdout_thread.join(timeout=10)
+        stderr_thread.join(timeout=10)
+        if stdout_thread.is_alive() or stderr_thread.is_alive():
+            self._terminate_process_tree(process)
+            if cas:
+                raise CasConflict(
+                    "Git remote compare-and-swap output did not drain"
+                )
+            raise ResolutionError("Git remote output did not drain")
+        if process.stdout is not None:
+            process.stdout.close()
+        if process.stderr is not None:
+            process.stderr.close()
+
+        if overflow.is_set():
+            if cas:
+                raise CasConflict(
+                    "Git remote compare-and-swap output exceeded Runtime budget"
+                )
+            raise ResolutionError("Git remote output exceeded Runtime budget")
+        if timed_out:
+            if cas:
+                raise CasConflict(
+                    "Git transport timed out during compare-and-swap"
+                )
+            raise ResolutionError("Git remote transport timed out")
+        if process.returncode:
+            if cas:
+                raise CasConflict(
+                    "Git rejected compare-and-swap update"
+                ) from None
+            raise ResolutionError("Git transport or ref resolution failed")
+        return bytes(stdout_buffer)
+
     def _run_git(
         self,
         args: tuple[str, ...],
@@ -603,6 +710,16 @@ class GitCliProvider:
         env = self._env(binding)
         if extra_env:
             env.update(extra_env)
+        if binding is not None:
+            if input_bytes is not None:
+                if cas:
+                    raise CasConflict(
+                        "Git remote compare-and-swap stdin is unsupported"
+                    )
+                raise ResolutionError("Git remote stdin is unsupported")
+            return self._run_remote_git_bounded(
+                args, cwd=cwd, env=env, timeout=timeout, cas=cas
+            )
         try:
             result = subprocess.run(
                 ["git", *args],
@@ -687,6 +804,14 @@ class GitCliProvider:
             re.fullmatch(r"[^. ]{1,6}~[0-9]+(?:\.[^. ]{0,3})?", normalized)
         )
 
+    @staticmethod
+    def _git_sentinel_component(part: str) -> bool:
+        normalized = unicodedata.normalize("NFC", part)
+        return (
+            normalized.casefold() == ".git"
+            or unicodedata.normalize("NFC", normalized.upper()) == ".GIT"
+        )
+
     @classmethod
     def _safe_path(cls, path: str) -> PurePosixPath:
         pure = PurePosixPath(path)
@@ -695,7 +820,7 @@ class GitCliProvider:
             or "\\" in path
             or pure.is_absolute()
             or ".." in pure.parts
-            or any(part.lower() == ".git" for part in pure.parts)
+            or any(cls._git_sentinel_component(part) for part in pure.parts)
             or any(part.endswith((" ", ".")) for part in pure.parts)
             or any(cls._windows_reserved_component(part) for part in pure.parts)
             or any(
@@ -824,24 +949,61 @@ class GitCliProvider:
             raise ResolutionError("Git commit tree is not exact")
         return tree_sha
 
+    @classmethod
+    def _expanded_tree_path(
+        cls,
+        prefix: str,
+        component: str,
+        depth: int,
+        expanded_bytes: int,
+    ) -> tuple[str, int, int]:
+        if len(PurePosixPath(component).parts) != 1:
+            raise ResolutionError("Git tree entry is not one path component")
+        component_size = len(component.encode("utf-8"))
+        if component_size > MAX_SNAPSHOT_PATH_COMPONENT_BYTES:
+            raise ResolutionError(
+                "Git tree path component exceeds Runtime byte budget"
+            )
+        next_depth = depth + 1
+        if next_depth > MAX_SNAPSHOT_PATH_DEPTH:
+            raise ResolutionError("Git tree path exceeds Runtime depth budget")
+        full_path = f"{prefix}/{component}" if prefix else component
+        full_size = len(full_path.encode("utf-8"))
+        if full_size > MAX_SNAPSHOT_PATH_BYTES:
+            raise ResolutionError("Git tree path exceeds Runtime byte budget")
+        next_expanded = expanded_bytes + full_size
+        if next_expanded > MAX_SNAPSHOT_EXPANDED_PATH_BYTES:
+            raise ResolutionError(
+                "Git tree expanded paths exceed Runtime aggregate byte budget"
+            )
+        cls._safe_path(full_path)
+        return full_path, next_depth, next_expanded
+
     def _tree_objects(
         self, repo: Path, commit: str
     ) -> list[tuple[str, str, str, str]]:
         root_tree = self._commit_tree_sha(repo, commit)
-        pending_trees: list[tuple[str, str]] = [("", root_tree)]
+        pending_trees: list[tuple[str, str, int]] = [("", root_tree, 0)]
         objects: list[tuple[str, str, str, str]] = []
         listing_bytes = 0
+        expanded_path_bytes = 0
+        tree_cache: dict[str, bytes] = {}
 
         while pending_trees:
-            prefix, tree_sha = pending_trees.pop()
-            object_type, _ = self._object_header(repo, tree_sha)
-            if object_type != "tree":
-                raise ResolutionError("Git tree identity is not a tree")
-            raw = self._git_bytes(
-                "ls-tree", "-z", tree_sha,
-                cwd=repo,
-                extra_env={"GIT_NO_LAZY_FETCH": "1"},
-            )
+            prefix, tree_sha, depth = pending_trees.pop()
+            raw = tree_cache.get(tree_sha)
+            if raw is None:
+                object_type, _ = self._object_header(repo, tree_sha)
+                if object_type != "tree":
+                    raise ResolutionError("Git tree identity is not a tree")
+                raw = self._git_bytes(
+                    "ls-tree", "-z", tree_sha,
+                    cwd=repo,
+                    extra_env={"GIT_NO_LAZY_FETCH": "1"},
+                )
+                if not raw:
+                    raise ResolutionError("Git tree contains an empty directory")
+                tree_cache[tree_sha] = raw
             listing_bytes += len(raw)
             if listing_bytes > MAX_SNAPSHOT_TREE_LIST_BYTES:
                 raise ResolutionError(
@@ -851,15 +1013,18 @@ class GitCliProvider:
                 path, sha, mode, kind = self._decode_tree_object_record(
                     record
                 )
-                full_path = f"{prefix}/{path}" if prefix else path
-                self._safe_path(full_path)
+                full_path, entry_depth, expanded_path_bytes = (
+                    self._expanded_tree_path(
+                        prefix, path, depth, expanded_path_bytes
+                    )
+                )
                 objects.append((full_path, sha, mode, kind))
                 if len(objects) > MAX_SNAPSHOT_TREE_ENTRIES:
                     raise ResolutionError(
                         "Git tree exceeds Runtime entry budget"
                     )
                 if kind == "tree":
-                    pending_trees.append((full_path, sha))
+                    pending_trees.append((full_path, sha, entry_depth))
         return objects
 
     def _tree_entries(
