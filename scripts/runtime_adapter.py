@@ -547,15 +547,29 @@ class GitCliProvider:
         )
         self._tempdirs: list[tempfile.TemporaryDirectory] = []
         self._tempdirs_lock = threading.Lock()
+        self._closed = False
 
     def close(self) -> None:
+        first_error = None
         with self._tempdirs_lock:
-            retained = list(reversed(self._tempdirs))
-            self._tempdirs.clear()
-        for tempdir in retained:
-            tempdir.cleanup()
-        self._empty_git_template.cleanup()
-        self._isolated_home.cleanup()
+            if self._closed:
+                return
+            self._closed = True
+            while self._tempdirs:
+                tempdir = self._tempdirs.pop()
+                try:
+                    tempdir.cleanup()
+                except Exception as exc:
+                    if first_error is None:
+                        first_error = exc
+        for tempdir in (self._empty_git_template, self._isolated_home):
+            try:
+                tempdir.cleanup()
+            except Exception as exc:
+                if first_error is None:
+                    first_error = exc
+        if first_error is not None:
+            raise ResolutionError("repository provider cleanup failed") from first_error
 
     def release_materialization(
         self, snapshot: MaterializedRepository
@@ -1790,6 +1804,9 @@ class GitCliProvider:
     def materialize(
         self, repository_id: int, ref: str
     ) -> MaterializedRepository:
+        with self._tempdirs_lock:
+            if self._closed:
+                raise ResolutionError("repository provider is closed")
         binding = self._binding(repository_id)
         checkout_td, repo, commit = self._checkout(binding, ref)
         snapshot_td = tempfile.TemporaryDirectory(prefix="learning-os-snapshot-")
@@ -1804,6 +1821,9 @@ class GitCliProvider:
         finally:
             checkout_td.cleanup()
         with self._tempdirs_lock:
+            if self._closed:
+                snapshot_td.cleanup()
+                raise ResolutionError("repository provider closed during materialization")
             self._tempdirs.append(snapshot_td)
         return MaterializedRepository(
             snapshot,
@@ -1970,13 +1990,23 @@ class GitHubApiProvider:
         self.api_url = api_url.rstrip("/")
         self._tempdirs: list[tempfile.TemporaryDirectory] = []
         self._tempdirs_lock = threading.Lock()
+        self._closed = False
 
     def close(self) -> None:
+        first_error = None
         with self._tempdirs_lock:
-            retained = list(reversed(self._tempdirs))
-            self._tempdirs.clear()
-        for tempdir in retained:
-            tempdir.cleanup()
+            if self._closed:
+                return
+            self._closed = True
+            while self._tempdirs:
+                tempdir = self._tempdirs.pop()
+                try:
+                    tempdir.cleanup()
+                except Exception as exc:
+                    if first_error is None:
+                        first_error = exc
+        if first_error is not None:
+            raise ResolutionError("repository provider cleanup failed") from first_error
 
     def release_materialization(
         self, snapshot: MaterializedRepository
@@ -2051,6 +2081,9 @@ class GitHubApiProvider:
         return output
 
     def materialize(self, repository_id: int, ref: str) -> MaterializedRepository:
+        with self._tempdirs_lock:
+            if self._closed:
+                raise ResolutionError("repository provider is closed")
         repo = self._repo(repository_id)
         full_name = _nonempty(repo.get("full_name"), "repository.full_name")
         commit = self._commit(full_name, ref)
@@ -2080,6 +2113,9 @@ class GitHubApiProvider:
             td.cleanup()
             raise
         with self._tempdirs_lock:
+            if self._closed:
+                td.cleanup()
+                raise ResolutionError("repository provider closed during materialization")
             self._tempdirs.append(td)
         return MaterializedRepository(root, repository_id, commit, full_name)
 

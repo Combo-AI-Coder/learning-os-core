@@ -466,6 +466,45 @@ class GitCliProviderTests(unittest.TestCase):
         self.assertTrue(all(not root.exists() for root in roots))
         self.assertEqual([], provider._tempdirs)
 
+    def test_materialize_fails_closed_after_provider_close(self):
+        provider = self.provider()
+        provider.close()
+        with self.assertRaisesRegex(ResolutionError, "closed"):
+            provider.materialize(self.REPO_ID, "main")
+
+    def test_inflight_materialize_cannot_retain_snapshot_after_close(self):
+        provider = self.provider()
+        entered = threading.Event()
+        proceed = threading.Event()
+        errors = []
+
+        def blocked_materialize_blobs(repo, entries, snapshot):
+            entered.set()
+            proceed.wait(timeout=5)
+            (snapshot / "state.txt").write_text(
+                "synthetic\n", encoding="utf-8", newline="\n"
+            )
+
+        provider._materialize_blobs = blocked_materialize_blobs
+
+        def run_materialize():
+            try:
+                provider.materialize(self.REPO_ID, "main")
+            except Exception as exc:
+                errors.append(exc)
+
+        worker = threading.Thread(target=run_materialize)
+        worker.start()
+        self.assertTrue(entered.wait(2))
+        provider.close()
+        proceed.set()
+        worker.join(timeout=5)
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(1, len(errors))
+        self.assertIsInstance(errors[0], ResolutionError)
+        self.assertIn("closed during materialization", str(errors[0]))
+        self.assertEqual([], provider._tempdirs)
+
     def test_materialize_streams_blob_content_instead_of_buffering_it(self):
         provider = self.provider()
         original_git_bytes = provider._git_bytes
@@ -1893,6 +1932,12 @@ class GitHubApiProviderTests(unittest.TestCase):
         self.assertFalse(errors)
         self.assertTrue(all(not root.exists() for root in roots))
         self.assertEqual([], provider._tempdirs)
+
+    def test_materialize_fails_closed_after_provider_close(self):
+        provider = self.provider()
+        provider.close()
+        with self.assertRaisesRegex(ResolutionError, "closed"):
+            provider.materialize(self.REPO_ID, "main")
 
     def test_read_text_pins_content_to_resolved_commit(self):
         provider = GitHubApiProvider(

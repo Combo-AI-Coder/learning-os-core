@@ -529,6 +529,24 @@ class RuntimeSessionBroker:
             raise GuardRejected("semantic generation changed")
         return authority_head
 
+    def _assert_instance_authority_head_current(
+        self,
+        session: LearningRuntimeSession,
+        expected_head: str,
+    ) -> None:
+        try:
+            _, _, current_head = self.provider.read_text(
+                session.deployment.instance_repository_id,
+                session.binding.instance_ref,
+                session.binding.branch_runtime_path,
+            )
+        except ResolutionError as exc:
+            raise GuardRejected(
+                f"Instance authority head recheck failed closed: {exc}"
+            ) from None
+        if current_head != expected_head:
+            raise GuardRejected("Instance authority head changed during read")
+
     def _release_materializations(
         self, snapshots: list[MaterializedRepository]
     ) -> None:
@@ -703,10 +721,11 @@ class RuntimeSessionBroker:
         if final_authority_head != authority_head:
             raise GuardRejected("Instance authority head changed during read")
         # _fresh_generation may itself resolve immutable handoff references from
-        # the exact Instance authority head. A promotion can race those final
-        # remote reads without changing the Instance head, so close the full
-        # read operation with one last Runtime-Control freshness check.
+        # the exact Instance authority head. Close the read with both authorities:
+        # Runtime-Control must still match, and the moving Instance canonical ref
+        # must still resolve to the same exact head after those final handoff reads.
         self.guard.check(session.deployment, require_active=False)
+        self._assert_instance_authority_head_current(session, authority_head)
         return InstanceText(content=content, version_token=blob_sha)
 
     def guarded_update(

@@ -483,6 +483,41 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         with self.assertRaisesRegex(GuardRejected, "epoch"):
             self.broker.read_instance_text(session, READ_PATH)
 
+    def test_instance_advance_during_final_handoff_read_discards_result(self):
+        session = self.open()
+        runtime = branch_runtime()
+        runtime["generations"][1]["handoff_ref"] = HANDOFF_PATH
+        self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(
+            runtime, sort_keys=False
+        )
+        self.provider.docs[HANDOFF_PATH] = yaml.safe_dump({
+            "schema_version": "0.3",
+            "document_type": "learning_handoff",
+            "topic": "synthetic",
+            "branch_id": "main",
+            "lineage_id": "synthetic-main-lineage",
+            "from_generation": 1,
+            "to_generation": 2,
+        }, sort_keys=False)
+        self.provider.blobs[HANDOFF_PATH] = "3" * 40
+        original_read = self.provider.read_text
+        target_read = False
+
+        def racing_read(repository_id, ref, path):
+            nonlocal target_read
+            result = original_read(repository_id, ref, path)
+            if path == READ_PATH:
+                target_read = True
+            elif path == HANDOFF_PATH and target_read:
+                self.provider.set_generation(4)
+            return result
+
+        self.provider.read_text = racing_read
+        with self.assertRaisesRegex(
+            GuardRejected, "authority head changed"
+        ):
+            self.broker.read_instance_text(session, READ_PATH)
+
     def test_fresh_branch_runtime_forbidden_keys_fail_closed(self):
         session = self.open()
         runtime = branch_runtime()
