@@ -531,9 +531,19 @@ INSTANCE_CONFIG_FORBIDDEN={"core.yaml":"Core plane contract","project.yaml":"leg
 INSTANCE_FORBIDDEN_DOC_TYPES={"lineage_control":"private project-design Control lineage","project_config":"legacy canonical project configuration","deployment_binding":"Runtime-Control deployment binding","migration_transaction":"Control migration transaction","core_config":"Core plane contract document"}
 INSTANCE_STATE_TYPES={"learner_background","learner_model","learner_calibration","learner_costs","learner_execution","learner_knowledge","topic_goal","topic_plan","topic_progress","topic_deferred","subtopic_definition","subtopic_plan","subtopic_progress","evidence","weekly_execution","daily_execution","execution_session","branch_registry","branch_runtime","learning_handoff","topic_report","branch_report","hub_runtime","coordination_event","conversation_sequence_registry"}
 INSTANCE_REVISIONED_TYPES={"learner_execution","learner_knowledge","topic_goal","topic_plan","topic_progress","subtopic_plan","subtopic_progress","weekly_execution","daily_execution","branch_registry","branch_runtime","branch_report","hub_runtime","topic_report"}
-INSTANCE_GENERIC_WRITE_REVISION_FIELDS={
-    **{document_type:"revision" for document_type in INSTANCE_REVISIONED_TYPES},
-    "curriculum_extension":"extension_revision",
+INSTANCE_GENERIC_WRITE_VERSION_RULES={
+    **{
+        document_type:{"field":"revision","ordering":"positive_int"}
+        for document_type in INSTANCE_REVISIONED_TYPES
+    },
+    "curriculum_extension":{
+        "field":"extension_revision",
+        "ordering":"positive_int",
+    },
+    "curriculum":{
+        "field":"curriculum_version",
+        "ordering":"dotted_int_v1",
+    },
 }
 INSTANCE_CONTRACT_TYPES={"instance_config","curriculum_extension"}
 INSTANCE_CURRICULUM_TYPES={"curriculum"}
@@ -615,9 +625,9 @@ def instance_generic_write_role_rule(document_type):
     """Return an optional canonical Branch-role constraint for generic replacement."""
     return INSTANCE_GENERIC_WRITE_ROLE_RULES.get(document_type)
 
-def instance_generic_write_revision_field(document_type):
-    """Return the semantic counter that generic replacement must advance."""
-    return INSTANCE_GENERIC_WRITE_REVISION_FIELDS.get(document_type)
+def instance_generic_write_version_rule(document_type):
+    """Return the semantic-version transition rule for generic replacement."""
+    return INSTANCE_GENERIC_WRITE_VERSION_RULES.get(document_type)
 
 def instance_write_policy_fingerprint():
     """Stable semantic fingerprint for path classification + generic mutation modes."""
@@ -638,14 +648,14 @@ def instance_write_policy_fingerprint():
             }
             for t,rule in sorted(INSTANCE_GENERIC_WRITE_ROLE_RULES.items())
         },
-        "revision_transition":{
-            "fields":{
-                t:field
-                for t,field in sorted(
-                    INSTANCE_GENERIC_WRITE_REVISION_FIELDS.items()
+        "semantic_version_transition":{
+            "rules":{
+                t:dict(rule)
+                for t,rule in sorted(
+                    INSTANCE_GENERIC_WRITE_VERSION_RULES.items()
                 )
             },
-            "rule":"candidate_semantic_revision_must_exceed_current",
+            "rule":"candidate_semantic_version_must_exceed_current",
         },
     }
     encoded=json.dumps(

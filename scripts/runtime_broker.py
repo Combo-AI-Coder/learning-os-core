@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import os
+import re
 import secrets
 import shutil
 import subprocess
@@ -39,8 +40,8 @@ from scripts.validate_learning_os import (
     DeploymentBinding,
     instance_expected_types,
     instance_generic_write_mode,
-    instance_generic_write_revision_field,
     instance_generic_write_role_rule,
+    instance_generic_write_version_rule,
     instance_write_policy_fingerprint,
     learning_handoff_identity_mismatches,
     validate_instance_document_trust_boundary,
@@ -961,16 +962,37 @@ class RuntimeSessionBroker:
         raise GuardRejected("deployed Core role-write scope is unsupported")
 
     @staticmethod
-    def _assert_revision_transition(
+    def _dotted_integer_version(
+        value: object, label: str
+    ) -> tuple[tuple[int, str], ...]:
+        if (
+            not isinstance(value, str)
+            or re.fullmatch(r"[0-9]+(?:\.[0-9]+)*", value) is None
+        ):
+            raise GuardRejected(
+                f"{label} replacement curriculum_version is not an "
+                "orderable dotted-integer version"
+            )
+        parts = []
+        for part in value.split("."):
+            normalized = part.lstrip("0") or "0"
+            parts.append((len(normalized), normalized))
+        while len(parts) > 1 and parts[-1][1] == "0":
+            parts.pop()
+        return tuple(parts)
+
+    @staticmethod
+    def _assert_semantic_version_transition(
         instance_root: Path,
         *,
         path: str,
         document_type: str,
         content: str,
     ) -> None:
-        revision_field = instance_generic_write_revision_field(document_type)
-        if revision_field is None:
+        version_rule = instance_generic_write_version_rule(document_type)
+        if version_rule is None:
             return
+        revision_field = version_rule["field"]
 
         current_path = instance_root.joinpath(*PurePosixPath(path).parts)
         try:
@@ -1009,23 +1031,38 @@ class RuntimeSessionBroker:
 
         current_revision = current.get(revision_field)
         candidate_revision = candidate.get(revision_field)
-        for label, revision in (
-            ("current", current_revision),
-            ("candidate", candidate_revision),
-        ):
-            if (
-                not isinstance(revision, int)
-                or isinstance(revision, bool)
-                or revision < 1
+        ordering = version_rule["ordering"]
+        if ordering == "positive_int":
+            for label, revision in (
+                ("current", current_revision),
+                ("candidate", candidate_revision),
             ):
-                if revision_field == "revision":
+                if (
+                    not isinstance(revision, int)
+                    or isinstance(revision, bool)
+                    or revision < 1
+                ):
+                    if revision_field == "revision":
+                        raise GuardRejected(
+                            f"{label} revisioned replacement revision is invalid"
+                        )
                     raise GuardRejected(
-                        f"{label} revisioned replacement revision is invalid"
+                        f"{label} replacement {revision_field} is invalid"
                     )
-                raise GuardRejected(
-                    f"{label} replacement {revision_field} is invalid"
-                )
-        if candidate_revision <= current_revision:
+            current_order = (current_revision,)
+            candidate_order = (candidate_revision,)
+        elif ordering == "dotted_int_v1":
+            current_order = RuntimeSessionBroker._dotted_integer_version(
+                current_revision, "current"
+            )
+            candidate_order = RuntimeSessionBroker._dotted_integer_version(
+                candidate_revision, "candidate"
+            )
+        else:
+            raise GuardRejected(
+                "deployed Core semantic-version ordering is unsupported"
+            )
+        if candidate_order <= current_order:
             raise GuardRejected(
                 f"replacement must advance semantic {revision_field}"
             )
@@ -1060,7 +1097,7 @@ class RuntimeSessionBroker:
                 raise GuardRejected(
                     "candidate Instance update path is unclassified or ambiguous"
                 )
-            self._assert_revision_transition(
+            self._assert_semantic_version_transition(
                 instance.root,
                 path=path,
                 document_type=types[0],

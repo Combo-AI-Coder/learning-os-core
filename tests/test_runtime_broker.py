@@ -178,6 +178,7 @@ class BrokerProvider:
                     path in {READ_PATH, WRITE_PATH}
                     or "/handoffs/" in path
                     or path.startswith("curriculum/extensions/")
+                    or path.startswith("curriculum/local/")
                 )
             }
             for path, content in snapshot_docs.items():
@@ -1649,6 +1650,86 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 self.assertFalse(
                     any(call[0] == "update" for call in self.provider.calls)
                 )
+
+    def test_dotted_curriculum_version_orders_numeric_segments(self):
+        parse = RuntimeSessionBroker._dotted_integer_version
+        self.assertGreater(
+            parse("1.10", "candidate"),
+            parse("1.2", "current"),
+        )
+        self.assertEqual(
+            parse("01.002.0", "candidate"),
+            parse("1.2", "current"),
+        )
+        self.assertLess(
+            parse("9.99", "candidate"),
+            parse("10.0", "current"),
+        )
+
+    def test_local_curriculum_requires_ordered_curriculum_version_advance(self):
+        path = "curriculum/local/runtime-broker-local/curriculum.yaml"
+        current = yaml.safe_dump({
+            "schema_version": "0.3",
+            "document_type": "curriculum",
+            "domain": {
+                "id": "runtime-broker-local",
+                "title": "Runtime Broker Local",
+            },
+            "curriculum_version": "1.2",
+            "nodes": {},
+            "edges": [],
+            "aliases": {},
+        }, sort_keys=False)
+        self.provider.docs[path] = current
+        self.provider.blobs[path] = "b" * 40
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("curriculum/local",),
+            writable_roots=(path,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        for candidate_version in ("1.2", "1.1", "1.2.0"):
+            with self.subTest(candidate_version=candidate_version):
+                candidate = yaml.safe_load(current)
+                candidate["curriculum_version"] = candidate_version
+                candidate["nodes"] = {
+                    "runtime-broker-local.changed": {
+                        "title": "Changed without version advance",
+                        "kind": "concept",
+                    }
+                }
+                self.provider.calls.clear()
+                with self.assertRaisesRegex(
+                    GuardRejected, "advance semantic curriculum_version"
+                ):
+                    self.broker.guarded_update(
+                        session,
+                        path=path,
+                        content=yaml.safe_dump(
+                            candidate, sort_keys=False
+                        ),
+                        expected_blob_sha="b" * 40,
+                        message="must reject local curriculum version rollback",
+                    )
+                self.assertFalse(
+                    any(call[0] == "update" for call in self.provider.calls)
+                )
+
+        malformed = yaml.safe_load(current)
+        malformed["curriculum_version"] = "next"
+        with self.assertRaisesRegex(
+            GuardRejected, "orderable dotted-integer version"
+        ):
+            self.broker.guarded_update(
+                session,
+                path=path,
+                content=yaml.safe_dump(malformed, sort_keys=False),
+                expected_blob_sha="b" * 40,
+                message="must fail closed on unorderable local version",
+            )
 
     def test_revisioned_candidate_requires_positive_integer_revision(self):
         path = READ_PATH
