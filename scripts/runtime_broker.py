@@ -37,9 +37,9 @@ from scripts.runtime_adapter import (
 )
 from scripts.validate_learning_os import (
     DeploymentBinding,
-    INSTANCE_REVISIONED_TYPES,
     instance_expected_types,
     instance_generic_write_mode,
+    instance_generic_write_revision_field,
     instance_generic_write_role_rule,
     instance_write_policy_fingerprint,
     learning_handoff_identity_mismatches,
@@ -968,7 +968,8 @@ class RuntimeSessionBroker:
         document_type: str,
         content: str,
     ) -> None:
-        if document_type not in INSTANCE_REVISIONED_TYPES:
+        revision_field = instance_generic_write_revision_field(document_type)
+        if revision_field is None:
             return
 
         current_path = instance_root.joinpath(*PurePosixPath(path).parts)
@@ -1006,8 +1007,8 @@ class RuntimeSessionBroker:
                 "revisioned replacement documents must be mappings"
             )
 
-        current_revision = current.get("revision")
-        candidate_revision = candidate.get("revision")
+        current_revision = current.get(revision_field)
+        candidate_revision = candidate.get(revision_field)
         for label, revision in (
             ("current", current_revision),
             ("candidate", candidate_revision),
@@ -1017,12 +1018,16 @@ class RuntimeSessionBroker:
                 or isinstance(revision, bool)
                 or revision < 1
             ):
+                if revision_field == "revision":
+                    raise GuardRejected(
+                        f"{label} revisioned replacement revision is invalid"
+                    )
                 raise GuardRejected(
-                    f"{label} revisioned replacement revision is invalid"
+                    f"{label} replacement {revision_field} is invalid"
                 )
         if candidate_revision <= current_revision:
             raise GuardRejected(
-                "revisioned replacement must advance semantic revision"
+                f"replacement must advance semantic {revision_field}"
             )
 
     def _validate_candidate(

@@ -174,7 +174,11 @@ class BrokerProvider:
             snapshot_docs = {
                 path: content
                 for path, content in self.docs.items()
-                if path in {READ_PATH, WRITE_PATH} or "/handoffs/" in path
+                if (
+                    path in {READ_PATH, WRITE_PATH}
+                    or "/handoffs/" in path
+                    or path.startswith("curriculum/extensions/")
+                )
             }
             for path, content in snapshot_docs.items():
                 target = self.instance.joinpath(*Path(path).parts)
@@ -1593,6 +1597,54 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                         ),
                         expected_blob_sha="e" * 40,
                         message="must reject revision rollback",
+                    )
+                self.assertFalse(
+                    any(call[0] == "update" for call in self.provider.calls)
+                )
+
+    def test_curriculum_extension_requires_extension_revision_advance(self):
+        path = "curriculum/extensions/runtime-broker-test.yaml"
+        current = yaml.safe_dump({
+            "schema_version": "0.4",
+            "document_type": "curriculum_extension",
+            "domain": "modern-language-models",
+            "base_version": "0.2",
+            "extension_revision": 5,
+            "nodes": {},
+        }, sort_keys=False)
+        self.provider.docs[path] = current
+        self.provider.blobs[path] = "a" * 40
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("curriculum/extensions",),
+            writable_roots=(path,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        for candidate_revision in (5, 4):
+            with self.subTest(candidate_revision=candidate_revision):
+                candidate = yaml.safe_load(current)
+                candidate["extension_revision"] = candidate_revision
+                candidate["nodes"] = {
+                    "language_modeling.runtime_broker_test": {
+                        "title": "Changed without semantic version advance",
+                        "kind": "concept",
+                    }
+                }
+                self.provider.calls.clear()
+                with self.assertRaisesRegex(
+                    GuardRejected, "advance semantic extension_revision"
+                ):
+                    self.broker.guarded_update(
+                        session,
+                        path=path,
+                        content=yaml.safe_dump(
+                            candidate, sort_keys=False
+                        ),
+                        expected_blob_sha="a" * 40,
+                        message="must reject extension revision rollback",
                     )
                 self.assertFalse(
                     any(call[0] == "update" for call in self.provider.calls)

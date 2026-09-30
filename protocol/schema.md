@@ -29,7 +29,7 @@ A semantic `revision` counter is REQUIRED only when another artifact depends on 
 - `hub_runtime`
 - `topic_report`
 
-Background/model/calibration/cost files do not require migration-only revision counters. Curriculum uses `curriculum_version`. Immutable evidence/session/event/handoff artifacts do not use revision counters. `conversation_sequence_registry` is mutable allocation metadata and uses Git blob SHA CAS rather than a semantic `revision` counter. Normal reservations advance monotonically within their scope; the narrowly authorized proven-orphan suffix repair defined in `conversation-naming-policy.md` is the only permitted production-counter decrease.
+Background/model/calibration/cost files do not require migration-only revision counters. Reusable/local curriculum documents use `curriculum_version`; split `curriculum_extension` overlays use the positive integer `extension_revision` semantic counter. Immutable evidence/session/event/handoff artifacts do not use revision counters. `conversation_sequence_registry` is mutable allocation metadata and uses Git blob SHA CAS rather than a semantic `revision` counter. Normal reservations advance monotonically within their scope; the narrowly authorized proven-orphan suffix repair defined in `conversation-naming-policy.md` is the only permitted production-counter decrease.
 
 `updated_at` is not a semantic revision. Git blob SHA is a concurrency/write guard and MUST NOT be stored as canonical semantic version state. A Project Handoff MAY persist a commit SHA as a canonical-settlement snapshot anchor and a blob SHA as immutable packet identity; these are provenance/integrity anchors for that transaction, not semantic revisions of the referenced artifacts.
 
