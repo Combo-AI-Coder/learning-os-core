@@ -716,6 +716,26 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                         message="must not overwrite history",
                     )
 
+    def test_generic_update_rejects_global_hub_runtime(self):
+        path = "coordination/hub/runtime.yaml"
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("coordination",),
+            writable_roots=(path,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        with self.assertRaisesRegex(GuardRejected, "Global Hub runtime"):
+            self.broker.guarded_update(
+                session,
+                path=path,
+                content="x",
+                expected_blob_sha="0" * 40,
+                message="must reject Branch write to Global Hub runtime",
+            )
+
     def test_generic_update_rejects_protocol_governed_branch_registry(self):
         path = "topics/synthetic/coordination/branches.yaml"
         policy = RuntimeCapabilityPolicy(
@@ -910,6 +930,36 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             )
         self.assertEqual(str(validator_path), calls[0][0][1])
         self.assertEqual(core_root, calls[0][1]["cwd"])
+
+    def test_candidate_cleanup_attempts_all_releases_when_one_fails(self):
+        session = self.open()
+        released = []
+        original_release = self.provider.release_materialization
+
+        def flaky_release(snapshot):
+            released.append(snapshot.repository_id)
+            if snapshot.repository_id == CORE_ID:
+                raise RuntimeError("synthetic release failure")
+            original_release(snapshot)
+
+        self.provider.release_materialization = flaky_release
+        with mock.patch(
+            "scripts.runtime_broker.subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                ["validator"], 0, "", ""
+            ),
+        ):
+            with self.assertRaisesRegex(
+                GuardRejected, "materialization cleanup failed"
+            ):
+                self.broker._validate_candidate(
+                    session,
+                    authority_head=self.provider.instance_head,
+                    path=WRITE_PATH,
+                    content=WRITE_V2,
+                    contract=self.provider.contract,
+                )
+        self.assertEqual([CORE_ID, INSTANCE_ID], released)
 
     def test_candidate_validation_timeout_fails_before_provider_update(self):
         session = self.open()

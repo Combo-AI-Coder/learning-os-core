@@ -567,6 +567,7 @@ INSTANCE_CANONICAL_PATH_RULES=(
 INSTANCE_ALL_TYPES=frozenset(t for _,t in INSTANCE_CANONICAL_PATH_RULES)
 INSTANCE_GENERIC_WRITE_MODE_OVERRIDES={
     "branch_runtime":"branch_authority",
+    "hub_runtime":"hub_authority",
     "evidence":"immutable_create_only",
     "execution_session":"immutable_create_only",
     "coordination_event":"immutable_create_only",

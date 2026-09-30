@@ -464,12 +464,11 @@ class RuntimeSessionBroker:
         try:
             deployment = resolved.context
         finally:
-            for snapshot in (
-                resolved.instance,
-                resolved.core,
+            self._release_materializations([
                 resolved.control,
-            ):
-                self.provider.release_materialization(snapshot)
+                resolved.core,
+                resolved.instance,
+            ])
         instance_ref = self.locator["instance"]["canonical_ref"]
         runtime_path = _relative_path(branch_runtime_path, "branch_runtime_path")
         if policy.writable_roots and self.write_admission is None:
@@ -529,6 +528,21 @@ class RuntimeSessionBroker:
         if generation != session.binding.generation:
             raise GuardRejected("semantic generation changed")
         return authority_head
+
+    def _release_materializations(
+        self, snapshots: list[MaterializedRepository]
+    ) -> None:
+        first_error = None
+        for snapshot in reversed(snapshots):
+            try:
+                self.provider.release_materialization(snapshot)
+            except Exception as exc:
+                if first_error is None:
+                    first_error = exc
+        if first_error is not None:
+            raise GuardRejected(
+                "repository materialization cleanup failed"
+            ) from first_error
 
     def _assert_deployed_write_policy_compatible(
         self, session: LearningRuntimeSession
@@ -664,8 +678,7 @@ class RuntimeSessionBroker:
                     "candidate Instance state failed canonical validation"
                 )
         finally:
-            for snapshot in reversed(snapshots):
-                self.provider.release_materialization(snapshot)
+            self._release_materializations(snapshots)
 
     def read_instance_text(
         self, session: LearningRuntimeSession, path: str
@@ -721,6 +734,10 @@ class RuntimeSessionBroker:
             if write_mode == "branch_authority":
                 raise GuardRejected(
                     "ordinary learning session cannot mutate Branch runtime authority"
+                )
+            if write_mode == "hub_authority":
+                raise GuardRejected(
+                    "ordinary learning session cannot mutate Global Hub runtime state"
                 )
             if write_mode == "immutable_create_only":
                 raise GuardRejected(
