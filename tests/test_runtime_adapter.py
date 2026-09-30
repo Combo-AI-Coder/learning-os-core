@@ -318,6 +318,10 @@ class GitCliProviderTests(unittest.TestCase):
         self.remote = self.root / "remote.git"
         self.seed = self.root / "seed"
         self._git("init", "--bare", "-q", str(self.remote))
+        self._git(
+            "--git-dir", str(self.remote),
+            "config", "uploadpack.allowFilter", "true",
+        )
         self._git("init", "-q", str(self.seed))
         self._git("checkout", "-q", "-b", "main", cwd=self.seed)
         self._git("config", "user.name", "Synthetic Runtime Test", cwd=self.seed)
@@ -391,6 +395,34 @@ class GitCliProviderTests(unittest.TestCase):
             (snapshot.root / "state.txt").read_text(encoding="utf-8"),
         )
 
+    def test_materialize_uses_one_batch_cat_file_process(self):
+        (self.seed / "second.txt").write_text(
+            "two\n", encoding="utf-8", newline="\n"
+        )
+        (self.seed / "third.txt").write_text(
+            "three\n", encoding="utf-8", newline="\n"
+        )
+        self._git("add", "second.txt", "third.txt", cwd=self.seed)
+        self._git("commit", "-q", "-m", "add batch fixtures", cwd=self.seed)
+        self._git("push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed)
+
+        original_popen = subprocess.Popen
+        batch_calls = []
+
+        def recording_popen(args, *popen_args, **popen_kwargs):
+            if list(args[:3]) == ["git", "cat-file", "--batch"]:
+                batch_calls.append(list(args))
+            return original_popen(args, *popen_args, **popen_kwargs)
+
+        with mock.patch(
+            "scripts.runtime_adapter.subprocess.Popen",
+            side_effect=recording_popen,
+        ):
+            snapshot = self.provider().materialize(self.REPO_ID, "main")
+        self.assertEqual(1, len(batch_calls))
+        self.assertEqual("two\n", (snapshot.root / "second.txt").read_text())
+        self.assertEqual("three\n", (snapshot.root / "third.txt").read_text())
+
     def test_non_fetch_remote_output_is_bounded(self):
         provider = self.provider()
 
@@ -423,21 +455,52 @@ class GitCliProviderTests(unittest.TestCase):
                     binding=provider._binding(self.REPO_ID),
                 )
 
-    def test_remote_transport_requires_bounded_filtering(self):
+    def test_all_transports_require_bounded_filtering(self):
         provider = self.provider()
-        self.assertTrue(
-            provider._requires_filtered_fetch(
-                "https://example.invalid/repo.git"
-            )
+        for remote in (
+            "https://example.invalid/repo.git",
+            "git@example.invalid:repo.git",
+            str(self.remote),
+            self.remote.resolve().as_uri(),
+        ):
+            with self.subTest(remote=remote):
+                self.assertTrue(provider._requires_filtered_fetch(remote))
+
+    def test_local_transport_without_filter_support_fails_closed(self):
+        self._git(
+            "--git-dir", str(self.remote),
+            "config", "uploadpack.allowFilter", "false",
         )
-        self.assertTrue(
-            provider._requires_filtered_fetch(
-                "git@example.invalid:repo.git"
-            )
-        )
-        self.assertFalse(
-            provider._requires_filtered_fetch(str(self.remote))
-        )
+        with self.assertRaisesRegex(
+            ResolutionError, "bounded object filtering"
+        ):
+            self.provider().materialize(self.REPO_ID, "main")
+
+    def test_process_group_cleanup_runs_after_leader_exit(self):
+        class FinishedProcess:
+            pid = 12345
+
+            @staticmethod
+            def poll():
+                return 0
+
+            @staticmethod
+            def wait(timeout=None):
+                return 0
+
+            @staticmethod
+            def kill():
+                raise AssertionError("finished leader must not be killed")
+
+        with mock.patch(
+            "scripts.runtime_adapter.os.name", "posix"
+        ), mock.patch(
+            "scripts.runtime_adapter.os.killpg", create=True
+        ) as killpg, mock.patch(
+            "scripts.runtime_adapter.signal.SIGKILL", 9, create=True
+        ):
+            GitCliProvider._terminate_process_tree(FinishedProcess())
+        killpg.assert_called_once_with(12345, 9)
 
     def test_tree_path_expansion_budgets_fail_closed(self):
         provider = self.provider()
@@ -1571,6 +1634,9 @@ class GitHubApiProviderTests(unittest.TestCase):
 
     def test_exact_branch_head_cas_is_rejected_before_requests(self):
         provider = self.provider()
+        provider._repo = mock.Mock(
+            side_effect=AssertionError("repository lookup must not run")
+        )
         with self.assertRaisesRegex(CasConflict, "unsupported"):
             provider.update_text(
                 self.REPO_ID,
@@ -1581,6 +1647,7 @@ class GitHubApiProviderTests(unittest.TestCase):
                 "test: exact authority write",
                 expected_ref_sha=self.HEAD,
             )
+        provider._repo.assert_not_called()
         self.assertEqual([], provider.calls)
 
     def test_legacy_contents_update_remains_available_without_head_cas(self):

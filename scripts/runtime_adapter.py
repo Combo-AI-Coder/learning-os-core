@@ -504,8 +504,7 @@ class GitCliProvider:
 
     @staticmethod
     def _terminate_process_tree(process: subprocess.Popen) -> None:
-        if process.poll() is not None:
-            return
+        leader_running = process.poll() is None
         if os.name == "nt":
             try:
                 subprocess.run(
@@ -516,17 +515,20 @@ class GitCliProvider:
                     check=False,
                 )
             except (OSError, subprocess.SubprocessError):
-                process.kill()
+                if leader_running:
+                    process.kill()
         else:
             try:
                 os.killpg(process.pid, signal.SIGKILL)
             except OSError:
+                if leader_running:
+                    process.kill()
+        if process.poll() is None:
+            try:
+                process.wait(timeout=10)
+            except subprocess.SubprocessError:
                 process.kill()
-        try:
-            process.wait(timeout=10)
-        except subprocess.SubprocessError:
-            process.kill()
-            process.wait()
+                process.wait()
 
     def _binding(self, repository_id: int) -> GitRepositoryBinding:
         repository_id = _positive_id(repository_id, "repository_id")
@@ -767,30 +769,105 @@ class GitCliProvider:
             binding=binding, extra_env=extra_env,
         )
 
-    def _git_blob_to_file(
-        self, repo: Path, sha: str, output: Path
+    def _materialize_blobs(
+        self,
+        repo: Path,
+        entries: list[tuple[str, str, str]],
+        snapshot: Path,
     ) -> None:
+        env = self._env()
+        env["GIT_NO_LAZY_FETCH"] = "1"
         try:
-            with output.open("xb") as handle:
-                result = subprocess.run(
-                    ["git", "cat-file", "blob", sha],
-                    cwd=repo,
-                    env=self._env(),
-                    stdout=handle,
-                    stderr=subprocess.PIPE,
-                    timeout=90,
-                    check=False,
-                )
-        except FileExistsError:
-            raise ResolutionError(
-                "materialized Git path aliases an existing snapshot entry"
-            ) from None
-        except (OSError, subprocess.SubprocessError):
-            output.unlink(missing_ok=True)
+            process = subprocess.Popen(
+                ["git", "cat-file", "--batch"],
+                cwd=repo,
+                env=env,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                **self._fetch_process_kwargs(),
+            )
+        except OSError:
             raise ResolutionError("Git blob materialization failed") from None
-        if result.returncode:
-            output.unlink(missing_ok=True)
-            raise ResolutionError("Git blob materialization failed")
+
+        try:
+            if process.stdin is None or process.stdout is None:
+                raise ResolutionError("Git blob materialization failed")
+            for path, sha, mode in entries:
+                output = snapshot.joinpath(*PurePosixPath(path).parts)
+                output.parent.mkdir(parents=True, exist_ok=True)
+                if output.exists():
+                    raise ResolutionError(
+                        "materialized Git path aliases an existing snapshot entry"
+                    )
+
+                process.stdin.write((sha + "\n").encode("ascii"))
+                process.stdin.flush()
+                header = process.stdout.readline().rstrip(b"\n")
+                parts = header.split()
+                if len(parts) != 3:
+                    raise ResolutionError("Git blob materialization failed")
+                try:
+                    reported_sha = parts[0].decode("ascii")
+                    object_type = parts[1].decode("ascii")
+                    size_text = parts[2].decode("ascii")
+                except UnicodeDecodeError:
+                    raise ResolutionError(
+                        "Git blob materialization failed"
+                    ) from None
+                if (
+                    reported_sha != sha
+                    or object_type != "blob"
+                    or not size_text.isdigit()
+                ):
+                    raise ResolutionError("Git blob materialization failed")
+                size = int(size_text)
+                if size > MAX_SNAPSHOT_BLOB_BYTES:
+                    raise ResolutionError(
+                        "Git snapshot blob exceeds Runtime size budget"
+                    )
+
+                try:
+                    with output.open("xb") as handle:
+                        remaining = size
+                        while remaining:
+                            chunk = process.stdout.read(
+                                min(64 * 1024, remaining)
+                            )
+                            if not chunk:
+                                raise ResolutionError(
+                                    "Git blob materialization failed"
+                                )
+                            handle.write(chunk)
+                            remaining -= len(chunk)
+                except FileExistsError:
+                    raise ResolutionError(
+                        "materialized Git path aliases an existing snapshot entry"
+                    ) from None
+                if process.stdout.read(1) != b"\n":
+                    raise ResolutionError("Git blob materialization failed")
+                if not output.is_file():
+                    raise ResolutionError(
+                        "materialized Git tree entry is not a regular file"
+                    )
+                try:
+                    output.chmod(0o755 if mode == "100755" else 0o644)
+                except OSError:
+                    pass
+
+            process.stdin.close()
+            process.wait(timeout=90)
+            if process.returncode:
+                raise ResolutionError("Git blob materialization failed")
+        except (OSError, subprocess.SubprocessError):
+            raise ResolutionError("Git blob materialization failed") from None
+        finally:
+            if process.stdin is not None and not process.stdin.closed:
+                process.stdin.close()
+            if process.poll() is None:
+                self._terminate_process_tree(process)
+            if process.stdout is not None:
+                process.stdout.close()
 
     @staticmethod
     def _windows_reserved_component(part: str) -> bool:
@@ -1078,6 +1155,15 @@ class GitCliProvider:
             raise ResolutionError("Git object-size response is invalid") from None
         for line in lines:
             parts = line.split()
+            if (
+                len(parts) == 2
+                and EXACT_COMMIT.fullmatch(parts[0])
+                and parts[1] == "missing"
+            ):
+                raise ResolutionError(
+                    "Git snapshot blob exceeds Runtime size budget "
+                    "or was omitted by bounded fetch"
+                )
             if len(parts) != 3:
                 raise ResolutionError("Git object-size response is invalid")
             sha, object_type, size_text = parts
@@ -1239,16 +1325,11 @@ class GitCliProvider:
 
     @staticmethod
     def _requires_filtered_fetch(remote: str) -> bool:
-        if remote.startswith("file://"):
-            return False
-        if (
-            remote.startswith(("/", "\\\\", "//"))
-            or re.match(r"^[A-Za-z]:[/\\\\]", remote)
-        ):
-            return False
-        if "://" in remote:
-            return True
-        return bool(re.match(r"^[^/\\\\]+:.+", remote))
+        # Every transport must prove bounded blob filtering. Local paths and
+        # file:// remotes can support upload-pack filtering when explicitly
+        # configured; otherwise the fetch fails closed instead of inflating an
+        # unbounded blob before expanded-size validation can run.
+        return True
 
     @staticmethod
     def _object_store_bytes(repo: Path) -> int:
@@ -1420,22 +1501,9 @@ class GitCliProvider:
         snapshot_td = tempfile.TemporaryDirectory(prefix="learning-os-snapshot-")
         snapshot = Path(snapshot_td.name)
         try:
-            for path, sha, mode in self._tree_entries(repo, commit):
-                output = snapshot.joinpath(*PurePosixPath(path).parts)
-                output.parent.mkdir(parents=True, exist_ok=True)
-                if output.exists():
-                    raise ResolutionError(
-                        "materialized Git path aliases an existing snapshot entry"
-                    )
-                self._git_blob_to_file(repo, sha, output)
-                if not output.is_file():
-                    raise ResolutionError(
-                        "materialized Git tree entry is not a regular file"
-                    )
-                try:
-                    output.chmod(0o755 if mode == "100755" else 0o644)
-                except OSError:
-                    pass
+            self._materialize_blobs(
+                repo, self._tree_entries(repo, commit), snapshot
+            )
         except Exception:
             snapshot_td.cleanup()
             raise
@@ -1721,14 +1789,14 @@ class GitHubApiProvider:
         message: str,
         expected_ref_sha: str | None = None,
     ) -> str:
-        repo = self._repo(repository_id)
-        full_name = _nonempty(repo.get("full_name"), "repository.full_name")
-        if not EXACT_COMMIT.fullmatch(str(expected_blob_sha)):
-            raise CasConflict("expected blob SHA must be exact")
         if expected_ref_sha is not None:
             raise CasConflict(
                 "exact branch-head CAS is unsupported by GitHub REST provider"
             )
+        repo = self._repo(repository_id)
+        full_name = _nonempty(repo.get("full_name"), "repository.full_name")
+        if not EXACT_COMMIT.fullmatch(str(expected_blob_sha)):
+            raise CasConflict("expected blob SHA must be exact")
 
         quoted_path = urllib.parse.quote(path, safe="/")
         data = self._request(
