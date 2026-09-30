@@ -48,12 +48,16 @@ from scripts.validate_learning_os import (
     DeploymentBinding,
     instance_expected_types,
     instance_generic_write_mode,
+    instance_generic_write_role_rule,
     instance_write_policy_fingerprint,
     learning_handoff_identity_mismatches,
     validate_instance_document_trust_boundary,
 )
 
 BRANCH_RUNTIME_SCHEMA_VERSION = "0.3"
+BRANCH_REGISTRY_SCHEMA_VERSION = "0.3"
+BRANCH_ROLES = frozenset({"hub", "main", "practice", "deep_dive"})
+BRANCH_LIFECYCLES = frozenset({"active", "idle", "retired"})
 BRANCH_GENERATION_LIFECYCLES = frozenset({
     "active",
     "idle",
@@ -75,6 +79,13 @@ BRANCH_RUNTIME_REQUIRED_FIELDS = frozenset({
     "active_generation",
     "pending_successor",
     "generations",
+})
+BRANCH_REGISTRY_REQUIRED_FIELDS = frozenset({
+    "schema_version",
+    "document_type",
+    "revision",
+    "topic",
+    "branches",
 })
 WINDOWS_RESERVED_BASENAMES = frozenset({
     "CON", "PRN", "AUX", "NUL",
@@ -292,6 +303,8 @@ class LearningSessionBinding:
     branch_id: str
     lineage_id: str
     generation: int
+    role: str
+    subtopic: str | None
 
 
 @dataclass(frozen=True)
@@ -438,6 +451,99 @@ class RuntimeSessionBroker:
             )
         return data
 
+    @staticmethod
+    def _parse_branch_registry(text: str) -> dict:
+        try:
+            data = yaml.safe_load(text)
+        except yaml.YAMLError as exc:
+            raise ResolutionError(
+                f"Branch registry is malformed YAML: {exc.__class__.__name__}"
+            ) from None
+        if not isinstance(data, dict):
+            raise ResolutionError("Branch registry must be a mapping")
+        missing = BRANCH_REGISTRY_REQUIRED_FIELDS - set(data)
+        if missing:
+            raise ResolutionError(
+                "Branch registry is missing required fields: "
+                + ", ".join(sorted(missing))
+            )
+        if data.get("schema_version") != BRANCH_REGISTRY_SCHEMA_VERSION:
+            raise ResolutionError("Branch registry schema_version is unsupported")
+        if data.get("document_type") != "branch_registry":
+            raise ResolutionError("Branch registry has the wrong document type")
+        trust_findings = validate_instance_document_trust_boundary(
+            "<branch-registry>", data, "branch_registry"
+        )
+        if trust_findings:
+            raise ResolutionError(
+                "Branch registry violates the canonical Instance trust boundary: "
+                + "; ".join(finding.render() for finding in trust_findings)
+            )
+        revision = data.get("revision")
+        if (
+            not isinstance(revision, int)
+            or isinstance(revision, bool)
+            or revision < 1
+        ):
+            raise ResolutionError("Branch registry revision is invalid")
+        topic = data.get("topic")
+        if not isinstance(topic, str) or not topic:
+            raise ResolutionError("Branch registry topic is invalid")
+        branches = data.get("branches")
+        if not isinstance(branches, dict):
+            raise ResolutionError("Branch registry branches is invalid")
+        for branch_id, record in branches.items():
+            if (
+                not isinstance(branch_id, str)
+                or not branch_id
+                or "/" in branch_id
+                or "\\" in branch_id
+                or branch_id in {".", ".."}
+            ):
+                raise ResolutionError("Branch registry branch id is invalid")
+            if not isinstance(record, dict):
+                raise ResolutionError("Branch registry branch record is invalid")
+            if record.get("role") not in BRANCH_ROLES:
+                raise ResolutionError("Branch registry role is invalid")
+            if record.get("lifecycle") not in BRANCH_LIFECYCLES:
+                raise ResolutionError("Branch registry lifecycle is invalid")
+            subtopic = record.get("subtopic")
+            if subtopic is not None and (
+                not isinstance(subtopic, str) or not subtopic
+            ):
+                raise ResolutionError("Branch registry subtopic is invalid")
+        return data
+
+    def _read_branch_registry(
+        self,
+        *,
+        instance_repository_id: int,
+        authority_head: str,
+        topic: str,
+        branch_id: str,
+    ) -> dict:
+        registry_path = f"topics/{topic}/coordination/branches.yaml"
+        if instance_expected_types(registry_path) != ("branch_registry",):
+            raise ResolutionError("Branch registry path is not canonical")
+        text, _, registry_head = self.provider.read_text(
+            instance_repository_id,
+            authority_head,
+            registry_path,
+        )
+        if registry_head != authority_head:
+            raise ResolutionError(
+                "Branch registry provenance changed during validation"
+            )
+        registry = self._parse_branch_registry(text)
+        if registry["topic"] != topic:
+            raise ResolutionError("Branch registry topic does not match Branch runtime")
+        record = registry["branches"].get(branch_id)
+        if not isinstance(record, dict):
+            raise ResolutionError("Branch is missing from the canonical registry")
+        if record.get("lifecycle") != "active":
+            raise ResolutionError("Branch registry lifecycle is not active")
+        return record
+
     def _validate_branch_handoff_refs(
         self,
         *,
@@ -572,10 +678,16 @@ class RuntimeSessionBroker:
             raise GuardRejected(
                 "writable learning session requires an established generation"
             )
-        runtime, _ = self._read_branch_runtime(
+        runtime, authority_head = self._read_branch_runtime(
             instance_repository_id=deployment.instance_repository_id,
             instance_ref=instance_ref,
             runtime_path=runtime_path,
+        )
+        branch_record = self._read_branch_registry(
+            instance_repository_id=deployment.instance_repository_id,
+            authority_head=authority_head,
+            topic=runtime["topic"],
+            branch_id=runtime["branch_id"],
         )
         generation = runtime["active_generation"]
         if expected_generation is not None and generation != expected_generation:
@@ -587,6 +699,8 @@ class RuntimeSessionBroker:
             branch_id=runtime["branch_id"],
             lineage_id=runtime["lineage_id"],
             generation=generation,
+            role=branch_record["role"],
+            subtopic=branch_record.get("subtopic"),
         )
         state = _LearningRuntimeSessionState(
             deployment=deployment,
@@ -627,6 +741,21 @@ class RuntimeSessionBroker:
         ):
             if runtime[field] != expected:
                 raise GuardRejected(f"Branch runtime {field} changed")
+        try:
+            branch_record = self._read_branch_registry(
+                instance_repository_id=state.deployment.instance_repository_id,
+                authority_head=commit_sha,
+                topic=state.binding.topic,
+                branch_id=state.binding.branch_id,
+            )
+        except ResolutionError as exc:
+            raise GuardRejected(
+                f"Branch registry fresh-read failed closed: {exc}"
+            ) from None
+        if branch_record.get("role") != state.binding.role:
+            raise GuardRejected("Branch registry role changed")
+        if branch_record.get("subtopic") != state.binding.subtopic:
+            raise GuardRejected("Branch registry subtopic changed")
         return runtime["active_generation"], commit_sha
 
     def _assert_state_current(
@@ -712,6 +841,34 @@ class RuntimeSessionBroker:
             raise GuardRejected(
                 "Runtime broker write policy does not match the exact deployed Core"
             )
+
+    @staticmethod
+    def _assert_replace_role_compatible(
+        state: _LearningRuntimeSessionState,
+        *,
+        document_type: str,
+        path: str,
+    ) -> None:
+        rule = instance_generic_write_role_rule(document_type)
+        if rule is None:
+            return
+        if state.binding.role not in rule["roles"]:
+            raise GuardRejected(
+                f"Branch role {state.binding.role!r} cannot replace {document_type}"
+            )
+        if rule["scope"] == "bound_subtopic":
+            parts = PurePosixPath(path).parts
+            target_topic = parts[1]
+            target_subtopic = parts[3]
+            if (
+                state.binding.topic != target_topic
+                or state.binding.subtopic != target_subtopic
+            ):
+                raise GuardRejected(
+                    f"{document_type} replacement is outside the bound Subtopic"
+                )
+            return
+        raise GuardRejected("deployed Core role-write scope is unsupported")
 
     def _validate_candidate(
         self,
@@ -896,6 +1053,11 @@ class RuntimeSessionBroker:
                 raise GuardRejected(
                     "deployed Core generic write mode is unsupported"
                 )
+            self._assert_replace_role_compatible(
+                state,
+                document_type=document_type,
+                path=path,
+            )
 
             generation, authority_head = self._fresh_generation(state)
             if generation != state.binding.generation:

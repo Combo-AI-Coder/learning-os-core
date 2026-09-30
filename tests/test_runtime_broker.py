@@ -33,6 +33,7 @@ RC_ID, CORE_ID, INSTANCE_ID = 9100000101, 9100000102, 9100000103
 CORE_COMMIT = "a" * 40
 RC_COMMIT = "b" * 40
 INSTANCE_COMMIT = "c" * 40
+REGISTRY_PATH = "topics/synthetic/coordination/branches.yaml"
 RUNTIME_PATH = "topics/synthetic/coordination/branches/main/runtime.yaml"
 HANDOFF_PATH = (
     "topics/synthetic/handoffs/synthetic-main-lineage/C01-to-C02.yaml"
@@ -85,6 +86,19 @@ def contract(*, epoch=1, write_state="active", core_commit=CORE_COMMIT):
     }
 
 
+def branch_registry(*, role="main", lifecycle="active", subtopic=None):
+    record = {"role": role, "lifecycle": lifecycle}
+    if subtopic is not None:
+        record["subtopic"] = subtopic
+    return {
+        "schema_version": "0.3",
+        "document_type": "branch_registry",
+        "revision": 1,
+        "topic": "synthetic",
+        "branches": {"main": record},
+    }
+
+
 def branch_runtime(*, generation=3):
     generations = {
         1: {"lifecycle": "archived"},
@@ -115,11 +129,13 @@ class BrokerProvider:
         self.promote_after_target_read = False
         self.advance_branch_after_target_read = False
         self.docs = {
+            REGISTRY_PATH: yaml.safe_dump(branch_registry(), sort_keys=False),
             RUNTIME_PATH: yaml.safe_dump(branch_runtime(), sort_keys=False),
             READ_PATH: READ_V1,
             WRITE_PATH: WRITE_V1,
         }
         self.blobs = {
+            REGISTRY_PATH: "4" * 40,
             RUNTIME_PATH: "d" * 40,
             READ_PATH: "e" * 40,
             WRITE_PATH: "f" * 40,
@@ -238,6 +254,20 @@ class BrokerProvider:
         self.blobs[RUNTIME_PATH] = "7" * 40
         self.instance_head = "6" * 40
 
+    def set_branch_registry(
+        self, *, role="main", lifecycle="active", subtopic=None
+    ):
+        self.docs[REGISTRY_PATH] = yaml.safe_dump(
+            branch_registry(
+                role=role,
+                lifecycle=lifecycle,
+                subtopic=subtopic,
+            ),
+            sort_keys=False,
+        )
+        self.blobs[REGISTRY_PATH] = "5" * 40
+        self.instance_head = "6" * 40
+
 
 class RuntimeSessionBrokerTests(unittest.TestCase):
     def setUp(self):
@@ -272,6 +302,8 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         self.assertEqual("synthetic", state.binding.topic)
         self.assertEqual("main", state.binding.branch_id)
         self.assertEqual("synthetic-main-lineage", state.binding.lineage_id)
+        self.assertEqual("main", state.binding.role)
+        self.assertIsNone(state.binding.subtopic)
 
     def test_resolver_releases_partial_materializations_on_failure(self):
         self.provider.calls.clear()
@@ -441,6 +473,14 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         with self.assertRaisesRegex(GuardRejected, "not active"):
             self.open(expected_generation=2)
 
+    def test_open_session_requires_active_branch_registry_lifecycle(self):
+        for lifecycle in ("idle", "retired"):
+            with self.subTest(lifecycle=lifecycle):
+                self.provider.set_branch_registry(lifecycle=lifecycle)
+                with self.assertRaisesRegex(ResolutionError, "lifecycle is not active"):
+                    self.open(expected_generation=3)
+                self.provider.set_branch_registry(lifecycle="active")
+
     def test_open_session_requires_canonical_branch_runtime_path(self):
         with self.assertRaisesRegex(ResolutionError, "not canonical"):
             self.broker.open_session(
@@ -593,7 +633,8 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
 
         self.provider.read_text = racing_read
         with self.assertRaisesRegex(
-            GuardRejected, "authority head changed"
+            GuardRejected,
+            "authority head changed|Branch registry fresh-read failed closed",
         ):
             self.broker.read_instance_text(session, READ_PATH)
 
@@ -827,6 +868,93 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 message="test stale session",
             )
         self.assertFalse(any(call[0] == "update" for call in self.provider.calls))
+
+    def test_main_branch_may_replace_bound_subtopic_progress(self):
+        path = "topics/synthetic/subtopics/unit/progress.yaml"
+        content = yaml.safe_dump({
+            "schema_version": "0.3",
+            "document_type": "subtopic_progress",
+            "revision": 1,
+            "topic": "synthetic",
+            "subtopic": "unit",
+            "plan_revision": 1,
+            "milestones": {},
+        }, sort_keys=False)
+        self.provider.docs[path] = content
+        self.provider.blobs[path] = "2" * 40
+        self.provider.set_branch_registry(role="main", subtopic="unit")
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(path,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        with mock.patch.object(
+            self.broker, "_validate_candidate", return_value=None
+        ):
+            result = self.broker.guarded_update(
+                session,
+                path=path,
+                content=content,
+                expected_blob_sha="2" * 40,
+                message="advance bound subtopic progress",
+            )
+        self.assertTrue(result.applied)
+
+    def test_practice_branch_cannot_replace_main_subtopic_progress(self):
+        path = "topics/synthetic/subtopics/unit/progress.yaml"
+        self.provider.docs[path] = "revision: 1\n"
+        self.provider.blobs[path] = "2" * 40
+        self.provider.set_branch_registry(role="practice", subtopic="unit")
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(path,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        with self.assertRaisesRegex(GuardRejected, "cannot replace subtopic_progress"):
+            self.broker.guarded_update(
+                session,
+                path=path,
+                content="revision: 2\n",
+                expected_blob_sha="2" * 40,
+                message="must not move Main route position",
+            )
+
+    def test_main_branch_cannot_replace_other_subtopic_progress(self):
+        path = "topics/synthetic/subtopics/other/progress.yaml"
+        self.provider.docs[path] = "revision: 1\n"
+        self.provider.blobs[path] = "2" * 40
+        self.provider.set_branch_registry(role="main", subtopic="unit")
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(path,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        with self.assertRaisesRegex(GuardRejected, "outside the bound Subtopic"):
+            self.broker.guarded_update(
+                session,
+                path=path,
+                content="revision: 2\n",
+                expected_blob_sha="2" * 40,
+                message="must stay within bound subtopic",
+            )
+
+    def test_branch_registry_role_change_blocks_existing_session(self):
+        session = self.open()
+        self.provider.set_branch_registry(role="practice")
+        with self.assertRaisesRegex(GuardRejected, "role changed"):
+            self.broker.read_instance_text(session, READ_PATH)
 
     def test_generic_update_rejects_immutable_append_families(self):
         policy = RuntimeCapabilityPolicy(

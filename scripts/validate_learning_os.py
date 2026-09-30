@@ -578,6 +578,12 @@ INSTANCE_GENERIC_WRITE_MODE_OVERRIDES={
     "branch_registry":"protocol_transition",
     "conversation_sequence_registry":"protocol_transition",
 }
+INSTANCE_GENERIC_WRITE_ROLE_RULES={
+    "subtopic_progress": {
+        "roles": ("main",),
+        "scope": "bound_subtopic",
+    },
+}
 
 def instance_expected_types(p,rules=None):
     """Return every split Instance document type whose canonical family matches p."""
@@ -590,6 +596,10 @@ def instance_generic_write_mode(document_type):
         return None
     return INSTANCE_GENERIC_WRITE_MODE_OVERRIDES.get(document_type,"replace")
 
+def instance_generic_write_role_rule(document_type):
+    """Return an optional canonical Branch-role constraint for generic replacement."""
+    return INSTANCE_GENERIC_WRITE_ROLE_RULES.get(document_type)
+
 def instance_write_policy_fingerprint():
     """Stable semantic fingerprint for path classification + generic mutation modes."""
     payload={
@@ -601,6 +611,13 @@ def instance_write_policy_fingerprint():
         "modes":{
             t:instance_generic_write_mode(t)
             for t in sorted(INSTANCE_ALL_TYPES)
+        },
+        "role_rules":{
+            t:{
+                "roles":list(rule["roles"]),
+                "scope":rule["scope"],
+            }
+            for t,rule in sorted(INSTANCE_GENERIC_WRITE_ROLE_RULES.items())
         },
     }
     encoded=json.dumps(
