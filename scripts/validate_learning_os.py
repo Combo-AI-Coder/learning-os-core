@@ -1565,7 +1565,12 @@ def main():
     a.add_argument("--instance-snapshot",default=None,help="materialized Instance snapshot root required by --deployment")
     a.add_argument("--locator",default=None,help="YAML file with the trusted locator (external trust root) required by --deployment")
     a.add_argument("--provenance",default=None,help="YAML file with caller-supplied trusted snapshot provenance (control/core/instance repository_id[/commit_sha]) required by --deployment")
-    args=a.parse_args(); root=Path(args.root)
+    a.add_argument("--write-policy-fingerprint",action="store_true",help="print the write-policy fingerprint computed by this exact Core implementation")
+    args=a.parse_args()
+    if args.write_policy_fingerprint:
+        print(instance_write_policy_fingerprint())
+        return 0
+    root=Path(args.root)
     if args.deployment:
         need={"--control-snapshot":args.control_snapshot,"--core-snapshot":args.core_snapshot,"--instance-snapshot":args.instance_snapshot,"--locator":args.locator,"--provenance":args.provenance}
         missing=[k for k,v in need.items() if not v]

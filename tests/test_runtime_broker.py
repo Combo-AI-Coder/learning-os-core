@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import gc
+import shutil
 import subprocess
 import tempfile
 import threading
@@ -295,6 +297,19 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             **kwargs,
         )
 
+    def deployed_core_snapshot(self) -> Path:
+        tempdir = tempfile.TemporaryDirectory(prefix="synthetic-deployed-core-")
+        self.addCleanup(tempdir.cleanup)
+        root = Path(tempdir.name)
+        (root / "config").mkdir(parents=True)
+        (root / "scripts").mkdir(parents=True)
+        shutil.copy2(ROOT / "config/core.yaml", root / "config/core.yaml")
+        shutil.copy2(
+            ROOT / "scripts/validate_learning_os.py",
+            root / "scripts/validate_learning_os.py",
+        )
+        return root
+
     def test_open_session_binds_active_branch_generation(self):
         session = self.open(expected_generation=3)
         state = self.broker._session_state(session)
@@ -383,11 +398,35 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             )
         self.assertFalse(any(call[0] == "update" for call in self.provider.calls))
 
+    def test_copied_session_handle_survives_original_object_collection(self):
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=RuntimeCapabilityPolicy(readable_roots=("learner",)),
+        )
+        copied = replace(session)
+        del session
+        gc.collect()
+        result = self.broker.read_instance_text(copied, READ_PATH)
+        self.assertEqual(READ_V1, result.content)
+
+    def test_close_session_revokes_all_handle_copies(self):
+        session = self.open()
+        copied = replace(session)
+        self.broker.close_session(session)
+        with self.assertRaisesRegex(GuardRejected, "not broker-issued"):
+            self.broker.read_instance_text(copied, READ_PATH)
+        with self.assertRaisesRegex(GuardRejected, "not broker-issued"):
+            self.broker.close_session(copied)
+
     def test_forged_session_handle_is_rejected(self):
         session = self.open()
         forged = replace(session, session_id="forged-session-token")
         with self.assertRaisesRegex(GuardRejected, "not broker-issued"):
             self.broker.read_instance_text(forged, READ_PATH)
+
+    def test_public_freshness_check_does_not_expose_instance_commit(self):
+        session = self.open()
+        self.assertIsNone(self.broker.assert_current(session))
 
     def test_session_capability_is_bound_to_issuing_broker(self):
         session = self.open()
@@ -1258,11 +1297,16 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
     def test_candidate_validation_timeout_fails_before_provider_update(self):
         session = self.open()
         self.provider.calls.clear()
+        real_run = subprocess.run
+
+        def timeout_candidate_only(command, **kwargs):
+            if "--write-policy-fingerprint" in command:
+                return real_run(command, **kwargs)
+            raise subprocess.TimeoutExpired(cmd=command, timeout=10)
+
         with mock.patch(
             "scripts.runtime_broker.subprocess.run",
-            side_effect=subprocess.TimeoutExpired(
-                cmd=["validator"], timeout=10
-            ),
+            side_effect=timeout_candidate_only,
         ):
             with self.assertRaisesRegex(GuardRejected, "timed out"):
                 self.broker.guarded_update(
@@ -1280,7 +1324,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             for call in self.provider.calls
             if call[0] == "release"
         ]
-        self.assertEqual([CORE_ID, INSTANCE_ID], released)
+        self.assertEqual([CORE_ID, CORE_ID, INSTANCE_ID], released)
 
     def test_revisioned_candidate_requires_positive_integer_revision(self):
         path = READ_PATH
@@ -1312,33 +1356,68 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             any(call[0] == "update" for call in self.provider.calls)
         )
 
-    def test_deployed_write_policy_mismatch_fails_before_update(self):
+    def test_deployed_write_policy_manifest_mismatch_fails_before_update(self):
         session = self.open()
-        original = self.provider.read_text
+        core_root = self.deployed_core_snapshot()
+        data = yaml.safe_load(
+            (core_root / "config/core.yaml").read_text(encoding="utf-8")
+        )
+        data["manifest"]["runtime_session_write_policy_fingerprint"] = "0" * 64
+        (core_root / "config/core.yaml").write_text(
+            yaml.safe_dump(data, sort_keys=False), encoding="utf-8", newline="\n"
+        )
+        original_materialize = self.provider.materialize
 
-        def stale_policy(repository_id, ref, path):
-            if (
-                repository_id == CORE_ID
-                and ref == CORE_COMMIT
-                and path == "config/core.yaml"
-            ):
-                data = yaml.safe_load(
-                    (ROOT / "config/core.yaml").read_text(encoding="utf-8")
+        def materialize(repository_id, ref):
+            if repository_id == CORE_ID:
+                return MaterializedRepository(
+                    core_root, CORE_ID, CORE_COMMIT, "synthetic/core"
                 )
-                data["manifest"]["runtime_session_write_policy_fingerprint"] = (
-                    "0" * 64
-                )
-                return yaml.safe_dump(data, sort_keys=False), "2" * 40, CORE_COMMIT
-            return original(repository_id, ref, path)
+            return original_materialize(repository_id, ref)
 
-        self.provider.read_text = stale_policy
-        with self.assertRaisesRegex(GuardRejected, "write policy"):
+        self.provider.materialize = materialize
+        with self.assertRaisesRegex(GuardRejected, "manifest write policy"):
             self.broker.guarded_update(
                 session,
                 path=WRITE_PATH,
                 content=WRITE_V2,
                 expected_blob_sha="f" * 40,
-                message="must fail on stale broker policy",
+                message="must fail on stale broker policy declaration",
+            )
+        self.assertFalse(
+            any(call[0] == "update" for call in self.provider.calls)
+        )
+
+    def test_deployed_write_policy_is_computed_from_exact_core_code(self):
+        session = self.open()
+        core_root = self.deployed_core_snapshot()
+        validator_path = core_root / "scripts/validate_learning_os.py"
+        source = validator_path.read_text(encoding="utf-8")
+        old = '"subtopic_progress": {\n        "roles": ("main",),'
+        new = '"subtopic_progress": {\n        "roles": ("practice",),'
+        self.assertIn(old, source)
+        validator_path.write_text(
+            source.replace(old, new, 1), encoding="utf-8", newline="\n"
+        )
+        original_materialize = self.provider.materialize
+
+        def materialize(repository_id, ref):
+            if repository_id == CORE_ID:
+                return MaterializedRepository(
+                    core_root, CORE_ID, CORE_COMMIT, "synthetic/core"
+                )
+            return original_materialize(repository_id, ref)
+
+        self.provider.materialize = materialize
+        with self.assertRaisesRegex(
+            GuardRejected, "manifest write policy does not match"
+        ):
+            self.broker.guarded_update(
+                session,
+                path=WRITE_PATH,
+                content=WRITE_V2,
+                expected_blob_sha="f" * 40,
+                message="must compute exact deployed Core policy",
             )
         self.assertFalse(
             any(call[0] == "update" for call in self.provider.calls)
@@ -1410,7 +1489,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             for call in self.provider.calls
             if call[0] == "release"
         ]
-        self.assertEqual([CORE_ID, INSTANCE_ID], released)
+        self.assertEqual([CORE_ID, CORE_ID, INSTANCE_ID], released)
 
 
 if __name__ == "__main__":

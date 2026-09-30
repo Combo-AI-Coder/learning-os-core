@@ -17,7 +17,6 @@ import subprocess
 import sys
 import tempfile
 import threading
-import weakref
 from typing import ContextManager, Iterator, Protocol
 
 import yaml
@@ -338,16 +337,18 @@ class RuntimeSessionBroker:
         self._session_lock = threading.Lock()
         self._issued_sessions: dict[str, _LearningRuntimeSessionState] = {}
 
-    @staticmethod
-    def _expire_session(
-        broker_ref: weakref.ReferenceType["RuntimeSessionBroker"],
-        session_id: str,
-    ) -> None:
-        broker = broker_ref()
-        if broker is None:
-            return
-        with broker._session_lock:
-            broker._issued_sessions.pop(session_id, None)
+    def close_session(self, session: LearningRuntimeSession) -> None:
+        """Explicitly revoke one broker-issued session capability.
+
+        All copies/serialized representations of the same opaque handle share
+        this broker-side lifetime and become invalid together after close.
+        """
+        if not isinstance(session, LearningRuntimeSession):
+            raise GuardRejected("session capability is not broker-issued")
+        with self._session_lock:
+            removed = self._issued_sessions.pop(session.session_id, None)
+        if removed is None:
+            raise GuardRejected("session capability is not broker-issued")
 
     def _session_state(
         self, session: LearningRuntimeSession
@@ -712,14 +713,7 @@ class RuntimeSessionBroker:
             while session_id in self._issued_sessions:
                 session_id = secrets.token_urlsafe(32)
             self._issued_sessions[session_id] = state
-        session = LearningRuntimeSession(session_id=session_id)
-        weakref.finalize(
-            session,
-            RuntimeSessionBroker._expire_session,
-            weakref.ref(self),
-            session_id,
-        )
-        return session
+        return LearningRuntimeSession(session_id=session_id)
 
     def _fresh_generation(
         self, state: _LearningRuntimeSessionState
@@ -767,8 +761,9 @@ class RuntimeSessionBroker:
             raise GuardRejected("semantic generation changed")
         return authority_head
 
-    def assert_current(self, session: LearningRuntimeSession) -> str:
-        return self._assert_state_current(self._session_state(session))
+    def assert_current(self, session: LearningRuntimeSession) -> None:
+        """Verify session freshness without exposing private Instance commit identity."""
+        self._assert_state_current(self._session_state(session))
 
     def _assert_instance_authority_head_current(
         self,
@@ -806,41 +801,92 @@ class RuntimeSessionBroker:
     def _assert_deployed_write_policy_compatible(
         self, state: _LearningRuntimeSessionState
     ) -> None:
+        snapshots: list[MaterializedRepository] = []
         try:
-            text, _, commit_sha = self.provider.read_text(
+            core = self.provider.materialize(
                 state.deployment.core_repository_id,
                 state.deployment.core_commit,
-                "config/core.yaml",
             )
-        except ResolutionError as exc:
-            raise GuardRejected(
-                f"deployed Core write policy is unavailable: {exc}"
-            ) from None
-        if commit_sha != state.deployment.core_commit:
-            raise GuardRejected(
-                "deployed Core write policy provenance changed during validation"
+            snapshots.append(core)
+            if (
+                core.repository_id != state.deployment.core_repository_id
+                or core.commit_sha != state.deployment.core_commit
+            ):
+                raise GuardRejected(
+                    "deployed Core write policy provenance changed during validation"
+                )
+            core_config_path = core.root / "config" / "core.yaml"
+            validator_path = core.root / "scripts" / "validate_learning_os.py"
+            if not core_config_path.is_file() or not validator_path.is_file():
+                raise GuardRejected(
+                    "deployed Core write policy implementation is unavailable"
+                )
+            try:
+                core_config = yaml.safe_load(
+                    core_config_path.read_text(encoding="utf-8")
+                )
+            except (OSError, UnicodeError, yaml.YAMLError) as exc:
+                raise GuardRejected(
+                    "deployed Core write policy declaration is unreadable: "
+                    f"{exc.__class__.__name__}"
+                ) from None
+            manifest = (
+                core_config.get("manifest")
+                if isinstance(core_config, dict)
+                else None
             )
-        try:
-            core_config = yaml.safe_load(text)
-        except yaml.YAMLError as exc:
-            raise GuardRejected(
-                f"deployed Core write policy is malformed YAML: "
-                f"{exc.__class__.__name__}"
-            ) from None
-        manifest = (
-            core_config.get("manifest")
-            if isinstance(core_config, dict)
-            else None
-        )
-        deployed_fingerprint = (
-            manifest.get("runtime_session_write_policy_fingerprint")
-            if isinstance(manifest, dict)
-            else None
-        )
-        if deployed_fingerprint != instance_write_policy_fingerprint():
-            raise GuardRejected(
-                "Runtime broker write policy does not match the exact deployed Core"
+            declared_fingerprint = (
+                manifest.get("runtime_session_write_policy_fingerprint")
+                if isinstance(manifest, dict)
+                else None
             )
+            command = [
+                sys.executable,
+                str(validator_path),
+                "--write-policy-fingerprint",
+            ]
+            try:
+                result = subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=CANDIDATE_VALIDATION_TIMEOUT_SECONDS,
+                    check=False,
+                    cwd=core.root,
+                )
+            except subprocess.TimeoutExpired:
+                raise GuardRejected(
+                    "deployed Core write policy computation timed out"
+                ) from None
+            except OSError:
+                raise GuardRejected(
+                    "deployed Core write policy computation failed to start"
+                ) from None
+            implementation_fingerprint = result.stdout.strip()
+            if (
+                result.returncode != 0
+                or len(implementation_fingerprint) != 64
+                or any(
+                    char not in "0123456789abcdef"
+                    for char in implementation_fingerprint
+                )
+            ):
+                raise GuardRejected(
+                    "deployed Core write policy computation failed closed"
+                )
+            if implementation_fingerprint != declared_fingerprint:
+                raise GuardRejected(
+                    "deployed Core manifest write policy does not match "
+                    "the exact deployed implementation"
+                )
+            if implementation_fingerprint != instance_write_policy_fingerprint():
+                raise GuardRejected(
+                    "Runtime broker write policy does not match the exact deployed Core"
+                )
+        finally:
+            self._release_materializations(snapshots)
 
     @staticmethod
     def _assert_replace_role_compatible(
@@ -1075,7 +1121,6 @@ class RuntimeSessionBroker:
             # Re-read both authorities after validation as an additional
             # fail-closed check against an external actor that ignored the gate.
             self.guard.check(state.deployment)
-            self._assert_deployed_write_policy_compatible(state)
             final_generation, final_authority_head = self._fresh_generation(
                 state
             )
