@@ -702,6 +702,11 @@ class RuntimeSessionBroker:
             raise GuardRejected("semantic generation changed during Instance read")
         if final_authority_head != authority_head:
             raise GuardRejected("Instance authority head changed during read")
+        # _fresh_generation may itself resolve immutable handoff references from
+        # the exact Instance authority head. A promotion can race those final
+        # remote reads without changing the Instance head, so close the full
+        # read operation with one last Runtime-Control freshness check.
+        self.guard.check(session.deployment, require_active=False)
         return InstanceText(content=content, version_token=blob_sha)
 
     def guarded_update(

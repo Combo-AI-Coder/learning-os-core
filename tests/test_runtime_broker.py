@@ -463,6 +463,26 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         ):
             self.broker.read_instance_text(session, READ_PATH)
 
+    def test_promotion_during_final_branch_validation_discards_result(self):
+        session = self.open()
+        original_read = self.provider.read_text
+        target_read = False
+
+        def racing_read(repository_id, ref, path):
+            nonlocal target_read
+            result = original_read(repository_id, ref, path)
+            if path == READ_PATH:
+                target_read = True
+            elif path == RUNTIME_PATH and target_read:
+                # Simulate Runtime-Control promotion immediately after the
+                # final Branch authority/handoff validation read completes.
+                self.provider.contract = contract(epoch=2)
+            return result
+
+        self.provider.read_text = racing_read
+        with self.assertRaisesRegex(GuardRejected, "epoch"):
+            self.broker.read_instance_text(session, READ_PATH)
+
     def test_fresh_branch_runtime_forbidden_keys_fail_closed(self):
         session = self.open()
         runtime = branch_runtime()
