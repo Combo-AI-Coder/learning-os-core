@@ -171,11 +171,16 @@ class BrokerProvider:
                 raise ResolutionError("exact Core unavailable")
             return MaterializedRepository(ROOT, CORE_ID, CORE_COMMIT, "synthetic/core")
         if repository_id == INSTANCE_ID:
-            for path in (READ_PATH, WRITE_PATH):
+            snapshot_docs = {
+                path: content
+                for path, content in self.docs.items()
+                if path in {READ_PATH, WRITE_PATH} or "/handoffs/" in path
+            }
+            for path, content in snapshot_docs.items():
                 target = self.instance.joinpath(*Path(path).parts)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(
-                    self.docs[path], encoding="utf-8", newline="\n"
+                    content, encoding="utf-8", newline="\n"
                 )
             return MaterializedRepository(
                 self.instance, INSTANCE_ID, self.instance_head, "synthetic/instance"
@@ -711,6 +716,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         }, sort_keys=False)
         self.provider.blobs[HANDOFF_PATH] = "3" * 40
         original_read = self.provider.read_text
+        original_materialize = self.provider.materialize
         target_read = False
 
         def racing_read(repository_id, ref, path):
@@ -718,11 +724,16 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             result = original_read(repository_id, ref, path)
             if path == READ_PATH:
                 target_read = True
-            elif path == HANDOFF_PATH and target_read:
+            return result
+
+        def racing_materialize(repository_id, ref):
+            result = original_materialize(repository_id, ref)
+            if repository_id == INSTANCE_ID and target_read:
                 self.provider.set_generation(4)
             return result
 
         self.provider.read_text = racing_read
+        self.provider.materialize = racing_materialize
         with self.assertRaisesRegex(
             GuardRejected,
             "authority head changed|Branch registry fresh-read failed closed",
@@ -841,6 +852,51 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         self.provider.blobs[HANDOFF_PATH] = "3" * 40
         result = self.broker.read_instance_text(session, READ_PATH)
         self.assertEqual(READ_V1, result.content)
+
+    def test_handoff_history_uses_one_exact_head_materialization(self):
+        second_handoff = (
+            "topics/synthetic/handoffs/synthetic-main-lineage/"
+            "C02-to-C03.yaml"
+        )
+        runtime = branch_runtime()
+        runtime["generations"][1]["handoff_ref"] = HANDOFF_PATH
+        runtime["generations"][2]["handoff_ref"] = second_handoff
+        self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(
+            runtime, sort_keys=False
+        )
+        for path, from_generation, to_generation in (
+            (HANDOFF_PATH, 1, 2),
+            (second_handoff, 2, 3),
+        ):
+            self.provider.docs[path] = yaml.safe_dump({
+                "schema_version": "0.3",
+                "document_type": "learning_handoff",
+                "topic": "synthetic",
+                "branch_id": "main",
+                "lineage_id": "synthetic-main-lineage",
+                "from_generation": from_generation,
+                "to_generation": to_generation,
+            }, sort_keys=False)
+            self.provider.blobs[path] = "3" * 40
+
+        self.provider.calls.clear()
+        parsed, head = self.broker._read_branch_runtime(
+            instance_repository_id=INSTANCE_ID,
+            instance_ref="main",
+            runtime_path=RUNTIME_PATH,
+        )
+        self.assertEqual(3, parsed["active_generation"])
+        self.assertEqual(INSTANCE_COMMIT, head)
+        handoff_reads = [
+            call for call in self.provider.calls
+            if call[0] == "read" and call[3] in {HANDOFF_PATH, second_handoff}
+        ]
+        self.assertEqual([], handoff_reads)
+        instance_materializations = [
+            call for call in self.provider.calls
+            if call[0] == "materialize" and call[1] == INSTANCE_ID
+        ]
+        self.assertEqual(1, len(instance_materializations))
 
     def test_branch_runtime_schema_and_required_fields_fail_closed(self):
         session = self.open()
@@ -1125,6 +1181,46 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 content="revision: 2\n",
                 expected_blob_sha="2" * 40,
                 message="must stay within bound subtopic",
+            )
+
+    def test_branch_may_replace_only_its_bound_branch_report(self):
+        own_path = "topics/synthetic/coordination/branches/main/report.yaml"
+        other_path = "topics/synthetic/coordination/branches/other/report.yaml"
+        self.provider.set_branch_registry(role="practice")
+        for path in (own_path, other_path):
+            self.provider.docs[path] = "revision: 1\n"
+            self.provider.blobs[path] = "2" * 40
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=("topics/synthetic",),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+
+        with mock.patch.object(
+            self.broker, "_validate_candidate", return_value=None
+        ):
+            result = self.broker.guarded_update(
+                session,
+                path=own_path,
+                content="revision: 2\n",
+                expected_blob_sha="2" * 40,
+                message="update own Branch report",
+            )
+        self.assertTrue(result.applied)
+
+        self.provider.docs[other_path] = "revision: 1\n"
+        self.provider.blobs[other_path] = "2" * 40
+        with self.assertRaisesRegex(GuardRejected, "outside the bound Branch"):
+            self.broker.guarded_update(
+                session,
+                path=other_path,
+                content="revision: 2\n",
+                expected_blob_sha="2" * 40,
+                message="must not spoof another Branch report",
             )
 
     def test_branch_registry_role_change_blocks_existing_session(self):
@@ -1464,6 +1560,44 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         ]
         self.assertEqual([CORE_ID, CORE_ID, INSTANCE_ID], released)
 
+    def test_revisioned_replacement_rejects_non_advancing_revision_before_cas(self):
+        path = READ_PATH
+        current = yaml.safe_load(READ_V1)
+        current["revision"] = 2
+        self.provider.docs[path] = yaml.safe_dump(
+            current, sort_keys=False
+        )
+        self.provider.blobs[path] = "e" * 40
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("learner",),
+            writable_roots=(path,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        for candidate_revision in (2, 1):
+            with self.subTest(candidate_revision=candidate_revision):
+                candidate = dict(current)
+                candidate["revision"] = candidate_revision
+                self.provider.calls.clear()
+                with self.assertRaisesRegex(
+                    GuardRejected, "advance semantic revision"
+                ):
+                    self.broker.guarded_update(
+                        session,
+                        path=path,
+                        content=yaml.safe_dump(
+                            candidate, sort_keys=False
+                        ),
+                        expected_blob_sha="e" * 40,
+                        message="must reject revision rollback",
+                    )
+                self.assertFalse(
+                    any(call[0] == "update" for call in self.provider.calls)
+                )
+
     def test_revisioned_candidate_requires_positive_integer_revision(self):
         path = READ_PATH
         policy = RuntimeCapabilityPolicy(
@@ -1482,7 +1616,9 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             "domain": "synthetic",
             "concepts": {},
         }, sort_keys=False)
-        with self.assertRaisesRegex(GuardRejected, "canonical validation"):
+        with self.assertRaisesRegex(
+            GuardRejected, "revisioned replacement revision is invalid"
+        ):
             self.broker.guarded_update(
                 session,
                 path=path,

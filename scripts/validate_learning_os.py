@@ -590,6 +590,10 @@ INSTANCE_GENERIC_WRITE_ROLE_RULES={
         "roles": ("main",),
         "scope": "bound_subtopic",
     },
+    "branch_report": {
+        "roles": ("hub", "main", "practice", "deep_dive"),
+        "scope": "bound_branch",
+    },
 }
 
 def instance_expected_types(p,rules=None):
@@ -625,6 +629,10 @@ def instance_write_policy_fingerprint():
                 "scope":rule["scope"],
             }
             for t,rule in sorted(INSTANCE_GENERIC_WRITE_ROLE_RULES.items())
+        },
+        "revision_transition":{
+            "types":sorted(INSTANCE_REVISIONED_TYPES),
+            "rule":"candidate_revision_must_exceed_current_revision",
         },
     }
     encoded=json.dumps(

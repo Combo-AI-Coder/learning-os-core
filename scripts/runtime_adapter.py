@@ -26,6 +26,14 @@ from pathlib import Path, PurePosixPath
 from typing import Callable, Protocol
 
 import yaml
+from yaml.events import (
+    AliasEvent,
+    MappingEndEvent,
+    MappingStartEvent,
+    ScalarEvent,
+    SequenceEndEvent,
+    SequenceStartEvent,
+)
 
 from scripts.validate_learning_os import (
     RepositorySnapshot,
@@ -50,6 +58,9 @@ MAX_SNAPSHOT_PATH_BYTES = 4096
 MAX_SNAPSHOT_PATH_DEPTH = 128
 MAX_SNAPSHOT_EXPANDED_PATH_BYTES = 16 * 1024 * 1024
 FETCH_POLL_SECONDS = 0.02
+BOUNDED_YAML_MAX_BYTES = 1024 * 1024
+BOUNDED_YAML_MAX_NODES = 20000
+BOUNDED_YAML_MAX_DEPTH = 64
 
 
 class ResolutionError(RuntimeError):
@@ -66,6 +77,45 @@ class CasConflict(RuntimeError):
 
 class TransitionRejected(RuntimeError):
     pass
+
+
+def _preflight_bounded_yaml(content: str, where: str) -> None:
+    try:
+        encoded = content.encode("utf-8")
+    except UnicodeEncodeError:
+        raise ResolutionError(f"{where} is not valid UTF-8 text") from None
+    if len(encoded) > BOUNDED_YAML_MAX_BYTES:
+        raise ResolutionError(f"{where} exceeds the byte limit")
+
+    depth = 0
+    nodes = 0
+    starts = (MappingStartEvent, SequenceStartEvent)
+    ends = (MappingEndEvent, SequenceEndEvent)
+    try:
+        for event in yaml.parse(content):
+            if isinstance(event, AliasEvent) or getattr(
+                event, "anchor", None
+            ) is not None:
+                raise ResolutionError(
+                    f"{where} aliases and anchors are not allowed"
+                )
+            if isinstance(event, starts):
+                depth += 1
+                nodes += 1
+                if depth > BOUNDED_YAML_MAX_DEPTH:
+                    raise ResolutionError(
+                        f"{where} exceeds the nesting-depth limit"
+                    )
+            elif isinstance(event, ScalarEvent):
+                nodes += 1
+            elif isinstance(event, ends):
+                depth = max(0, depth - 1)
+            if nodes > BOUNDED_YAML_MAX_NODES:
+                raise ResolutionError(f"{where} exceeds the node limit")
+    except yaml.YAMLError as exc:
+        raise ResolutionError(
+            f"{where} preflight failed: {exc.__class__.__name__}"
+        ) from None
 
 
 @dataclass(frozen=True)
@@ -166,6 +216,7 @@ def load_locator(source: str | Path | dict) -> dict:
 
 
 def _load_contract(text: str) -> dict:
+    _preflight_bounded_yaml(text, "Runtime-Control YAML")
     try:
         data = yaml.safe_load(text)
     except yaml.YAMLError as exc:

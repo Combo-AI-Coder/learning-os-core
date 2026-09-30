@@ -20,20 +20,11 @@ import threading
 from typing import ContextManager, Iterator, Protocol
 
 import yaml
-from yaml.tokens import (
-    AliasToken,
-    AnchorToken,
-    BlockEndToken,
-    BlockMappingStartToken,
-    BlockSequenceStartToken,
-    FlowMappingEndToken,
-    FlowMappingStartToken,
-    FlowSequenceEndToken,
-    FlowSequenceStartToken,
-    ScalarToken,
-)
 
 from scripts.runtime_adapter import (
+    BOUNDED_YAML_MAX_BYTES,
+    BOUNDED_YAML_MAX_DEPTH,
+    BOUNDED_YAML_MAX_NODES,
     CasConflict,
     DeploymentGuard,
     DeploymentResolver,
@@ -41,10 +32,12 @@ from scripts.runtime_adapter import (
     RepositoryProvider,
     ResolutionError,
     SessionDeploymentContext,
+    _preflight_bounded_yaml,
     load_locator,
 )
 from scripts.validate_learning_os import (
     DeploymentBinding,
+    INSTANCE_REVISIONED_TYPES,
     instance_expected_types,
     instance_generic_write_mode,
     instance_generic_write_role_rule,
@@ -64,9 +57,9 @@ BRANCH_GENERATION_LIFECYCLES = frozenset({
     "archived",
     "deprecated",
 })
-CANDIDATE_YAML_MAX_BYTES = 1024 * 1024
-CANDIDATE_YAML_MAX_NODES = 20000
-CANDIDATE_YAML_MAX_DEPTH = 64
+CANDIDATE_YAML_MAX_BYTES = BOUNDED_YAML_MAX_BYTES
+CANDIDATE_YAML_MAX_NODES = BOUNDED_YAML_MAX_NODES
+CANDIDATE_YAML_MAX_DEPTH = BOUNDED_YAML_MAX_DEPTH
 CANDIDATE_VALIDATION_TIMEOUT_SECONDS = 10
 BRANCH_RUNTIME_REQUIRED_FIELDS = frozenset({
     "schema_version",
@@ -149,52 +142,13 @@ def _under(path: str, root: str) -> bool:
 
 def _preflight_candidate_yaml(content: str) -> None:
     try:
-        encoded = content.encode("utf-8")
-    except UnicodeEncodeError:
-        raise GuardRejected("candidate YAML is not valid UTF-8 text") from None
-    if len(encoded) > CANDIDATE_YAML_MAX_BYTES:
-        raise GuardRejected("candidate YAML exceeds the byte limit")
-
-    depth = 0
-    nodes = 0
-    starts = (
-        BlockMappingStartToken,
-        BlockSequenceStartToken,
-        FlowMappingStartToken,
-        FlowSequenceStartToken,
-    )
-    ends = (BlockEndToken, FlowMappingEndToken, FlowSequenceEndToken)
-    try:
-        for token in yaml.scan(content):
-            if isinstance(token, (AliasToken, AnchorToken)):
-                raise GuardRejected(
-                    "candidate YAML aliases and anchors are not allowed"
-                )
-            if isinstance(token, starts):
-                depth += 1
-                nodes += 1
-                if depth > CANDIDATE_YAML_MAX_DEPTH:
-                    raise GuardRejected(
-                        "candidate YAML exceeds the nesting-depth limit"
-                    )
-            elif isinstance(token, ScalarToken):
-                nodes += 1
-            elif isinstance(token, ends):
-                depth = max(0, depth - 1)
-            if nodes > CANDIDATE_YAML_MAX_NODES:
-                raise GuardRejected("candidate YAML exceeds the node limit")
-    except yaml.YAMLError as exc:
-        raise GuardRejected(
-            f"candidate YAML preflight failed: {exc.__class__.__name__}"
-        ) from None
+        _preflight_bounded_yaml(content, "candidate YAML")
+    except ResolutionError as exc:
+        raise GuardRejected(str(exc)) from None
 
 
 def _preflight_authority_yaml(content: str, where: str) -> None:
-    try:
-        _preflight_candidate_yaml(content)
-    except GuardRejected as exc:
-        message = str(exc).replace("candidate YAML", where)
-        raise ResolutionError(message) from None
+    _preflight_bounded_yaml(content, where)
 
 
 class DeploymentWriteAdmission(Protocol):
@@ -581,6 +535,30 @@ class RuntimeSessionBroker:
             raise ResolutionError("Branch registry lifecycle is not active")
         return record
 
+    @staticmethod
+    def _read_materialized_authority_yaml(
+        snapshot: MaterializedRepository,
+        ref: str,
+        where: str,
+    ) -> str:
+        target = snapshot.root.joinpath(*PurePosixPath(ref).parts)
+        try:
+            if not target.is_file():
+                raise ResolutionError(
+                    "Branch runtime handoff_ref target is missing from the "
+                    "exact Instance authority snapshot"
+                )
+            text = target.read_text(encoding="utf-8")
+        except ResolutionError:
+            raise
+        except (OSError, UnicodeError) as exc:
+            raise ResolutionError(
+                "Branch runtime handoff_ref target is unreadable: "
+                f"{exc.__class__.__name__}"
+            ) from None
+        _preflight_authority_yaml(text, where)
+        return text
+
     def _validate_branch_handoff_refs(
         self,
         *,
@@ -588,6 +566,7 @@ class RuntimeSessionBroker:
         instance_repository_id: int,
         authority_head: str,
     ) -> None:
+        refs = []
         generations = runtime["generations"]
         for generation_key, generation_record in generations.items():
             if "handoff_ref" not in generation_record:
@@ -605,62 +584,77 @@ class RuntimeSessionBroker:
                 raise ResolutionError(
                     "Branch runtime handoff_ref is not a canonical learning_handoff path"
                 )
-            try:
-                text, _, handoff_head = self.provider.read_text(
-                    instance_repository_id,
-                    authority_head,
+            refs.append((generation_key, generation_record, ref))
+
+        if not refs:
+            return
+
+        try:
+            snapshot = self.provider.materialize(
+                instance_repository_id,
+                authority_head,
+            )
+        except ResolutionError as exc:
+            raise ResolutionError(
+                f"Branch runtime handoff authority snapshot cannot be resolved: {exc}"
+            ) from None
+        try:
+            if (
+                snapshot.repository_id != instance_repository_id
+                or snapshot.commit_sha != authority_head
+            ):
+                raise ResolutionError(
+                    "Branch runtime handoff authority snapshot provenance changed"
+                )
+            for generation_key, generation_record, ref in refs:
+                text = self._read_materialized_authority_yaml(
+                    snapshot,
                     ref,
+                    "Learning handoff YAML",
                 )
-            except ResolutionError as exc:
-                raise ResolutionError(
-                    f"Branch runtime handoff_ref cannot be resolved: {exc}"
-                ) from None
-            if handoff_head != authority_head:
-                raise ResolutionError(
-                    "Branch runtime handoff_ref provenance changed during validation"
-                )
-            _preflight_authority_yaml(text, "Learning handoff YAML")
-            try:
-                handoff = yaml.safe_load(text)
-            except yaml.YAMLError as exc:
-                raise ResolutionError(
-                    f"Branch runtime handoff_ref is malformed YAML: "
-                    f"{exc.__class__.__name__}"
-                ) from None
-            if not isinstance(handoff, dict):
-                raise ResolutionError(
-                    "Branch runtime handoff_ref target must be a mapping"
-                )
-            if handoff.get("schema_version") != BRANCH_RUNTIME_SCHEMA_VERSION:
-                raise ResolutionError(
-                    "Branch runtime handoff_ref schema_version is unsupported"
-                )
-            if handoff.get("document_type") != "learning_handoff":
-                raise ResolutionError(
-                    "Branch runtime handoff_ref has the wrong document type"
-                )
-            trust_findings = validate_instance_document_trust_boundary(
-                ref, handoff, "learning_handoff"
-            )
-            if trust_findings:
-                raise ResolutionError(
-                    "Branch runtime handoff_ref violates the canonical Instance "
-                    "trust boundary: "
-                    + "; ".join(
-                        finding.render() for finding in trust_findings
+                try:
+                    handoff = yaml.safe_load(text)
+                except yaml.YAMLError as exc:
+                    raise ResolutionError(
+                        f"Branch runtime handoff_ref is malformed YAML: "
+                        f"{exc.__class__.__name__}"
+                    ) from None
+                if not isinstance(handoff, dict):
+                    raise ResolutionError(
+                        "Branch runtime handoff_ref target must be a mapping"
                     )
+                if handoff.get("schema_version") != BRANCH_RUNTIME_SCHEMA_VERSION:
+                    raise ResolutionError(
+                        "Branch runtime handoff_ref schema_version is unsupported"
+                    )
+                if handoff.get("document_type") != "learning_handoff":
+                    raise ResolutionError(
+                        "Branch runtime handoff_ref has the wrong document type"
+                    )
+                trust_findings = validate_instance_document_trust_boundary(
+                    ref, handoff, "learning_handoff"
                 )
-            mismatches = learning_handoff_identity_mismatches(
-                runtime,
-                generation_key,
-                generation_record,
-                handoff,
-            )
-            if mismatches:
-                raise ResolutionError(
-                    "Branch runtime handoff_ref identity is inconsistent: "
-                    + "; ".join(mismatches)
+                if trust_findings:
+                    raise ResolutionError(
+                        "Branch runtime handoff_ref violates the canonical Instance "
+                        "trust boundary: "
+                        + "; ".join(
+                            finding.render() for finding in trust_findings
+                        )
+                    )
+                mismatches = learning_handoff_identity_mismatches(
+                    runtime,
+                    generation_key,
+                    generation_record,
+                    handoff,
                 )
+                if mismatches:
+                    raise ResolutionError(
+                        "Branch runtime handoff_ref identity is inconsistent: "
+                        + "; ".join(mismatches)
+                    )
+        finally:
+            self._release_materializations([snapshot])
 
     def _read_branch_runtime(
         self,
@@ -952,7 +946,84 @@ class RuntimeSessionBroker:
                     f"{document_type} replacement is outside the bound Subtopic"
                 )
             return
+        if rule["scope"] == "bound_branch":
+            parts = PurePosixPath(path).parts
+            target_topic = parts[1]
+            target_branch = parts[4]
+            if (
+                state.binding.topic != target_topic
+                or state.binding.branch_id != target_branch
+            ):
+                raise GuardRejected(
+                    f"{document_type} replacement is outside the bound Branch"
+                )
+            return
         raise GuardRejected("deployed Core role-write scope is unsupported")
+
+    @staticmethod
+    def _assert_revision_transition(
+        instance_root: Path,
+        *,
+        path: str,
+        document_type: str,
+        content: str,
+    ) -> None:
+        if document_type not in INSTANCE_REVISIONED_TYPES:
+            return
+
+        current_path = instance_root.joinpath(*PurePosixPath(path).parts)
+        try:
+            if not current_path.is_file():
+                raise GuardRejected(
+                    "revisioned replacement target is missing from the exact "
+                    "Instance authority snapshot"
+                )
+            current_text = current_path.read_text(encoding="utf-8")
+        except GuardRejected:
+            raise
+        except (OSError, UnicodeError) as exc:
+            raise GuardRejected(
+                "revisioned replacement target is unreadable: "
+                f"{exc.__class__.__name__}"
+            ) from None
+
+        try:
+            _preflight_bounded_yaml(
+                current_text, "current revisioned Instance YAML"
+            )
+        except ResolutionError as exc:
+            raise GuardRejected(str(exc)) from None
+        try:
+            current = yaml.safe_load(current_text)
+            candidate = yaml.safe_load(content)
+        except yaml.YAMLError as exc:
+            raise GuardRejected(
+                "revisioned replacement YAML is malformed: "
+                f"{exc.__class__.__name__}"
+            ) from None
+        if not isinstance(current, dict) or not isinstance(candidate, dict):
+            raise GuardRejected(
+                "revisioned replacement documents must be mappings"
+            )
+
+        current_revision = current.get("revision")
+        candidate_revision = candidate.get("revision")
+        for label, revision in (
+            ("current", current_revision),
+            ("candidate", candidate_revision),
+        ):
+            if (
+                not isinstance(revision, int)
+                or isinstance(revision, bool)
+                or revision < 1
+            ):
+                raise GuardRejected(
+                    f"{label} revisioned replacement revision is invalid"
+                )
+        if candidate_revision <= current_revision:
+            raise GuardRejected(
+                "revisioned replacement must advance semantic revision"
+            )
 
     def _validate_candidate(
         self,
@@ -971,6 +1042,25 @@ class RuntimeSessionBroker:
                 authority_head,
             )
             snapshots.append(instance)
+            if (
+                instance.repository_id
+                != state.deployment.instance_repository_id
+                or instance.commit_sha != authority_head
+            ):
+                raise GuardRejected(
+                    "candidate Instance snapshot provenance changed"
+                )
+            types = instance_expected_types(path)
+            if len(types) != 1:
+                raise GuardRejected(
+                    "candidate Instance update path is unclassified or ambiguous"
+                )
+            self._assert_revision_transition(
+                instance.root,
+                path=path,
+                document_type=types[0],
+                content=content,
+            )
             core = self.provider.materialize(
                 state.deployment.core_repository_id,
                 state.deployment.core_commit,

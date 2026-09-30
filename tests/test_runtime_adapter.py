@@ -16,6 +16,7 @@ from pathlib import Path
 import yaml
 
 from scripts.runtime_adapter import (
+    BOUNDED_YAML_MAX_NODES,
     CasConflict,
     DeploymentGuard,
     DeploymentResolver,
@@ -187,6 +188,55 @@ class RuntimeAdapterTests(unittest.TestCase):
         self.provider.read_text = lambda *args: ("[]", "e" * 40, RC_COMMIT)
         with self.assertRaises(ResolutionError):
             DeploymentResolver(self.provider).resolve(locator())
+
+    def test_fresh_guard_rejects_runtime_control_alias_graph_before_parse(self):
+        session = self.session()
+        raw = """schema_version: "0.4"
+document_type: deployment_binding
+deployment: &deployment
+  id: dep-runtime-test
+  topology: split
+  epoch: 1
+  write_state: active
+  nested: *deployment
+core:
+  repository_id: 9000000102
+  commit: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+"""
+        self.provider.read_text = lambda *args: (
+            raw,
+            "e" * 40,
+            RC_COMMIT,
+        )
+        with self.assertRaisesRegex(
+            GuardRejected, "aliases and anchors"
+        ):
+            DeploymentGuard(self.provider).check(
+                session, require_active=False
+            )
+
+    def test_fresh_guard_rejects_implicit_null_node_overflow(self):
+        session = self.session()
+        raw = (
+            'schema_version: "0.4"\n'
+            "document_type: deployment_binding\n"
+            "deployment:\n"
+            "  id: dep-runtime-test\n"
+            "  topology: split\n"
+            "  epoch: 1\n"
+            "  write_state: active\n"
+            "  extra:\n"
+            + "    -\n" * (BOUNDED_YAML_MAX_NODES + 1)
+        )
+        self.provider.read_text = lambda *args: (
+            raw,
+            "e" * 40,
+            RC_COMMIT,
+        )
+        with self.assertRaisesRegex(GuardRejected, "node limit"):
+            DeploymentGuard(self.provider).check(
+                session, require_active=False
+            )
 
     def test_fresh_guard_rejects_complete_contract_schema_drift(self):
         session = self.session()
