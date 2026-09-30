@@ -44,6 +44,9 @@ from scripts.runtime_adapter import (
 from scripts.validate_learning_os import (
     DeploymentBinding,
     instance_expected_types,
+    instance_generic_write_mode,
+    instance_write_policy_fingerprint,
+    learning_handoff_identity_mismatches,
     validate_instance_document_trust_boundary,
 )
 
@@ -70,17 +73,6 @@ BRANCH_RUNTIME_REQUIRED_FIELDS = frozenset({
     "pending_successor",
     "generations",
 })
-IMMUTABLE_UPDATE_TYPES = frozenset({
-    "evidence",
-    "execution_session",
-    "coordination_event",
-    "learning_handoff",
-})
-PROTOCOL_GOVERNED_UPDATE_TYPES = frozenset({
-    "branch_registry",
-    "conversation_sequence_registry",
-})
-
 
 def _relative_path(value: object, where: str) -> str:
     if not isinstance(value, str) or not value:
@@ -353,6 +345,86 @@ class RuntimeSessionBroker:
             )
         return data
 
+    def _validate_branch_handoff_refs(
+        self,
+        *,
+        runtime: dict,
+        instance_repository_id: int,
+        authority_head: str,
+    ) -> None:
+        generations = runtime["generations"]
+        for generation_key, generation_record in generations.items():
+            if "handoff_ref" not in generation_record:
+                continue
+            try:
+                ref = _relative_path(
+                    generation_record.get("handoff_ref"),
+                    f"generations.{generation_key}.handoff_ref",
+                )
+            except ResolutionError as exc:
+                raise ResolutionError(
+                    f"Branch runtime handoff_ref is invalid: {exc}"
+                ) from None
+            if instance_expected_types(ref) != ("learning_handoff",):
+                raise ResolutionError(
+                    "Branch runtime handoff_ref is not a canonical learning_handoff path"
+                )
+            try:
+                text, _, handoff_head = self.provider.read_text(
+                    instance_repository_id,
+                    authority_head,
+                    ref,
+                )
+            except ResolutionError as exc:
+                raise ResolutionError(
+                    f"Branch runtime handoff_ref cannot be resolved: {exc}"
+                ) from None
+            if handoff_head != authority_head:
+                raise ResolutionError(
+                    "Branch runtime handoff_ref provenance changed during validation"
+                )
+            try:
+                handoff = yaml.safe_load(text)
+            except yaml.YAMLError as exc:
+                raise ResolutionError(
+                    f"Branch runtime handoff_ref is malformed YAML: "
+                    f"{exc.__class__.__name__}"
+                ) from None
+            if not isinstance(handoff, dict):
+                raise ResolutionError(
+                    "Branch runtime handoff_ref target must be a mapping"
+                )
+            if handoff.get("schema_version") != BRANCH_RUNTIME_SCHEMA_VERSION:
+                raise ResolutionError(
+                    "Branch runtime handoff_ref schema_version is unsupported"
+                )
+            if handoff.get("document_type") != "learning_handoff":
+                raise ResolutionError(
+                    "Branch runtime handoff_ref has the wrong document type"
+                )
+            trust_findings = validate_instance_document_trust_boundary(
+                ref, handoff, "learning_handoff"
+            )
+            if trust_findings:
+                raise ResolutionError(
+                    "Branch runtime handoff_ref violates the canonical Instance "
+                    "trust boundary: "
+                    + "; ".join(
+                        finding.render() for finding in trust_findings
+                    )
+                )
+            mismatches = learning_handoff_identity_mismatches(
+                runtime,
+                generation_key,
+                generation_record,
+                handoff,
+            )
+            if mismatches:
+                raise ResolutionError(
+                    "Branch runtime handoff_ref identity is inconsistent: "
+                    + "; ".join(mismatches)
+                )
+
     def _read_branch_runtime(
         self,
         *,
@@ -374,6 +446,11 @@ class RuntimeSessionBroker:
             raise ResolutionError(
                 "Branch runtime identity does not match its canonical path"
             )
+        self._validate_branch_handoff_refs(
+            runtime=runtime,
+            instance_repository_id=instance_repository_id,
+            authority_head=commit_sha,
+        )
         return runtime, commit_sha
 
     def open_session(
@@ -452,6 +529,45 @@ class RuntimeSessionBroker:
         if generation != session.binding.generation:
             raise GuardRejected("semantic generation changed")
         return authority_head
+
+    def _assert_deployed_write_policy_compatible(
+        self, session: LearningRuntimeSession
+    ) -> None:
+        try:
+            text, _, commit_sha = self.provider.read_text(
+                session.deployment.core_repository_id,
+                session.deployment.core_commit,
+                "config/core.yaml",
+            )
+        except ResolutionError as exc:
+            raise GuardRejected(
+                f"deployed Core write policy is unavailable: {exc}"
+            ) from None
+        if commit_sha != session.deployment.core_commit:
+            raise GuardRejected(
+                "deployed Core write policy provenance changed during validation"
+            )
+        try:
+            core_config = yaml.safe_load(text)
+        except yaml.YAMLError as exc:
+            raise GuardRejected(
+                f"deployed Core write policy is malformed YAML: "
+                f"{exc.__class__.__name__}"
+            ) from None
+        manifest = (
+            core_config.get("manifest")
+            if isinstance(core_config, dict)
+            else None
+        )
+        deployed_fingerprint = (
+            manifest.get("runtime_session_write_policy_fingerprint")
+            if isinstance(manifest, dict)
+            else None
+        )
+        if deployed_fingerprint != instance_write_policy_fingerprint():
+            raise GuardRejected(
+                "Runtime broker write policy does not match the exact deployed Core"
+            )
 
     def _validate_candidate(
         self,
@@ -558,11 +674,21 @@ class RuntimeSessionBroker:
         if not session.policy.may_read(path):
             raise GuardRejected("Instance read is outside the session capability policy")
         authority_head = self.assert_current(session)
-        content, blob_sha, _ = self.provider.read_text(
+        content, blob_sha, read_head = self.provider.read_text(
             session.deployment.instance_repository_id,
             authority_head,
             path,
         )
+        if read_head != authority_head:
+            raise GuardRejected(
+                "Instance read provenance changed during the operation"
+            )
+        self.guard.check(session.deployment, require_active=False)
+        final_generation, final_authority_head = self._fresh_generation(session)
+        if final_generation != session.binding.generation:
+            raise GuardRejected("semantic generation changed during Instance read")
+        if final_authority_head != authority_head:
+            raise GuardRejected("Instance authority head changed during read")
         return InstanceText(content=content, version_token=blob_sha)
 
     def guarded_update(
@@ -575,26 +701,6 @@ class RuntimeSessionBroker:
         message: str,
     ) -> InstanceWriteAck:
         path = _relative_path(path, "path")
-        types = instance_expected_types(path)
-        if len(types) != 1:
-            raise GuardRejected(
-                "Instance update path is unclassified or ambiguous"
-            )
-        document_type = types[0]
-        if document_type == "branch_runtime":
-            raise GuardRejected(
-                "ordinary learning session cannot mutate Branch runtime authority"
-            )
-        if document_type in IMMUTABLE_UPDATE_TYPES:
-            raise GuardRejected(
-                "ordinary learning session cannot overwrite immutable/create-only "
-                f"{document_type} records"
-            )
-        if document_type in PROTOCOL_GOVERNED_UPDATE_TYPES:
-            raise GuardRejected(
-                "ordinary learning session must use the dedicated transition "
-                f"operation for {document_type}"
-            )
         if not session.policy.may_write(path):
             raise GuardRejected("Instance write is outside the session capability policy")
         if self.write_admission is None:
@@ -603,6 +709,34 @@ class RuntimeSessionBroker:
             )
         with self.write_admission.write_lease():
             contract = self.guard.check(session.deployment)
+            self._assert_deployed_write_policy_compatible(session)
+
+            types = instance_expected_types(path)
+            if len(types) != 1:
+                raise GuardRejected(
+                    "Instance update path is unclassified or ambiguous"
+                )
+            document_type = types[0]
+            write_mode = instance_generic_write_mode(document_type)
+            if write_mode == "branch_authority":
+                raise GuardRejected(
+                    "ordinary learning session cannot mutate Branch runtime authority"
+                )
+            if write_mode == "immutable_create_only":
+                raise GuardRejected(
+                    "ordinary learning session cannot overwrite immutable/create-only "
+                    f"{document_type} records"
+                )
+            if write_mode == "protocol_transition":
+                raise GuardRejected(
+                    "ordinary learning session must use the dedicated transition "
+                    f"operation for {document_type}"
+                )
+            if write_mode != "replace":
+                raise GuardRejected(
+                    "deployed Core generic write mode is unsupported"
+                )
+
             generation, authority_head = self._fresh_generation(session)
             if generation != session.binding.generation:
                 raise GuardRejected("semantic generation changed")
@@ -619,6 +753,7 @@ class RuntimeSessionBroker:
             # Re-read both authorities after validation as an additional
             # fail-closed check against an external actor that ignored the gate.
             self.guard.check(session.deployment)
+            self._assert_deployed_write_policy_compatible(session)
             final_generation, final_authority_head = self._fresh_generation(
                 session
             )

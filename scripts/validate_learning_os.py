@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Deterministic mechanical validator for Learning OS canonical YAML."""
 from __future__ import annotations
-import argparse, re, stat
+import argparse, hashlib, json, re, stat
 from dataclasses import dataclass
 from pathlib import Path
 import yaml
@@ -444,6 +444,15 @@ class CoreValidator:
         if not (isinstance(m.get("release"),str) and m["release"].strip()): self.error("core.manifest_release",p,"manifest.release must be a non-empty string")
         sv=m.get("supported_instance_state_schema_versions")
         if not (isinstance(sv,list) and sv and all(isinstance(x,str) and x for x in sv)): self.error("core.instance_schema_support",p,"manifest.supported_instance_state_schema_versions must be a non-empty string list")
+        write_policy=m.get("runtime_session_write_policy_fingerprint")
+        expected_policy=instance_write_policy_fingerprint()
+        if write_policy!=expected_policy:
+            self.error(
+                "core.runtime_session_write_policy",
+                p,
+                "manifest.runtime_session_write_policy_fingerprint must match "
+                f"the Core path/mutation policy fingerprint {expected_policy}",
+            )
         for field in ("canonical_status","deployment_status"):
             if field in m:
                 self.error("core.deployment_authority",p,f"manifest.{field} is forbidden: deployment authority belongs exclusively to Runtime-Control")
@@ -556,11 +565,44 @@ INSTANCE_CANONICAL_PATH_RULES=(
     (re.compile(rf"evidence/{_YAML_SEG}"),"evidence"),
 )
 INSTANCE_ALL_TYPES=frozenset(t for _,t in INSTANCE_CANONICAL_PATH_RULES)
+INSTANCE_GENERIC_WRITE_MODE_OVERRIDES={
+    "branch_runtime":"branch_authority",
+    "evidence":"immutable_create_only",
+    "execution_session":"immutable_create_only",
+    "coordination_event":"immutable_create_only",
+    "learning_handoff":"immutable_create_only",
+    "branch_registry":"protocol_transition",
+    "conversation_sequence_registry":"protocol_transition",
+}
 
 def instance_expected_types(p,rules=None):
     """Return every split Instance document type whose canonical family matches p."""
     if rules is None: rules=INSTANCE_CANONICAL_PATH_RULES
     return tuple(t for rx,t in rules if rx.fullmatch(p))
+
+def instance_generic_write_mode(document_type):
+    """Return the generic Runtime mutation mode owned by the deployed Core."""
+    if document_type not in INSTANCE_ALL_TYPES:
+        return None
+    return INSTANCE_GENERIC_WRITE_MODE_OVERRIDES.get(document_type,"replace")
+
+def instance_write_policy_fingerprint():
+    """Stable semantic fingerprint for path classification + generic mutation modes."""
+    payload={
+        "schema":"learning-os-runtime-session-write-policy-v1",
+        "path_rules":[
+            {"pattern":rx.pattern,"document_type":t}
+            for rx,t in INSTANCE_CANONICAL_PATH_RULES
+        ],
+        "modes":{
+            t:instance_generic_write_mode(t)
+            for t in sorted(INSTANCE_ALL_TYPES)
+        },
+    }
+    encoded=json.dumps(
+        payload,sort_keys=True,separators=(",",":"),ensure_ascii=True
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 # instance.yaml 不得重定义 Core 拥有的契约区块（Core semantic override 拒绝）
 INSTANCE_CONFIG_CORE_SECTIONS={"chat_routing","protocol","domains","governance","bootstrap","manifest","runtime","time"}
@@ -865,6 +907,14 @@ class InstanceValidator:
             if t not in INSTANCE_ALL_TYPES: continue
             for k in req.get(t,()):
                 if k not in d:self.error("document.required",p,f"missing {k}")
+            if "revision" in d:
+                revision=d.get("revision")
+                if not isinstance(revision,int) or isinstance(revision,bool) or revision<1:
+                    self.error(
+                        "revision.invalid",
+                        p,
+                        "revision must be a positive integer",
+                    )
             if t=="topic_plan":self.enum(p,"plan.status",(d.get("plan")or{}).get("status"),{"awaiting_intake","provisional","active","paused"})
             elif t=="topic_progress":
                 self.enum(p,"lifecycle",d.get("lifecycle"),TLIFE)

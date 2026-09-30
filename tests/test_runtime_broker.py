@@ -32,6 +32,9 @@ CORE_COMMIT = "a" * 40
 RC_COMMIT = "b" * 40
 INSTANCE_COMMIT = "c" * 40
 RUNTIME_PATH = "topics/synthetic/coordination/branches/main/runtime.yaml"
+HANDOFF_PATH = (
+    "topics/synthetic/handoffs/synthetic-main-lineage/C01-to-C02.yaml"
+)
 READ_PATH = "learner/knowledge/synthetic.yaml"
 WRITE_PATH = "learner/model.yaml"
 READ_V1 = yaml.safe_dump({
@@ -107,6 +110,8 @@ class BrokerProvider:
         self.calls = []
         self.instance_head = INSTANCE_COMMIT
         self.advance_on_update = False
+        self.promote_after_target_read = False
+        self.advance_branch_after_target_read = False
         self.docs = {
             RUNTIME_PATH: yaml.safe_dump(branch_runtime(), sort_keys=False),
             READ_PATH: READ_V1,
@@ -173,11 +178,27 @@ class BrokerProvider:
         ):
             return yaml.safe_dump(self.contract, sort_keys=False), "1" * 40, RC_COMMIT
         if (
+            repository_id == CORE_ID
+            and ref == CORE_COMMIT
+            and path == "config/core.yaml"
+        ):
+            content = (ROOT / "config/core.yaml").read_text(encoding="utf-8")
+            return content, "2" * 40, CORE_COMMIT
+        if (
             repository_id == INSTANCE_ID
             and ref in {"main", self.instance_head}
             and path in self.docs
         ):
-            return self.docs[path], self.blobs[path], self.instance_head
+            content = self.docs[path]
+            blob = self.blobs[path]
+            head = self.instance_head
+            if path == READ_PATH and self.promote_after_target_read:
+                self.promote_after_target_read = False
+                self.contract = contract(epoch=2)
+            if path == READ_PATH and self.advance_branch_after_target_read:
+                self.advance_branch_after_target_read = False
+                self.set_generation(4)
+            return content, blob, head
         raise ResolutionError("unexpected read")
 
     def update_text(
@@ -428,6 +449,20 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         with self.assertRaisesRegex(GuardRejected, "generation"):
             self.broker.read_instance_text(session, READ_PATH)
 
+    def test_promotion_during_target_read_discards_result(self):
+        session = self.open()
+        self.provider.promote_after_target_read = True
+        with self.assertRaisesRegex(GuardRejected, "epoch"):
+            self.broker.read_instance_text(session, READ_PATH)
+
+    def test_branch_advance_during_target_read_discards_result(self):
+        session = self.open()
+        self.provider.advance_branch_after_target_read = True
+        with self.assertRaisesRegex(
+            GuardRejected, "generation|authority head"
+        ):
+            self.broker.read_instance_text(session, READ_PATH)
+
     def test_fresh_branch_runtime_forbidden_keys_fail_closed(self):
         session = self.open()
         runtime = branch_runtime()
@@ -449,6 +484,56 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(GuardRejected, "fresh-read failed closed"):
             self.broker.read_instance_text(session, READ_PATH)
+
+    def test_fresh_branch_runtime_rejects_missing_handoff_ref_target(self):
+        session = self.open()
+        runtime = branch_runtime()
+        runtime["generations"][1]["handoff_ref"] = HANDOFF_PATH
+        self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(
+            runtime, sort_keys=False
+        )
+        with self.assertRaisesRegex(GuardRejected, "handoff_ref"):
+            self.broker.read_instance_text(session, READ_PATH)
+
+    def test_fresh_branch_runtime_rejects_mismatched_handoff_identity(self):
+        session = self.open()
+        runtime = branch_runtime()
+        runtime["generations"][1]["handoff_ref"] = HANDOFF_PATH
+        self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(
+            runtime, sort_keys=False
+        )
+        self.provider.docs[HANDOFF_PATH] = yaml.safe_dump({
+            "schema_version": "0.3",
+            "document_type": "learning_handoff",
+            "topic": "synthetic",
+            "branch_id": "main",
+            "lineage_id": "wrong-lineage",
+            "from_generation": 1,
+            "to_generation": 2,
+        }, sort_keys=False)
+        self.provider.blobs[HANDOFF_PATH] = "3" * 40
+        with self.assertRaisesRegex(GuardRejected, "handoff_ref identity"):
+            self.broker.read_instance_text(session, READ_PATH)
+
+    def test_fresh_branch_runtime_accepts_valid_archived_handoff_ref(self):
+        session = self.open()
+        runtime = branch_runtime()
+        runtime["generations"][1]["handoff_ref"] = HANDOFF_PATH
+        self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(
+            runtime, sort_keys=False
+        )
+        self.provider.docs[HANDOFF_PATH] = yaml.safe_dump({
+            "schema_version": "0.3",
+            "document_type": "learning_handoff",
+            "topic": "synthetic",
+            "branch_id": "main",
+            "lineage_id": "synthetic-main-lineage",
+            "from_generation": 1,
+            "to_generation": 2,
+        }, sort_keys=False)
+        self.provider.blobs[HANDOFF_PATH] = "3" * 40
+        result = self.broker.read_instance_text(session, READ_PATH)
+        self.assertEqual(READ_V1, result.content)
 
     def test_branch_runtime_schema_and_required_fields_fail_closed(self):
         session = self.open()
@@ -852,6 +937,68 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             if call[0] == "release"
         ]
         self.assertEqual([CORE_ID, INSTANCE_ID], released)
+
+    def test_revisioned_candidate_requires_positive_integer_revision(self):
+        path = READ_PATH
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("learner",),
+            writable_roots=(path,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        invalid = yaml.safe_dump({
+            "schema_version": "0.3",
+            "document_type": "learner_knowledge",
+            "revision": "broken",
+            "domain": "synthetic",
+            "concepts": {},
+        }, sort_keys=False)
+        with self.assertRaisesRegex(GuardRejected, "canonical validation"):
+            self.broker.guarded_update(
+                session,
+                path=path,
+                content=invalid,
+                expected_blob_sha="e" * 40,
+                message="must reject malformed revision",
+            )
+        self.assertFalse(
+            any(call[0] == "update" for call in self.provider.calls)
+        )
+
+    def test_deployed_write_policy_mismatch_fails_before_update(self):
+        session = self.open()
+        original = self.provider.read_text
+
+        def stale_policy(repository_id, ref, path):
+            if (
+                repository_id == CORE_ID
+                and ref == CORE_COMMIT
+                and path == "config/core.yaml"
+            ):
+                data = yaml.safe_load(
+                    (ROOT / "config/core.yaml").read_text(encoding="utf-8")
+                )
+                data["manifest"]["runtime_session_write_policy_fingerprint"] = (
+                    "0" * 64
+                )
+                return yaml.safe_dump(data, sort_keys=False), "2" * 40, CORE_COMMIT
+            return original(repository_id, ref, path)
+
+        self.provider.read_text = stale_policy
+        with self.assertRaisesRegex(GuardRejected, "write policy"):
+            self.broker.guarded_update(
+                session,
+                path=WRITE_PATH,
+                content=WRITE_V2,
+                expected_blob_sha="f" * 40,
+                message="must fail on stale broker policy",
+            )
+        self.assertFalse(
+            any(call[0] == "update" for call in self.provider.calls)
+        )
 
     def test_invalid_candidate_state_is_rejected_before_provider_update(self):
         session = self.open()

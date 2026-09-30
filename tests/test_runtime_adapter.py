@@ -438,6 +438,34 @@ class GitCliProviderTests(unittest.TestCase):
         replacement = provider.materialize(self.REPO_ID, "main")
         self.assertTrue(replacement.root.is_dir())
 
+    def test_concurrent_materialization_releases_remove_only_owned_snapshots(self):
+        provider = self.provider()
+        first = provider.materialize(self.REPO_ID, "main")
+        second = provider.materialize(self.REPO_ID, "main")
+        roots = (first.root, second.root)
+        barrier = threading.Barrier(3)
+        errors = []
+
+        def release(snapshot):
+            try:
+                barrier.wait(timeout=5)
+                provider.release_materialization(snapshot)
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [
+            threading.Thread(target=release, args=(snapshot,))
+            for snapshot in (first, second)
+        ]
+        for thread in threads:
+            thread.start()
+        barrier.wait(timeout=5)
+        for thread in threads:
+            thread.join(timeout=5)
+        self.assertFalse(errors)
+        self.assertTrue(all(not root.exists() for root in roots))
+        self.assertEqual([], provider._tempdirs)
+
     def test_materialize_streams_blob_content_instead_of_buffering_it(self):
         provider = self.provider()
         original_git_bytes = provider._git_bytes
@@ -1825,6 +1853,45 @@ class GitHubApiProviderTests(unittest.TestCase):
         self.assertTrue(root.is_dir())
         provider.release_materialization(snapshot)
         self.assertFalse(root.exists())
+        self.assertEqual([], provider._tempdirs)
+
+    def test_concurrent_release_materialization_is_identity_safe(self):
+        provider = self.provider()
+        snapshots = []
+        for index in range(3):
+            tempdir = tempfile.TemporaryDirectory(
+                prefix=f"synthetic-github-concurrent-{index}-"
+            )
+            with provider._tempdirs_lock:
+                provider._tempdirs.append(tempdir)
+            snapshots.append(MaterializedRepository(
+                Path(tempdir.name),
+                self.REPO_ID,
+                self.HEAD,
+                "synthetic/instance",
+            ))
+        roots = [snapshot.root for snapshot in snapshots]
+        barrier = threading.Barrier(len(snapshots) + 1)
+        errors = []
+
+        def release(snapshot):
+            try:
+                barrier.wait(timeout=5)
+                provider.release_materialization(snapshot)
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [
+            threading.Thread(target=release, args=(snapshot,))
+            for snapshot in snapshots
+        ]
+        for thread in threads:
+            thread.start()
+        barrier.wait(timeout=5)
+        for thread in threads:
+            thread.join(timeout=5)
+        self.assertFalse(errors)
+        self.assertTrue(all(not root.exists() for root in roots))
         self.assertEqual([], provider._tempdirs)
 
     def test_read_text_pins_content_to_resolved_commit(self):

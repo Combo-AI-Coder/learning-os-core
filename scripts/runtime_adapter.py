@@ -546,10 +546,14 @@ class GitCliProvider:
             prefix="learning-os-git-template-"
         )
         self._tempdirs: list[tempfile.TemporaryDirectory] = []
+        self._tempdirs_lock = threading.Lock()
 
     def close(self) -> None:
-        while self._tempdirs:
-            self._tempdirs.pop().cleanup()
+        with self._tempdirs_lock:
+            retained = list(reversed(self._tempdirs))
+            self._tempdirs.clear()
+        for tempdir in retained:
+            tempdir.cleanup()
         self._empty_git_template.cleanup()
         self._isolated_home.cleanup()
 
@@ -557,10 +561,15 @@ class GitCliProvider:
         self, snapshot: MaterializedRepository
     ) -> None:
         target = snapshot.root.resolve()
-        for index, tempdir in enumerate(tuple(self._tempdirs)):
-            if Path(tempdir.name).resolve() == target:
-                self._tempdirs.pop(index).cleanup()
-                return
+        owned = None
+        with self._tempdirs_lock:
+            for tempdir in self._tempdirs:
+                if Path(tempdir.name).resolve() == target:
+                    owned = tempdir
+                    self._tempdirs.remove(tempdir)
+                    break
+        if owned is not None:
+            owned.cleanup()
 
     @staticmethod
     def _absolute_host_path(
@@ -1794,7 +1803,8 @@ class GitCliProvider:
             raise
         finally:
             checkout_td.cleanup()
-        self._tempdirs.append(snapshot_td)
+        with self._tempdirs_lock:
+            self._tempdirs.append(snapshot_td)
         return MaterializedRepository(
             snapshot,
             binding.repository_id,
@@ -1959,19 +1969,28 @@ class GitHubApiProvider:
         self.token = token or os.environ.get("LEARNING_OS_GITHUB_TOKEN")
         self.api_url = api_url.rstrip("/")
         self._tempdirs: list[tempfile.TemporaryDirectory] = []
+        self._tempdirs_lock = threading.Lock()
 
     def close(self) -> None:
-        while self._tempdirs:
-            self._tempdirs.pop().cleanup()
+        with self._tempdirs_lock:
+            retained = list(reversed(self._tempdirs))
+            self._tempdirs.clear()
+        for tempdir in retained:
+            tempdir.cleanup()
 
     def release_materialization(
         self, snapshot: MaterializedRepository
     ) -> None:
         target = snapshot.root.resolve()
-        for index, tempdir in enumerate(tuple(self._tempdirs)):
-            if Path(tempdir.name).resolve() == target:
-                self._tempdirs.pop(index).cleanup()
-                return
+        owned = None
+        with self._tempdirs_lock:
+            for tempdir in self._tempdirs:
+                if Path(tempdir.name).resolve() == target:
+                    owned = tempdir
+                    self._tempdirs.remove(tempdir)
+                    break
+        if owned is not None:
+            owned.cleanup()
 
     def _request(self, method: str, path: str, payload: dict | None = None) -> object:
         body = json.dumps(payload).encode() if payload is not None else None
@@ -2037,7 +2056,6 @@ class GitHubApiProvider:
         commit = self._commit(full_name, ref)
         archive = self._request_bytes(f"/repos/{full_name}/zipball/{commit}")
         td = tempfile.TemporaryDirectory(prefix="learning-os-snapshot-")
-        self._tempdirs.append(td)
         root = Path(td.name)
         try:
             with zipfile.ZipFile(BytesIO(archive)) as bundle:
@@ -2056,7 +2074,13 @@ class GitHubApiProvider:
                     rel = PurePosixPath(*pure.parts[1:]).as_posix()
                     self._safe_output(root, rel).write_bytes(bundle.read(entry))
         except zipfile.BadZipFile:
+            td.cleanup()
             raise ResolutionError("GitHub archive is not a valid ZIP") from None
+        except Exception:
+            td.cleanup()
+            raise
+        with self._tempdirs_lock:
+            self._tempdirs.append(td)
         return MaterializedRepository(root, repository_id, commit, full_name)
 
     def read_text(self, repository_id: int, ref: str, path: str) -> tuple[str, str, str]:
