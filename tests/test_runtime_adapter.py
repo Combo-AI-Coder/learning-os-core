@@ -1320,6 +1320,8 @@ class GitCliProviderTests(unittest.TestCase):
         provider = self.provider()
         with mock.patch(
             "scripts.runtime_adapter.MAX_SNAPSHOT_TOTAL_BLOB_BYTES", 7
+        ), mock.patch.object(
+            provider, "_bounded_blob_fetch_cap", return_value=64
         ):
             with self.assertRaisesRegex(CasConflict, "total-size budget"):
                 provider.update_text(
