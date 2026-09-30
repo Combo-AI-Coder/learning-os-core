@@ -373,6 +373,10 @@ class GitCliProvider:
             remote = _nonempty(binding.remote, "binding.remote")
             if remote.startswith("-") or any(char in remote for char in "\x00\r\n"):
                 raise ResolutionError("Git repository remote is unsafe")
+            if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*::", remote):
+                raise ResolutionError(
+                    "Git explicit remote-helper syntax is unsupported"
+                )
             if "://" in remote:
                 parsed_remote = urllib.parse.urlsplit(remote)
                 if parsed_remote.scheme.lower() in {"http", "https"} and (
@@ -1624,7 +1628,7 @@ class GitCliProvider:
                 self._fetch_ref(
                     repo,
                     binding,
-                    fetch_ref,
+                    fetched,
                     filter_spec=f"blob:limit={blob_cap + 1}",
                     refetch=True,
                 )
@@ -1640,7 +1644,9 @@ class GitCliProvider:
         self,
         binding: GitRepositoryBinding,
         branch: str,
-    ) -> tuple[tempfile.TemporaryDirectory, Path, str, str, int]:
+    ) -> tuple[
+        tempfile.TemporaryDirectory, Path, str, str, int, int | None
+    ]:
         branch_ref = self._branch_ref(branch)
         td = tempfile.TemporaryDirectory(prefix="learning-os-git-")
         repo = Path(td.name) / "repo"
@@ -1661,7 +1667,7 @@ class GitCliProvider:
                 self._fetch_ref(
                     repo,
                     binding,
-                    branch_ref,
+                    fetched,
                     filter_spec=f"blob:limit={blob_cap + 1}",
                     refetch=True,
                 )
@@ -1669,7 +1675,9 @@ class GitCliProvider:
                 repo, objects, fetched_blob_cap=blob_cap
             )
             self._git("reset", "-q", "--mixed", fetched, cwd=repo)
-            return td, repo, fetched, branch_ref, snapshot_total
+            return (
+                td, repo, fetched, branch_ref, snapshot_total, blob_cap
+            )
         except Exception:
             td.cleanup()
             raise
@@ -1746,9 +1754,9 @@ class GitCliProvider:
         ):
             raise CasConflict("expected branch head SHA must be exact")
         pure = self._safe_path(path)
-        td, repo, commit, branch_ref, snapshot_total = self._checkout_branch(
-            binding, branch
-        )
+        (
+            td, repo, commit, branch_ref, snapshot_total, blob_cap
+        ) = self._checkout_branch(binding, branch)
         try:
             if expected_ref_sha is not None and commit != expected_ref_sha:
                 raise CasConflict("branch head compare-and-swap mismatch")
@@ -1782,6 +1790,10 @@ class GitCliProvider:
             if next_snapshot_total > MAX_SNAPSHOT_TOTAL_BLOB_BYTES:
                 raise CasConflict(
                     "updated snapshot exceeds Runtime total-size budget"
+                )
+            if blob_cap is not None and len(content_bytes) > blob_cap:
+                raise CasConflict(
+                    "replacement text exceeds conservative bounded-fetch budget"
                 )
 
             new_blob = self._git_bytes(

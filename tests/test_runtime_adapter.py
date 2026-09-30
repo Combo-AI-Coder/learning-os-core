@@ -553,6 +553,15 @@ class GitCliProviderTests(unittest.TestCase):
                 )
             ])
 
+    def test_explicit_remote_helper_syntax_fails_closed(self):
+        with self.assertRaisesRegex(ResolutionError, "remote-helper"):
+            GitCliProvider([
+                GitRepositoryBinding(
+                    self.REPO_ID,
+                    "https::https://token@example.invalid/private.git",
+                )
+            ])
+
     def test_blob_fetch_cap_scales_with_blob_count(self):
         objects = [
             (f"f{index}.txt", str(index + 1) * 40, "100644", "blob")
@@ -567,6 +576,22 @@ class GitCliProviderTests(unittest.TestCase):
                 25,
                 GitCliProvider._bounded_blob_fetch_cap(objects),
             )
+
+    def test_hydration_fetch_is_pinned_to_validated_commit(self):
+        provider = self.provider()
+        calls = []
+        original_fetch = provider._fetch_ref
+
+        def recording_fetch(repo, binding, fetch_ref, **kwargs):
+            calls.append((fetch_ref, kwargs.get("filter_spec"), kwargs.get("refetch")))
+            return original_fetch(repo, binding, fetch_ref, **kwargs)
+
+        provider._fetch_ref = recording_fetch  # type: ignore[method-assign]
+        provider.materialize(self.REPO_ID, "main")
+        self.assertGreaterEqual(len(calls), 2)
+        self.assertEqual("refs/heads/main", calls[0][0])
+        self.assertEqual(self.initial_commit, calls[1][0])
+        self.assertTrue(calls[1][2])
 
     def test_aggregate_budget_is_enforced_by_second_fetch_filter(self):
         (self.seed / "a.bin").write_bytes(b"a" * 80)
@@ -705,6 +730,31 @@ class GitCliProviderTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(ResolutionError, "exceeds"):
                 provider.read_text(self.REPO_ID, "main", "state.txt")
+
+    def test_update_rejects_content_above_bounded_fetch_ceiling(self):
+        (self.seed / "other.txt").write_text(
+            "x\n", encoding="utf-8", newline="\n"
+        )
+        self._git("add", "other.txt", cwd=self.seed)
+        self._git("commit", "-q", "-m", "second blob", cwd=self.seed)
+        self._git(
+            "push", "-q", "origin", "HEAD:refs/heads/main", cwd=self.seed
+        )
+        provider = self.provider()
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_TOTAL_BLOB_BYTES", 10
+        ), mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_BLOB_BYTES", 64
+        ):
+            with self.assertRaisesRegex(CasConflict, "bounded-fetch"):
+                provider.update_text(
+                    self.REPO_ID,
+                    "main",
+                    "state.txt",
+                    "123456",
+                    self.initial_blob,
+                    "test: exceed conservative hydration ceiling",
+                )
 
     def test_unsafe_path_fails_closed(self):
         with self.assertRaisesRegex(ResolutionError, "unsafe"):
