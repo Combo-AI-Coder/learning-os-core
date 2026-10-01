@@ -40,6 +40,9 @@ RUNTIME_PATH = "topics/synthetic/coordination/branches/main/runtime.yaml"
 HANDOFF_PATH = (
     "topics/synthetic/handoffs/synthetic-main-lineage/C01-to-C02.yaml"
 )
+HANDOFF_23_PATH = (
+    "topics/synthetic/handoffs/synthetic-main-lineage/C02-to-C03.yaml"
+)
 READ_PATH = "learner/knowledge/synthetic.yaml"
 WRITE_PATH = "learner/model.yaml"
 READ_V1 = yaml.safe_dump({
@@ -120,6 +123,18 @@ def branch_runtime(*, generation=3):
     }
 
 
+def learning_handoff(*, source=2, target=3):
+    return {
+        "schema_version": "0.3",
+        "document_type": "learning_handoff",
+        "topic": "synthetic",
+        "branch_id": "main",
+        "lineage_id": "synthetic-main-lineage",
+        "from_generation": source,
+        "to_generation": target,
+    }
+
+
 class BrokerProvider:
     def __init__(self, control: Path, instance: Path):
         self.control = control
@@ -175,7 +190,7 @@ class BrokerProvider:
                 path: content
                 for path, content in self.docs.items()
                 if (
-                    path in {READ_PATH, WRITE_PATH}
+                    path in {READ_PATH, WRITE_PATH, RUNTIME_PATH, REGISTRY_PATH}
                     or "/handoffs/" in path
                     or path.startswith("curriculum/extensions/")
                     or path.startswith("curriculum/local/")
@@ -263,6 +278,34 @@ class BrokerProvider:
         self.blobs[path] = "9" * 40
         self.instance_head = "8" * 40
         return self.instance_head
+
+    def set_pending_successor(
+        self,
+        *,
+        source_generation: int = 2,
+        successor_generation: int = 3,
+        handoff_path: str = HANDOFF_23_PATH,
+    ):
+        runtime = branch_runtime(generation=source_generation)
+        runtime["revision"] = 4
+        runtime["pending_successor"] = successor_generation
+        runtime["generations"][source_generation] = {
+            "lifecycle": "handoff_pending",
+            "handoff_ref": handoff_path,
+        }
+        self.docs[RUNTIME_PATH] = yaml.safe_dump(
+            runtime, sort_keys=False
+        )
+        self.blobs[RUNTIME_PATH] = "d" * 40
+        self.docs[handoff_path] = yaml.safe_dump(
+            learning_handoff(
+                source=source_generation,
+                target=successor_generation,
+            ),
+            sort_keys=False,
+        )
+        self.blobs[handoff_path] = "a" * 40
+        self.instance_head = INSTANCE_COMMIT
 
     def set_generation(self, generation: int):
         self.docs[RUNTIME_PATH] = yaml.safe_dump(
@@ -578,6 +621,159 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
     def test_open_session_rejects_wrong_expected_generation(self):
         with self.assertRaisesRegex(GuardRejected, "not active"):
             self.open(expected_generation=2)
+
+    def test_normal_open_session_stays_fail_closed_while_handoff_pending(self):
+        self.provider.set_pending_successor()
+        with self.assertRaisesRegex(
+            ResolutionError, "active generation is not active"
+        ):
+            self.broker.open_session(
+                branch_runtime_path=RUNTIME_PATH,
+                policy=self.policy,
+                expected_generation=2,
+            )
+
+    def test_claim_successor_session_claims_pending_generation(self):
+        self.provider.set_pending_successor()
+        session = self.broker.claim_successor_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=self.policy,
+            expected_successor_generation=3,
+        )
+        state = self.broker._session_state(session)
+        self.assertEqual(3, state.binding.generation)
+
+        runtime = yaml.safe_load(self.provider.docs[RUNTIME_PATH])
+        self.assertEqual(5, runtime["revision"])
+        self.assertEqual(3, runtime["active_generation"])
+        self.assertIsNone(runtime["pending_successor"])
+        self.assertEqual("archived", runtime["generations"][2]["lifecycle"])
+        self.assertEqual("active", runtime["generations"][3]["lifecycle"])
+
+        updates = [
+            call for call in self.provider.calls if call[0] == "update"
+        ]
+        self.assertEqual(INSTANCE_COMMIT, updates[0][-1])
+
+        result = self.broker.guarded_update(
+            session,
+            path=WRITE_PATH,
+            content=WRITE_V2,
+            expected_blob_sha="f" * 40,
+            message="successor session write",
+        )
+        self.assertTrue(result.applied)
+
+    def test_claim_successor_accepts_mapping_and_nonconsecutive_generation(self):
+        self.provider.set_pending_successor(
+            source_generation=2,
+            successor_generation=5,
+        )
+        runtime = yaml.safe_load(self.provider.docs[RUNTIME_PATH])
+        runtime["pending_successor"] = {"generation": 5}
+        self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(
+            runtime, sort_keys=False
+        )
+        session = self.broker.claim_successor_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=self.policy,
+            expected_successor_generation=5,
+        )
+        state = self.broker._session_state(session)
+        self.assertEqual(5, state.binding.generation)
+        claimed = yaml.safe_load(self.provider.docs[RUNTIME_PATH])
+        self.assertEqual(5, claimed["active_generation"])
+        self.assertEqual("active", claimed["generations"][5]["lifecycle"])
+
+    def test_claim_successor_rejects_branch_without_pending_handoff(self):
+        with self.assertRaisesRegex(ResolutionError, "pending successor"):
+            self.broker.claim_successor_session(
+                branch_runtime_path=RUNTIME_PATH,
+                policy=self.policy,
+                expected_successor_generation=4,
+            )
+
+    def test_claim_successor_rejects_wrong_pending_generation(self):
+        self.provider.set_pending_successor()
+        with self.assertRaisesRegex(GuardRejected, "not pending"):
+            self.broker.claim_successor_session(
+                branch_runtime_path=RUNTIME_PATH,
+                policy=self.policy,
+                expected_successor_generation=4,
+            )
+
+    def test_claim_successor_requires_canonical_handoff_ref(self):
+        self.provider.set_pending_successor()
+        runtime = yaml.safe_load(self.provider.docs[RUNTIME_PATH])
+        runtime["generations"][2].pop("handoff_ref")
+        self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(
+            runtime, sort_keys=False
+        )
+        with self.assertRaisesRegex(GuardRejected, "learning handoff"):
+            self.broker.claim_successor_session(
+                branch_runtime_path=RUNTIME_PATH,
+                policy=self.policy,
+                expected_successor_generation=3,
+            )
+
+    def test_claim_successor_rejects_handoff_target_mismatch(self):
+        self.provider.set_pending_successor()
+        self.provider.docs[HANDOFF_23_PATH] = yaml.safe_dump(
+            learning_handoff(source=2, target=4),
+            sort_keys=False,
+        )
+        with self.assertRaisesRegex(ResolutionError, "handoff_ref_identity"):
+            self.broker.claim_successor_session(
+                branch_runtime_path=RUNTIME_PATH,
+                policy=self.policy,
+                expected_successor_generation=3,
+            )
+
+    def test_claim_successor_fails_closed_on_branch_head_cas_race(self):
+        self.provider.set_pending_successor()
+        self.provider.advance_on_update = True
+        with self.assertRaisesRegex(CasConflict, "branch head"):
+            self.broker.claim_successor_session(
+                branch_runtime_path=RUNTIME_PATH,
+                policy=self.policy,
+                expected_successor_generation=3,
+            )
+
+    def test_claim_successor_requires_active_deployment(self):
+        self.provider.set_pending_successor()
+        self.provider.contract = contract(write_state="frozen")
+        with self.assertRaisesRegex(GuardRejected, "not active"):
+            self.broker.claim_successor_session(
+                branch_runtime_path=RUNTIME_PATH,
+                policy=self.policy,
+                expected_successor_generation=3,
+            )
+
+    def test_claim_successor_does_not_issue_stale_handle_after_readback_drift(self):
+        self.provider.set_pending_successor()
+        original = self.broker._read_branch_runtime
+
+        def drifted_readback(**kwargs):
+            runtime, head = original(**kwargs)
+            runtime["active_generation"] = 4
+            runtime["generations"][3]["lifecycle"] = "archived"
+            runtime["generations"][4] = {"lifecycle": "active"}
+            return runtime, head
+
+        with mock.patch.object(
+            self.broker,
+            "_read_branch_runtime",
+            side_effect=drifted_readback,
+        ):
+            with self.assertRaisesRegex(
+                GuardRejected, "did not become canonical"
+            ):
+                self.broker.claim_successor_session(
+                    branch_runtime_path=RUNTIME_PATH,
+                    policy=self.policy,
+                    expected_successor_generation=3,
+                )
+        self.assertEqual({}, self.broker._issued_sessions)
 
     def test_open_session_requires_active_branch_registry_lifecycle(self):
         for lifecycle in ("idle", "retired"):

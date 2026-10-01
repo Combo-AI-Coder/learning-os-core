@@ -138,6 +138,8 @@ Safe order:
 
 Do not mark a successor active before it actually claims the generation.
 
+For a narrow ordinary-Runtime successor, the host may execute the canonical claim on behalf of the successor work surface after the learner-authorized handoff has already produced `handoff_pending` plus its immutable handoff. The claim is a dedicated continuity transition, not a generic learner-state write: it must validate the exact pending authority/handoff, use the current deployed Core and Deployment Guard, apply target-blob plus exact Instance branch-head CAS, and issue the successor session capability only after canonical readback confirms the new active generation. That successful claim establishes the successor session generation; reading the pending or active generation never does. This host execution changes the physical executor of the already-authorized claim, not the learner authorization requirement.
+
 If a pending successor is never created, the old generation MAY be explicitly restored to active by clearing the pending successor. Do not silently continue canonical writes while `handoff_pending`.
 
 ## 7. Resume after inactivity
