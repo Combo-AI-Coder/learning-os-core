@@ -854,6 +854,29 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         with self.assertRaisesRegex(GuardRejected, "handoff_ref identity"):
             self.broker.read_instance_text(session, READ_PATH)
 
+    def test_fresh_branch_runtime_rejects_handoff_lineage_path_mismatch(self):
+        session = self.open()
+        wrong_path = (
+            "topics/synthetic/handoffs/other-lineage/C01-to-C02.yaml"
+        )
+        runtime = branch_runtime()
+        runtime["generations"][1]["handoff_ref"] = wrong_path
+        self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(
+            runtime, sort_keys=False
+        )
+        self.provider.docs[wrong_path] = yaml.safe_dump({
+            "schema_version": "0.3",
+            "document_type": "learning_handoff",
+            "topic": "synthetic",
+            "branch_id": "main",
+            "lineage_id": "synthetic-main-lineage",
+            "from_generation": 1,
+            "to_generation": 2,
+        }, sort_keys=False)
+        self.provider.blobs[wrong_path] = "3" * 40
+        with self.assertRaisesRegex(GuardRejected, "handoff_ref identity"):
+            self.broker.read_instance_text(session, READ_PATH)
+
     def test_fresh_branch_runtime_accepts_valid_archived_handoff_ref(self):
         session = self.open()
         runtime = branch_runtime()
@@ -1452,6 +1475,34 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             any(call[0] == "update" for call in self.provider.calls)
         )
 
+    def test_candidate_knowledge_domain_must_match_canonical_filename(self):
+        current = yaml.safe_load(READ_V1)
+        current["revision"] = 2
+        current["domain"] = "physics"
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("learner/knowledge",),
+            writable_roots=(READ_PATH,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        self.provider.calls.clear()
+        with self.assertRaisesRegex(
+            GuardRejected, "canonical validation"
+        ):
+            self.broker.guarded_update(
+                session,
+                path=READ_PATH,
+                content=yaml.safe_dump(current, sort_keys=False),
+                expected_blob_sha="e" * 40,
+                message="must bind Knowledge domain to canonical filename",
+            )
+        self.assertFalse(
+            any(call[0] == "update" for call in self.provider.calls)
+        )
+
     def test_branch_head_advance_after_generation_check_blocks_write(self):
         session = self.open()
         self.provider.advance_on_update = True
@@ -1559,6 +1610,32 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         self.assertEqual(subprocess.DEVNULL, calls[0][1]["stdout"])
         self.assertEqual(subprocess.DEVNULL, calls[0][1]["stderr"])
         self.assertNotIn("capture_output", calls[0][1])
+
+    def test_candidate_validator_core_provenance_must_match_deployment(self):
+        session = self.open()
+        original_materialize = self.provider.materialize
+
+        def materialize(repository_id, ref):
+            if repository_id == CORE_ID:
+                return MaterializedRepository(
+                    ROOT,
+                    CORE_ID,
+                    "0" * 40,
+                    "synthetic/core",
+                )
+            return original_materialize(repository_id, ref)
+
+        self.provider.materialize = materialize
+        with self.assertRaisesRegex(
+            GuardRejected, "candidate Core validator provenance"
+        ):
+            self.broker._validate_candidate(
+                self.broker._session_state(session),
+                authority_head=self.provider.instance_head,
+                path=WRITE_PATH,
+                content=WRITE_V2,
+                contract=self.provider.contract,
+            )
 
     def test_candidate_cleanup_attempts_all_releases_when_one_fails(self):
         session = self.open()
@@ -1828,6 +1905,41 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 content=invalid,
                 expected_blob_sha="e" * 40,
                 message="must reject malformed revision",
+            )
+        self.assertFalse(
+            any(call[0] == "update" for call in self.provider.calls)
+        )
+
+    def test_deployed_write_policy_fingerprint_output_is_bounded(self):
+        session = self.open()
+        core_root = self.deployed_core_snapshot()
+        validator_path = core_root / "scripts" / "validate_learning_os.py"
+        validator_path.write_text(
+            "import sys\n"
+            "if '--write-policy-fingerprint' in sys.argv:\n"
+            "    sys.stdout.write('a' * 4096)\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+        original_materialize = self.provider.materialize
+
+        def materialize(repository_id, ref):
+            if repository_id == CORE_ID:
+                return MaterializedRepository(
+                    core_root, CORE_ID, CORE_COMMIT, "synthetic/core"
+                )
+            return original_materialize(repository_id, ref)
+
+        self.provider.materialize = materialize
+        with self.assertRaisesRegex(
+            GuardRejected, "write policy output exceeded Runtime budget"
+        ):
+            self.broker.guarded_update(
+                session,
+                path=WRITE_PATH,
+                content=WRITE_V2,
+                expected_blob_sha="f" * 40,
+                message="must bound fingerprint output",
             )
         self.assertFalse(
             any(call[0] == "update" for call in self.provider.calls)

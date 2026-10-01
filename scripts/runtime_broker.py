@@ -17,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 from typing import ContextManager, Iterator, Protocol
 
 import yaml
@@ -42,6 +43,7 @@ from scripts.validate_learning_os import (
     instance_generic_write_role_rule,
     instance_generic_write_transition_rule,
     instance_generic_write_version_rule,
+    instance_path_identity_mismatches,
     instance_write_policy_fingerprint,
     learning_handoff_identity_mismatches,
     validate_instance_document_trust_boundary,
@@ -62,6 +64,8 @@ CANDIDATE_YAML_MAX_BYTES = BOUNDED_YAML_MAX_BYTES
 CANDIDATE_YAML_MAX_NODES = BOUNDED_YAML_MAX_NODES
 CANDIDATE_YAML_MAX_DEPTH = BOUNDED_YAML_MAX_DEPTH
 CANDIDATE_VALIDATION_TIMEOUT_SECONDS = 10
+FINGERPRINT_STDOUT_MAX_BYTES = 128
+FINGERPRINT_POLL_SECONDS = 0.01
 BRANCH_RUNTIME_REQUIRED_FIELDS = frozenset({
     "schema_version",
     "document_type",
@@ -150,6 +154,95 @@ def _preflight_candidate_yaml(content: str) -> None:
 
 def _preflight_authority_yaml(content: str, where: str) -> None:
     _preflight_bounded_yaml(content, where)
+
+
+def _compute_bounded_write_policy_fingerprint(
+    command: list[str], *, cwd: Path
+) -> str:
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=cwd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
+    except OSError:
+        raise GuardRejected(
+            "deployed Core write policy computation failed to start"
+        ) from None
+
+    output = bytearray()
+    overflow = threading.Event()
+
+    def drain_stdout() -> None:
+        if process.stdout is None:
+            return
+        while True:
+            chunk = process.stdout.read(64)
+            if not chunk:
+                break
+            remaining = FINGERPRINT_STDOUT_MAX_BYTES - len(output)
+            if remaining > 0:
+                output.extend(chunk[:remaining])
+            if len(chunk) > remaining:
+                overflow.set()
+
+    reader = threading.Thread(
+        target=drain_stdout,
+        name="learning-os-write-policy-fingerprint-stdout",
+        daemon=True,
+    )
+    reader.start()
+
+    timed_out = False
+    try:
+        deadline = time.monotonic() + CANDIDATE_VALIDATION_TIMEOUT_SECONDS
+        while process.poll() is None:
+            if overflow.is_set():
+                process.kill()
+                break
+            if time.monotonic() > deadline:
+                timed_out = True
+                process.kill()
+                break
+            time.sleep(FINGERPRINT_POLL_SECONDS)
+
+        if process.poll() is None:
+            process.wait()
+        reader.join(timeout=1)
+        if reader.is_alive():
+            raise GuardRejected(
+                "deployed Core write policy output did not drain"
+            )
+        if overflow.is_set():
+            raise GuardRejected(
+                "deployed Core write policy output exceeded Runtime budget"
+            )
+        if timed_out:
+            raise GuardRejected(
+                "deployed Core write policy computation timed out"
+            )
+        if process.returncode != 0:
+            raise GuardRejected(
+                "deployed Core write policy computation failed closed"
+            )
+        try:
+            return bytes(output).decode("ascii").strip()
+        except UnicodeDecodeError:
+            raise GuardRejected(
+                "deployed Core write policy computation failed closed"
+            ) from None
+    finally:
+        if process.poll() is None:
+            process.kill()
+            try:
+                process.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                pass
+        if process.stdout is not None:
+            process.stdout.close()
+        reader.join(timeout=1)
 
 
 class DeploymentWriteAdmission(Protocol):
@@ -643,12 +736,17 @@ class RuntimeSessionBroker:
                             finding.render() for finding in trust_findings
                         )
                     )
-                mismatches = learning_handoff_identity_mismatches(
-                    runtime,
-                    generation_key,
-                    generation_record,
-                    handoff,
-                )
+                mismatches = [
+                    *instance_path_identity_mismatches(
+                        ref, handoff, "learning_handoff"
+                    ),
+                    *learning_handoff_identity_mismatches(
+                        runtime,
+                        generation_key,
+                        generation_record,
+                        handoff,
+                    ),
+                ]
                 if mismatches:
                     raise ResolutionError(
                         "Branch runtime handoff_ref identity is inconsistent: "
@@ -878,29 +976,13 @@ class RuntimeSessionBroker:
                 str(validator_path),
                 "--write-policy-fingerprint",
             ]
-            try:
-                result = subprocess.run(
-                    command,
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
-                    timeout=CANDIDATE_VALIDATION_TIMEOUT_SECONDS,
-                    check=False,
-                    cwd=core.root,
+            implementation_fingerprint = (
+                _compute_bounded_write_policy_fingerprint(
+                    command, cwd=core.root
                 )
-            except subprocess.TimeoutExpired:
-                raise GuardRejected(
-                    "deployed Core write policy computation timed out"
-                ) from None
-            except OSError:
-                raise GuardRejected(
-                    "deployed Core write policy computation failed to start"
-                ) from None
-            implementation_fingerprint = result.stdout.strip()
+            )
             if (
-                result.returncode != 0
-                or len(implementation_fingerprint) != 64
+                len(implementation_fingerprint) != 64
                 or any(
                     char not in "0123456789abcdef"
                     for char in implementation_fingerprint
@@ -1156,6 +1238,13 @@ class RuntimeSessionBroker:
                 state.deployment.core_commit,
             )
             snapshots.append(core)
+            if (
+                core.repository_id != state.deployment.core_repository_id
+                or core.commit_sha != state.deployment.core_commit
+            ):
+                raise GuardRejected(
+                    "candidate Core validator provenance changed"
+                )
             binding = DeploymentBinding.from_contract(
                 contract, self.locator
             )
