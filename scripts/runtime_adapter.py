@@ -6,6 +6,7 @@ live/materialization duties that intentionally do not belong to it.
 from __future__ import annotations
 
 import base64
+import errno
 import json
 import os
 import re
@@ -717,6 +718,30 @@ class GitCliProvider:
                 )
             }
         return {"start_new_session": True}
+
+    @staticmethod
+    def _cleanup_checkout_tempdir(
+        tempdir: tempfile.TemporaryDirectory,
+        *,
+        attempts: int = 5,
+        retry_delay: float = 0.05,
+    ) -> None:
+        """Clean a transient Git checkout without hiding persistent failures.
+
+        A successful Git fetch may briefly leave auto-maintenance/object-info
+        activity racing with TemporaryDirectory cleanup on some hosts. Fetches
+        disable auto-maintenance explicitly, and this bounded ENOTEMPTY retry
+        covers any final transient filesystem lag without weakening fail-closed
+        cleanup semantics.
+        """
+        for attempt in range(attempts):
+            try:
+                tempdir.cleanup()
+                return
+            except OSError as exc:
+                if exc.errno != errno.ENOTEMPTY or attempt + 1 >= attempts:
+                    raise
+                time.sleep(retry_delay * (attempt + 1))
 
     @staticmethod
     def _windows_descendant_pids(root_pid: int) -> tuple[int, ...]:
@@ -1717,7 +1742,7 @@ class GitCliProvider:
     ) -> None:
         args = [
             "git", "-c", "protocol.version=2",
-            "fetch", "-q", "--no-tags", "--depth=1",
+            "fetch", "-q", "--no-tags", "--no-auto-maintenance", "--depth=1",
         ]
         if refetch:
             args.append("--refetch")
@@ -1836,7 +1861,7 @@ class GitCliProvider:
             )
             return td, repo, fetched
         except Exception:
-            td.cleanup()
+            self._cleanup_checkout_tempdir(td)
             raise
 
     def _checkout_branch(
@@ -1878,7 +1903,7 @@ class GitCliProvider:
                 td, repo, fetched, branch_ref, snapshot_total, blob_cap
             )
         except Exception:
-            td.cleanup()
+            self._cleanup_checkout_tempdir(td)
             raise
 
     def materialize(
@@ -1899,7 +1924,7 @@ class GitCliProvider:
             snapshot_td.cleanup()
             raise
         finally:
-            checkout_td.cleanup()
+            self._cleanup_checkout_tempdir(checkout_td)
         with self._tempdirs_lock:
             if self._closed:
                 snapshot_td.cleanup()
@@ -1938,7 +1963,7 @@ class GitCliProvider:
                 raise ResolutionError("Git content is not valid UTF-8") from None
             return text, blob, commit
         finally:
-            td.cleanup()
+            self._cleanup_checkout_tempdir(td)
 
     def update_text(
         self,
@@ -2060,7 +2085,7 @@ class GitCliProvider:
             )
             return new_commit
         finally:
-            td.cleanup()
+            self._cleanup_checkout_tempdir(td)
 
 
 class GitHubApiProvider:
