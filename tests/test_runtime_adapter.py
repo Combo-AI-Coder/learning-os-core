@@ -703,6 +703,51 @@ class GitCliProviderTests(unittest.TestCase):
                 )
         sleep.assert_not_called()
 
+    def test_checkout_cleanup_retries_real_temporarydirectory(self):
+        tempdir = tempfile.TemporaryDirectory()
+        original_rmtree = tempdir._rmtree
+        calls = 0
+
+        def flaky_rmtree(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls < 3:
+                raise OSError(errno.ENOTEMPTY, "directory not empty")
+            return original_rmtree(*args, **kwargs)
+
+        with mock.patch.object(
+            tempdir, "_rmtree", side_effect=flaky_rmtree
+        ), mock.patch("scripts.runtime_adapter.time.sleep") as sleep:
+            GitCliProvider._cleanup_checkout_tempdir(
+                tempdir, retry_delay=0
+            )
+
+        self.assertEqual(3, calls)
+        self.assertEqual(2, sleep.call_count)
+        self.assertFalse(Path(tempdir.name).exists())
+
+    def test_checkout_cleanup_persistent_enotempty_fails_closed(self):
+        tempdir = tempfile.TemporaryDirectory()
+        original_rmtree = tempdir._rmtree
+        try:
+            with mock.patch.object(
+                tempdir,
+                "_rmtree",
+                side_effect=OSError(
+                    errno.ENOTEMPTY, "directory not empty"
+                ),
+            ), mock.patch("scripts.runtime_adapter.time.sleep") as sleep:
+                with self.assertRaises(OSError) as raised:
+                    GitCliProvider._cleanup_checkout_tempdir(
+                        tempdir, attempts=3, retry_delay=0
+                    )
+            self.assertEqual(errno.ENOTEMPTY, raised.exception.errno)
+            self.assertEqual(2, sleep.call_count)
+            self.assertTrue(Path(tempdir.name).exists())
+        finally:
+            if Path(tempdir.name).exists():
+                original_rmtree(tempdir.name, ignore_errors=True)
+
     def test_all_transports_require_bounded_filtering(self):
         provider = self.provider()
         for remote in (
