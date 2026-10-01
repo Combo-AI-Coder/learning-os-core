@@ -634,6 +634,8 @@ def instance_path_identity_mismatches(p,d,t):
 
     if t=="curriculum":
         require(d.get("domain"),parts[2],"domain")
+    elif t=="learner_knowledge":
+        require(d.get("domain"),PurePosixPath(p).stem,"domain")
     elif t=="topic_goal":
         require(d.get("topic"),parts[1],"topic")
     elif t in {"topic_plan","topic_progress"}:
@@ -664,6 +666,7 @@ def instance_path_identity_mismatches(p,d,t):
         optional(d.get("topic"),parts[1],"topic")
     elif t=="learning_handoff":
         require(d.get("topic"),parts[1],"topic")
+        require(d.get("lineage_id"),parts[-2],"lineage_id")
     elif t=="evidence":
         require(d.get("id"),PurePosixPath(p).stem,"evidence id")
     return out

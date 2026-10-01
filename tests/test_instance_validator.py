@@ -141,7 +141,7 @@ def write_full_state(root: Path, *, curriculum_refs: list, provenance: list,
                      evidence_extra: dict | None = None, plan_provenance_extra: dict | None = None) -> None:
     """写一套完整合法的 Instance 0.3 状态文档；关键参数由各测试注入。"""
     t, s = topic, subtopic
-    write_yaml(root, f"learner/knowledge/{t}.yaml", {
+    write_yaml(root, f"learner/knowledge/{DOMAIN}.yaml", {
         "schema_version": knowledge_schema, "document_type": "learner_knowledge",
         "revision": 1, "domain": DOMAIN,
         "concepts": {f"{DOMAIN}.foundation": {"capabilities": {"explanation": {
@@ -367,6 +367,22 @@ class InstanceValidationTests(unittest.TestCase):
         path = self.instance / "topics/modern-language-models/goal.yaml"
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
         data["topic"] = "other-topic"
+        path.write_text(
+            yaml.safe_dump(data, sort_keys=False),
+            encoding="utf-8",
+        )
+        self.assertIn("path.identity", self.errors())
+
+    def test_fail_learner_knowledge_domain_must_match_canonical_filename(self):
+        write_full_state(
+            self.instance,
+            curriculum_refs=self.valid_refs(f"{DOMAIN}.foundation"),
+            provenance=self.valid_legacy_provenance(),
+            handoff_ref=self.handoff_ref_ok(),
+        )
+        path = self.instance / f"learner/knowledge/{DOMAIN}.yaml"
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data["domain"] = "other-domain"
         path.write_text(
             yaml.safe_dump(data, sort_keys=False),
             encoding="utf-8",
@@ -670,6 +686,20 @@ class InstanceLearningHandoffTargetIntegrityTests(unittest.TestCase):
         self.seed()
         self.mutate_handoff(lineage_id="other-lineage")
         self.assertIn("branch.handoff_ref_identity", self.errors())
+
+    def test_fail_handoff_lineage_must_match_canonical_path(self):
+        self.seed()
+        wrong = self.HANDOFF.replace(
+            "modern-language-models-main-lineage",
+            "other-lineage",
+        )
+        data = self.read_yaml(self.HANDOFF)
+        (self.instance / self.HANDOFF).unlink()
+        write_yaml(self.instance, wrong, data)
+        runtime = self.read_yaml(self.RUNTIME)
+        runtime["generations"]["1"]["handoff_ref"] = wrong
+        self.mutate_runtime(runtime)
+        self.assertIn("path.identity", self.errors())
 
     def test_fail_wrong_topic(self):
         self.seed()
