@@ -444,7 +444,9 @@ class RuntimeSessionBroker:
                 self._session_condition.notify_all()
 
     @staticmethod
-    def _parse_branch_runtime(text: str) -> dict:
+    def _parse_branch_runtime(
+        text: str, *, allow_handoff_pending: bool = False
+    ) -> dict:
         _preflight_authority_yaml(text, "Branch runtime YAML")
         try:
             data = yaml.safe_load(text)
@@ -493,10 +495,8 @@ class RuntimeSessionBroker:
         record = generations.get(generation)
         if record is None:
             record = generations.get(str(generation))
-        if not isinstance(record, dict) or record.get("lifecycle") != "active":
-            raise ResolutionError("Branch runtime active generation is not active")
-        if data.get("pending_successor") is not None:
-            raise ResolutionError("Branch runtime is handing off")
+        if not isinstance(record, dict):
+            raise ResolutionError("Branch runtime active generation record is invalid")
         active_generations: list[int] = []
         seen_generations: set[int] = set()
         for key, value in generations.items():
@@ -529,10 +529,38 @@ class RuntimeSessionBroker:
                 )
             if lifecycle == "active":
                 active_generations.append(normalized_generation)
-        if active_generations != [generation]:
-            raise ResolutionError(
-                "Branch runtime must contain exactly one active generation"
+        pending = data.get("pending_successor")
+        if allow_handoff_pending:
+            pending_value = (
+                pending.get("generation") if isinstance(pending, dict) else pending
             )
+            if (
+                not isinstance(pending_value, int)
+                or isinstance(pending_value, bool)
+                or pending_value <= generation
+            ):
+                raise ResolutionError(
+                    "Branch runtime pending successor generation is invalid"
+                )
+            if record.get("lifecycle") != "handoff_pending":
+                raise ResolutionError(
+                    "Branch runtime source generation is not handoff_pending"
+                )
+            if active_generations:
+                raise ResolutionError(
+                    "Branch runtime handing off must not contain an active generation"
+                )
+        else:
+            if record.get("lifecycle") != "active":
+                raise ResolutionError(
+                    "Branch runtime active generation is not active"
+                )
+            if pending is not None:
+                raise ResolutionError("Branch runtime is handing off")
+            if active_generations != [generation]:
+                raise ResolutionError(
+                    "Branch runtime must contain exactly one active generation"
+                )
         return data
 
     @staticmethod
@@ -755,6 +783,36 @@ class RuntimeSessionBroker:
         finally:
             self._release_materializations([snapshot])
 
+    def _read_pending_branch_runtime(
+        self,
+        *,
+        instance_repository_id: int,
+        instance_ref: str,
+        runtime_path: str,
+    ) -> tuple[dict, str, str]:
+        types = instance_expected_types(runtime_path)
+        if types != ("branch_runtime",):
+            raise ResolutionError(
+                "Branch runtime authority path is not canonical"
+            )
+        text, blob_sha, commit_sha = self.provider.read_text(
+            instance_repository_id, instance_ref, runtime_path
+        )
+        runtime = self._parse_branch_runtime(
+            text, allow_handoff_pending=True
+        )
+        parts = PurePosixPath(runtime_path).parts
+        if runtime["topic"] != parts[1] or runtime["branch_id"] != parts[4]:
+            raise ResolutionError(
+                "Branch runtime identity does not match its canonical path"
+            )
+        self._validate_branch_handoff_refs(
+            runtime=runtime,
+            instance_repository_id=instance_repository_id,
+            authority_head=commit_sha,
+        )
+        return runtime, blob_sha, commit_sha
+
     def _read_branch_runtime(
         self,
         *,
@@ -838,12 +896,196 @@ class RuntimeSessionBroker:
             binding=binding,
             policy=policy,
         )
+        return self._issue_session(state)
+
+    def _issue_session(
+        self, state: _LearningRuntimeSessionState
+    ) -> LearningRuntimeSession:
         with self._session_condition:
             session_id = secrets.token_urlsafe(32)
             while session_id in self._issued_sessions:
                 session_id = secrets.token_urlsafe(32)
             self._issued_sessions[session_id] = _IssuedSessionRecord(state=state)
         return LearningRuntimeSession(session_id=session_id)
+
+    def claim_successor_session(
+        self,
+        *,
+        branch_runtime_path: str,
+        policy: RuntimeCapabilityPolicy,
+        expected_successor_generation: int,
+    ) -> LearningRuntimeSession:
+        """Claim an authorized pending Branch successor and bind its session.
+
+        This is a host-side continuity transition, not a conversation-supplied
+        generic Instance write. Canonical handoff_pending state is required;
+        successful claim establishes the returned session generation identity.
+        """
+        if self.write_admission is None:
+            raise GuardRejected(
+                "successor claim requires shared deployment write admission"
+            )
+        if (
+            not isinstance(expected_successor_generation, int)
+            or isinstance(expected_successor_generation, bool)
+            or expected_successor_generation < 1
+        ):
+            raise ResolutionError(
+                "expected successor generation must be a positive integer"
+            )
+
+        resolved = DeploymentResolver(self.provider).resolve(self.locator)
+        try:
+            deployment = resolved.context
+        finally:
+            self._release_materializations([
+                resolved.control,
+                resolved.core,
+                resolved.instance,
+            ])
+        instance_ref = self.locator["instance"]["canonical_ref"]
+        runtime_path = _relative_path(
+            branch_runtime_path, "branch_runtime_path"
+        )
+
+        with self.write_admission.write_lease():
+            contract = self.guard.check(deployment)
+            runtime, runtime_blob, authority_head = (
+                self._read_pending_branch_runtime(
+                    instance_repository_id=deployment.instance_repository_id,
+                    instance_ref=instance_ref,
+                    runtime_path=runtime_path,
+                )
+            )
+            source_generation = runtime["active_generation"]
+            pending = runtime["pending_successor"]
+            pending_generation = (
+                pending.get("generation")
+                if isinstance(pending, dict)
+                else pending
+            )
+            if pending_generation != expected_successor_generation:
+                raise GuardRejected(
+                    "requested successor generation is not pending"
+                )
+
+            generations = runtime["generations"]
+            source_key = (
+                source_generation
+                if source_generation in generations
+                else str(source_generation)
+            )
+            source_record = generations[source_key]
+            if not source_record.get("handoff_ref"):
+                raise GuardRejected(
+                    "pending successor claim requires a canonical learning handoff"
+                )
+            if (
+                expected_successor_generation in generations
+                or str(expected_successor_generation) in generations
+            ):
+                raise GuardRejected(
+                    "pending successor generation is already materialized"
+                )
+
+            branch_record = self._read_branch_registry(
+                instance_repository_id=deployment.instance_repository_id,
+                authority_head=authority_head,
+                topic=runtime["topic"],
+                branch_id=runtime["branch_id"],
+            )
+
+            candidate = yaml.safe_load(
+                yaml.safe_dump(runtime, sort_keys=False)
+            )
+            candidate["revision"] = runtime["revision"] + 1
+            candidate["updated_at"] = time.strftime(
+                "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+            )
+            candidate["active_generation"] = expected_successor_generation
+            candidate["pending_successor"] = None
+            candidate["generations"][source_key]["lifecycle"] = "archived"
+            candidate["generations"][expected_successor_generation] = {
+                "lifecycle": "active"
+            }
+            candidate_text = yaml.safe_dump(candidate, sort_keys=False)
+
+            validation_state = _LearningRuntimeSessionState(
+                deployment=deployment,
+                binding=LearningSessionBinding(
+                    instance_ref=instance_ref,
+                    branch_runtime_path=runtime_path,
+                    topic=runtime["topic"],
+                    branch_id=runtime["branch_id"],
+                    lineage_id=runtime["lineage_id"],
+                    generation=source_generation,
+                    role=branch_record["role"],
+                    subtopic=branch_record.get("subtopic"),
+                ),
+                policy=policy,
+            )
+            self._validate_candidate(
+                validation_state,
+                authority_head=authority_head,
+                path=runtime_path,
+                content=candidate_text,
+                contract=contract,
+            )
+            self.guard.check(deployment)
+            try:
+                self.provider.update_text(
+                    deployment.instance_repository_id,
+                    instance_ref,
+                    runtime_path,
+                    candidate_text,
+                    runtime_blob,
+                    (
+                        "Claim learning Branch successor generation "
+                        f"{expected_successor_generation}"
+                    ),
+                    expected_ref_sha=authority_head,
+                )
+            except CasConflict:
+                raise
+            except Exception as exc:
+                raise CasConflict(
+                    f"successor claim compare-and-swap failed: {exc}"
+                ) from None
+
+            self.guard.check(deployment)
+            claimed_runtime, claimed_head = self._read_branch_runtime(
+                instance_repository_id=deployment.instance_repository_id,
+                instance_ref=instance_ref,
+                runtime_path=runtime_path,
+            )
+            if (
+                claimed_runtime["active_generation"]
+                != expected_successor_generation
+            ):
+                raise GuardRejected(
+                    "successor claim did not become canonical"
+                )
+            claimed_branch = self._read_branch_registry(
+                instance_repository_id=deployment.instance_repository_id,
+                authority_head=claimed_head,
+                topic=claimed_runtime["topic"],
+                branch_id=claimed_runtime["branch_id"],
+            )
+            state = _LearningRuntimeSessionState(
+                deployment=deployment,
+                binding=LearningSessionBinding(
+                    instance_ref=instance_ref,
+                    branch_runtime_path=runtime_path,
+                    topic=claimed_runtime["topic"],
+                    branch_id=claimed_runtime["branch_id"],
+                    lineage_id=claimed_runtime["lineage_id"],
+                    generation=expected_successor_generation,
+                    role=claimed_branch["role"],
+                    subtopic=claimed_branch.get("subtopic"),
+                ),
+                policy=policy,
+            )
+            return self._issue_session(state)
 
     def _fresh_generation(
         self, state: _LearningRuntimeSessionState
