@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import errno
 import io
 import os
 import subprocess
@@ -651,6 +652,56 @@ class GitCliProviderTests(unittest.TestCase):
                     "origin",
                     binding=provider._binding(self.REPO_ID),
                 )
+
+    def test_fetch_disables_auto_maintenance(self):
+        provider = self.provider()
+        calls = []
+        original_popen = subprocess.Popen
+
+        def recording_popen(args, *popen_args, **popen_kwargs):
+            if args and args[0] == "git" and "fetch" in args:
+                calls.append(list(args))
+            return original_popen(args, *popen_args, **popen_kwargs)
+
+        with mock.patch(
+            "scripts.runtime_adapter.subprocess.Popen",
+            side_effect=recording_popen,
+        ):
+            provider.materialize(self.REPO_ID, "main")
+
+        self.assertTrue(calls)
+        for call in calls:
+            self.assertIn("--no-auto-maintenance", call)
+
+    def test_checkout_cleanup_retries_only_enotempty(self):
+        class FlakyTempdir:
+            def __init__(self):
+                self.calls = 0
+
+            def cleanup(self):
+                self.calls += 1
+                if self.calls < 3:
+                    raise OSError(errno.ENOTEMPTY, "directory not empty")
+
+        flaky = FlakyTempdir()
+        with mock.patch("scripts.runtime_adapter.time.sleep") as sleep:
+            GitCliProvider._cleanup_checkout_tempdir(
+                flaky, retry_delay=0
+            )
+        self.assertEqual(3, flaky.calls)
+        self.assertEqual(2, sleep.call_count)
+
+        class PermissionFailure:
+            @staticmethod
+            def cleanup():
+                raise OSError(errno.EACCES, "permission denied")
+
+        with mock.patch("scripts.runtime_adapter.time.sleep") as sleep:
+            with self.assertRaises(OSError):
+                GitCliProvider._cleanup_checkout_tempdir(
+                    PermissionFailure(), retry_delay=0
+                )
+        sleep.assert_not_called()
 
     def test_all_transports_require_bounded_filtering(self):
         provider = self.provider()
