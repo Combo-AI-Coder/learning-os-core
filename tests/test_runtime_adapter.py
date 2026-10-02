@@ -492,6 +492,32 @@ class GitCliProviderTests(unittest.TestCase):
         self.addCleanup(provider.close)
         return provider
 
+    def test_ref_resolution_is_independent_of_broken_caller_repository(self):
+        provider = self.provider()
+        unrelated = self.root / "broken-caller"
+        unrelated.mkdir()
+        (unrelated / ".git").write_text("gitdir: nonexistent-synthetic-gitdir" + chr(10), encoding="utf-8")
+        previous = Path.cwd()
+        try:
+            os.chdir(unrelated)
+            snapshot = provider.materialize(self.REPO_ID, "main")
+            self.assertEqual(snapshot.commit_sha, self.initial_commit)
+            self.assertEqual((snapshot.root / "state.txt").read_text(), "one" + chr(10))
+        finally:
+            os.chdir(previous)
+
+    def test_context_free_git_does_not_discover_isolated_home_parent(self):
+        provider = self.provider()
+        isolated = self.seed / "synthetic-isolated-home"
+        isolated.mkdir()
+        self._git("config", "audit.syntheticMarker", "must-not-inherit", cwd=self.seed)
+        from types import SimpleNamespace
+        from contextlib import chdir
+        with chdir(self.seed), mock.patch.object(provider, "_isolated_home", SimpleNamespace(name=str(isolated))):
+            with self.assertRaises(ResolutionError):
+                provider._git("config", "--get", "audit.syntheticMarker")
+            self.assertEqual(provider._git("check-ref-format", "--branch", "main"), "main")
+
     def test_materialize_uses_host_bound_identity_and_strips_git_metadata(self):
         snapshot = self.provider().materialize(self.REPO_ID, "main")
         self.assertEqual(self.REPO_ID, snapshot.repository_id)

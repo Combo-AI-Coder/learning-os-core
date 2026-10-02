@@ -1080,6 +1080,12 @@ class GitCliProvider:
         env = self._env(binding)
         if extra_env:
             env.update(extra_env)
+        if cwd is None:
+            # Ref checks and other context-free commands must not inspect the
+            # caller's checkout or inherit its local configuration. The owned
+            # home is empty; its parent is also excluded from Git discovery.
+            cwd = Path(self._isolated_home.name).resolve()
+            env["GIT_CEILING_DIRECTORIES"] = str(cwd.parent)
         if binding is not None:
             if input_bytes is not None:
                 if cas:
