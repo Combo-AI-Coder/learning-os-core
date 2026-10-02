@@ -383,6 +383,14 @@ class _IssuedSessionRecord:
     revoked: bool = False
 
 
+@dataclass
+class _PinnedInstanceAuthority:
+    snapshot: MaterializedRepository
+    runtime: dict
+    branch_record: dict
+    head: str
+
+
 class RuntimeSessionBroker:
     """Bind a replaceable conversation surface to narrow Learning OS authority."""
 
@@ -667,19 +675,47 @@ class RuntimeSessionBroker:
         try:
             if not target.is_file():
                 raise ResolutionError(
-                    "Branch runtime handoff_ref target is missing from the "
-                    "exact Instance authority snapshot"
+                    f"{where} target is missing from the exact Instance "
+                    "authority snapshot"
                 )
             text = target.read_text(encoding="utf-8")
         except ResolutionError:
             raise
         except (OSError, UnicodeError) as exc:
             raise ResolutionError(
-                "Branch runtime handoff_ref target is unreadable: "
-                f"{exc.__class__.__name__}"
+                f"{where} target is unreadable: {exc.__class__.__name__}"
             ) from None
         _preflight_authority_yaml(text, where)
         return text
+
+    def _read_branch_registry_from_snapshot(
+        self,
+        *,
+        snapshot: MaterializedRepository,
+        topic: str,
+        branch_id: str,
+    ) -> dict:
+        registry_path = f"topics/{topic}/coordination/branches.yaml"
+        if instance_expected_types(registry_path) != ("branch_registry",):
+            raise ResolutionError("Branch registry path is not canonical")
+        text = self._read_materialized_authority_yaml(
+            snapshot, registry_path, "Branch registry YAML"
+        )
+        registry = self._parse_branch_registry(text)
+        if registry["topic"] != topic:
+            raise ResolutionError(
+                "Branch registry topic does not match Branch runtime"
+            )
+        record = registry["branches"].get(branch_id)
+        if not isinstance(record, dict):
+            raise ResolutionError(
+                "Branch is missing from the canonical registry"
+            )
+        if record.get("lifecycle") != "active":
+            raise ResolutionError(
+                "Branch registry lifecycle is not active"
+            )
+        return record
 
     def _validate_branch_handoff_refs(
         self,
@@ -687,6 +723,7 @@ class RuntimeSessionBroker:
         runtime: dict,
         instance_repository_id: int,
         authority_head: str,
+        snapshot: MaterializedRepository | None = None,
     ) -> None:
         refs = []
         generations = runtime["generations"]
@@ -711,15 +748,18 @@ class RuntimeSessionBroker:
         if not refs:
             return
 
-        try:
-            snapshot = self.provider.materialize(
-                instance_repository_id,
-                authority_head,
-            )
-        except ResolutionError as exc:
-            raise ResolutionError(
-                f"Branch runtime handoff authority snapshot cannot be resolved: {exc}"
-            ) from None
+        owns_snapshot = snapshot is None
+        if snapshot is None:
+            try:
+                snapshot = self.provider.materialize(
+                    instance_repository_id,
+                    authority_head,
+                )
+            except ResolutionError as exc:
+                raise ResolutionError(
+                    "Branch runtime handoff authority snapshot cannot be "
+                    f"resolved: {exc}"
+                ) from None
         try:
             if (
                 snapshot.repository_id != instance_repository_id
@@ -732,7 +772,7 @@ class RuntimeSessionBroker:
                 text = self._read_materialized_authority_yaml(
                     snapshot,
                     ref,
-                    "Learning handoff YAML",
+                    "Branch runtime handoff_ref",
                 )
                 try:
                     handoff = yaml.safe_load(text)
@@ -781,7 +821,8 @@ class RuntimeSessionBroker:
                         + "; ".join(mismatches)
                     )
         finally:
-            self._release_materializations([snapshot])
+            if owns_snapshot:
+                self._release_materializations([snapshot])
 
     def _read_pending_branch_runtime(
         self,
@@ -1124,6 +1165,120 @@ class RuntimeSessionBroker:
             raise GuardRejected("Branch registry subtopic changed")
         return runtime["active_generation"], commit_sha
 
+    def _pin_instance_authority(
+        self, state: _LearningRuntimeSessionState
+    ) -> _PinnedInstanceAuthority:
+        snapshot = None
+        keep_snapshot = False
+        try:
+            try:
+                authority_head = self.provider.resolve_ref(
+                    state.deployment.instance_repository_id,
+                    state.binding.instance_ref,
+                )
+                snapshot = self.provider.materialize(
+                    state.deployment.instance_repository_id,
+                    authority_head,
+                )
+                if (
+                    snapshot.repository_id
+                    != state.deployment.instance_repository_id
+                    or snapshot.commit_sha != authority_head
+                ):
+                    raise ResolutionError(
+                        "Instance authority snapshot provenance changed"
+                    )
+                runtime_text = self._read_materialized_authority_yaml(
+                    snapshot,
+                    state.binding.branch_runtime_path,
+                    "Branch runtime YAML",
+                )
+                runtime = self._parse_branch_runtime(runtime_text)
+                parts = PurePosixPath(
+                    state.binding.branch_runtime_path
+                ).parts
+                if (
+                    runtime["topic"] != parts[1]
+                    or runtime["branch_id"] != parts[4]
+                ):
+                    raise ResolutionError(
+                        "Branch runtime identity does not match its canonical path"
+                    )
+                self._validate_branch_handoff_refs(
+                    runtime=runtime,
+                    instance_repository_id=state.deployment.instance_repository_id,
+                    authority_head=authority_head,
+                    snapshot=snapshot,
+                )
+            except ResolutionError as exc:
+                raise GuardRejected(
+                    f"Branch runtime fresh-read failed closed: {exc}"
+                ) from None
+
+            try:
+                branch_record = self._read_branch_registry_from_snapshot(
+                    snapshot=snapshot,
+                    topic=state.binding.topic,
+                    branch_id=state.binding.branch_id,
+                )
+            except ResolutionError as exc:
+                raise GuardRejected(
+                    f"Branch registry fresh-read failed closed: {exc}"
+                ) from None
+
+            for field, expected in (
+                ("topic", state.binding.topic),
+                ("branch_id", state.binding.branch_id),
+                ("lineage_id", state.binding.lineage_id),
+            ):
+                if runtime[field] != expected:
+                    raise GuardRejected(
+                        f"Branch runtime {field} changed"
+                    )
+            if runtime["active_generation"] != state.binding.generation:
+                raise GuardRejected("semantic generation changed")
+            if branch_record.get("role") != state.binding.role:
+                raise GuardRejected("Branch registry role changed")
+            if branch_record.get("subtopic") != state.binding.subtopic:
+                raise GuardRejected("Branch registry subtopic changed")
+
+            result = _PinnedInstanceAuthority(
+                snapshot=snapshot,
+                runtime=runtime,
+                branch_record=branch_record,
+                head=authority_head,
+            )
+            keep_snapshot = True
+            return result
+        finally:
+            if snapshot is not None and not keep_snapshot:
+                self._release_materializations([snapshot])
+
+    def _assert_pinned_instance_current(
+        self,
+        state: _LearningRuntimeSessionState,
+        authority: _PinnedInstanceAuthority,
+    ) -> None:
+        try:
+            current_head = self.provider.resolve_ref(
+                state.deployment.instance_repository_id,
+                state.binding.instance_ref,
+            )
+        except ResolutionError as exc:
+            raise GuardRejected(
+                f"Instance authority head recheck failed closed: {exc}"
+            ) from None
+        if current_head == authority.head:
+            return
+        # Drift is exceptional. Re-run the semantic check only on drift so
+        # generation/registry errors retain their existing diagnostics.
+        generation, _ = self._fresh_generation(state)
+        if generation != state.binding.generation:
+            raise GuardRejected("semantic generation changed")
+        raise GuardRejected(
+            "Instance authority head changed during operation"
+        )
+
     def _assert_state_current(
         self, state: _LearningRuntimeSessionState
     ) -> str:
@@ -1172,15 +1327,20 @@ class RuntimeSessionBroker:
             ) from first_error
 
     def _assert_deployed_write_policy_compatible(
-        self, state: _LearningRuntimeSessionState
+        self,
+        state: _LearningRuntimeSessionState,
+        *,
+        core_snapshot: MaterializedRepository | None = None,
     ) -> None:
         snapshots: list[MaterializedRepository] = []
         try:
-            core = self.provider.materialize(
-                state.deployment.core_repository_id,
-                state.deployment.core_commit,
-            )
-            snapshots.append(core)
+            core = core_snapshot
+            if core is None:
+                core = self.provider.materialize(
+                    state.deployment.core_repository_id,
+                    state.deployment.core_commit,
+                )
+                snapshots.append(core)
             if (
                 core.repository_id != state.deployment.core_repository_id
                 or core.commit_sha != state.deployment.core_commit
@@ -1441,15 +1601,19 @@ class RuntimeSessionBroker:
         path: str,
         content: str,
         contract: dict,
+        instance_snapshot: MaterializedRepository | None = None,
+        core_snapshot: MaterializedRepository | None = None,
     ) -> None:
         _preflight_candidate_yaml(content)
-        snapshots: list = []
+        snapshots: list[MaterializedRepository] = []
         try:
-            instance = self.provider.materialize(
-                state.deployment.instance_repository_id,
-                authority_head,
-            )
-            snapshots.append(instance)
+            instance = instance_snapshot
+            if instance is None:
+                instance = self.provider.materialize(
+                    state.deployment.instance_repository_id,
+                    authority_head,
+                )
+                snapshots.append(instance)
             if (
                 instance.repository_id
                 != state.deployment.instance_repository_id
@@ -1475,11 +1639,13 @@ class RuntimeSessionBroker:
                 document_type=types[0],
                 content=content,
             )
-            core = self.provider.materialize(
-                state.deployment.core_repository_id,
-                state.deployment.core_commit,
-            )
-            snapshots.append(core)
+            core = core_snapshot
+            if core is None:
+                core = self.provider.materialize(
+                    state.deployment.core_repository_id,
+                    state.deployment.core_commit,
+                )
+                snapshots.append(core)
             if (
                 core.repository_id != state.deployment.core_repository_id
                 or core.commit_sha != state.deployment.core_commit
@@ -1572,31 +1738,40 @@ class RuntimeSessionBroker:
                     "learning session requires shared deployment operation admission"
                 )
             with self.write_admission.read_lease():
-                authority_head = self._assert_state_current(state)
-                content, blob_sha, read_head = self.provider.read_text(
-                    state.deployment.instance_repository_id,
-                    authority_head,
-                    path,
+                deployment = self.guard.snapshot(
+                    state.deployment, require_active=False
                 )
-                if read_head != authority_head:
-                    raise GuardRejected(
-                        "Instance read provenance changed during the operation"
+                authority = self._pin_instance_authority(state)
+                authority_release_attempted = False
+                try:
+                    try:
+                        content, blob_sha = self.provider.read_materialized_text(
+                            authority.snapshot, path
+                        )
+                    except ResolutionError as exc:
+                        raise GuardRejected(
+                            f"Instance target read failed closed: {exc}"
+                        ) from None
+                    # No later step needs the materialized tree. Release it
+                    # before returning so cleanup failure still fails closed.
+                    authority_release_attempted = True
+                    self._release_materializations([authority.snapshot])
+                    self._assert_pinned_instance_current(
+                        state, authority
                     )
-                self.guard.check(state.deployment, require_active=False)
-                final_generation, final_authority_head = self._fresh_generation(state)
-                if final_generation != state.binding.generation:
-                    raise GuardRejected(
-                        "semantic generation changed during Instance read"
+                    self.guard.assert_snapshot_current(
+                        state.deployment,
+                        deployment,
+                        require_active=False,
                     )
-                if final_authority_head != authority_head:
-                    raise GuardRejected(
-                        "Instance authority head changed during read"
+                    return InstanceText(
+                        content=content, version_token=blob_sha
                     )
-                self._assert_instance_authority_head_current(
-                    state, authority_head
-                )
-                self.guard.check(state.deployment, require_active=False)
-                return InstanceText(content=content, version_token=blob_sha)
+                finally:
+                    if not authority_release_attempted:
+                        self._release_materializations(
+                            [authority.snapshot]
+                        )
 
     def guarded_update(
         self,
@@ -1618,8 +1793,7 @@ class RuntimeSessionBroker:
                     "writable learning session requires shared deployment write admission"
                 )
             with self.write_admission.write_lease():
-                contract = self.guard.check(state.deployment)
-                self._assert_deployed_write_policy_compatible(state)
+                deployment = self.guard.snapshot(state.deployment)
 
                 types = instance_expected_types(path)
                 if len(types) != 1:
@@ -1661,39 +1835,73 @@ class RuntimeSessionBroker:
                     path=path,
                 )
 
-                generation, authority_head = self._fresh_generation(state)
-                if generation != state.binding.generation:
-                    raise GuardRejected("semantic generation changed")
-                self._validate_candidate(
-                    state,
-                    authority_head=authority_head,
-                    path=path,
-                    content=content,
-                    contract=contract,
-                )
-                self.guard.check(state.deployment)
-                final_generation, final_authority_head = self._fresh_generation(
-                    state
-                )
-                if final_generation != state.binding.generation:
-                    raise GuardRejected("semantic generation changed")
-                if final_authority_head != authority_head:
-                    raise GuardRejected("Instance authority head changed")
-
+                authority = self._pin_instance_authority(state)
+                core = None
+                release_attempted = False
                 try:
-                    self.provider.update_text(
-                        state.deployment.instance_repository_id,
-                        state.binding.instance_ref,
-                        path,
-                        content,
-                        expected_blob_sha,
-                        message,
-                        expected_ref_sha=authority_head,
+                    core = self.provider.materialize(
+                        state.deployment.core_repository_id,
+                        state.deployment.core_commit,
                     )
-                except CasConflict:
-                    raise
-                except Exception as exc:
-                    raise CasConflict(
-                        f"Instance compare-and-swap failed: {exc}"
-                    ) from None
+                    if (
+                        core.repository_id
+                        != state.deployment.core_repository_id
+                        or core.commit_sha
+                        != state.deployment.core_commit
+                    ):
+                        raise GuardRejected(
+                            "deployed Core provenance changed during operation"
+                        )
+                    self._assert_deployed_write_policy_compatible(
+                        state, core_snapshot=core
+                    )
+                    self._validate_candidate(
+                        state,
+                        authority_head=authority.head,
+                        path=path,
+                        content=content,
+                        contract=deployment.contract,
+                        instance_snapshot=authority.snapshot,
+                        core_snapshot=core,
+                    )
+                    self._assert_pinned_instance_current(
+                        state, authority
+                    )
+                    self.guard.assert_snapshot_current(
+                        state.deployment, deployment
+                    )
+
+                    # Cleanup is part of the pre-write fence: a failure here
+                    # must reject before canonical mutation, not create an
+                    # ambiguous "write applied but cleanup failed" result.
+                    release_attempted = True
+                    self._release_materializations(
+                        [core, authority.snapshot]
+                    )
+
+                    try:
+                        self.provider.update_text(
+                            state.deployment.instance_repository_id,
+                            state.binding.instance_ref,
+                            path,
+                            content,
+                            expected_blob_sha,
+                            message,
+                            expected_ref_sha=authority.head,
+                        )
+                    except CasConflict:
+                        raise
+                    except Exception as exc:
+                        raise CasConflict(
+                            f"Instance compare-and-swap failed: {exc}"
+                        ) from None
+                finally:
+                    if not release_attempted:
+                        pending = [
+                            snapshot
+                            for snapshot in (core, authority.snapshot)
+                            if snapshot is not None
+                        ]
+                        if pending:
+                            self._release_materializations(pending)
             return InstanceWriteAck()

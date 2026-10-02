@@ -154,6 +154,7 @@ class MaterializedRepository:
     repository_id: int
     commit_sha: str
     full_name: str = ""
+    blob_shas: tuple[tuple[str, str], ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -177,7 +178,11 @@ class ResolvedDeployment:
 
 
 class RepositoryProvider(Protocol):
+    def resolve_ref(self, repository_id: int, ref: str) -> str: ...
     def materialize(self, repository_id: int, ref: str) -> MaterializedRepository: ...
+    def read_materialized_text(
+        self, snapshot: MaterializedRepository, path: str
+    ) -> tuple[str, str]: ...
     def read_text(self, repository_id: int, ref: str, path: str) -> tuple[str, str, str]: ...
     def update_text(
         self,
@@ -420,18 +425,24 @@ class DeploymentResolver:
             raise
 
 
+@dataclass(frozen=True)
+class DeploymentGuardSnapshot:
+    contract: dict
+    control_head: str
+
+
 class DeploymentGuard:
     def __init__(self, provider: RepositoryProvider):
         self.provider = provider
 
-    def check(
+    def snapshot(
         self,
         session: SessionDeploymentContext,
         *,
         require_active: bool = True,
-    ) -> dict:
+    ) -> DeploymentGuardSnapshot:
         try:
-            text, _, _ = self.provider.read_text(
+            text, _, control_head = self.provider.read_text(
                 session.runtime_control_repository_id,
                 session.runtime_control_ref,
                 session.contract_path,
@@ -468,7 +479,42 @@ class DeploymentGuard:
         ):
             if not ok:
                 raise GuardRejected(message)
-        return contract
+        return DeploymentGuardSnapshot(contract, control_head)
+
+    def assert_snapshot_current(
+        self,
+        session: SessionDeploymentContext,
+        snapshot: DeploymentGuardSnapshot,
+        *,
+        require_active: bool = True,
+    ) -> None:
+        try:
+            current_head = self.provider.resolve_ref(
+                session.runtime_control_repository_id,
+                session.runtime_control_ref,
+            )
+        except (ResolutionError, OSError, RuntimeError) as exc:
+            raise GuardRejected(
+                f"Runtime-Control authority-head recheck failed closed: {exc}"
+            ) from None
+        if current_head == snapshot.control_head:
+            return
+        # Drift is exceptional. Re-read only on drift so callers preserve the
+        # existing semantic error (epoch/Core/write-state) when applicable.
+        self.check(session, require_active=require_active)
+        raise GuardRejected(
+            "Runtime-Control authority head changed during operation"
+        )
+
+    def check(
+        self,
+        session: SessionDeploymentContext,
+        *,
+        require_active: bool = True,
+    ) -> dict:
+        return self.snapshot(
+            session, require_active=require_active
+        ).contract
 
     def guarded_update(
         self,
@@ -1906,6 +1952,51 @@ class GitCliProvider:
             self._cleanup_checkout_tempdir(td)
             raise
 
+    def resolve_ref(self, repository_id: int, ref: str) -> str:
+        binding = self._binding(repository_id)
+        ref = _nonempty(ref, "ref")
+        if any(char in ref for char in "\x00\r\n") or ref.startswith("-"):
+            raise ResolutionError("Git ref is unsafe")
+        if EXACT_COMMIT.fullmatch(ref):
+            return ref
+        if ref.startswith("refs/heads/"):
+            self._git("check-ref-format", ref)
+            candidates = [ref]
+            branch_ref = ref
+            tag_ref = None
+        elif ref.startswith("refs/tags/"):
+            self._git("check-ref-format", ref)
+            candidates = [ref, f"{ref}^{{}}"]
+            branch_ref = None
+            tag_ref = ref
+        elif ref.startswith("refs/"):
+            raise ResolutionError("unsupported fully qualified Git ref")
+        else:
+            self._git("check-ref-format", "--branch", ref)
+            branch_ref = f"refs/heads/{ref}"
+            tag_ref = f"refs/tags/{ref}"
+            candidates = [branch_ref, tag_ref, f"{tag_ref}^{{}}"]
+        output = self._git(
+            "ls-remote", binding.remote, *candidates, binding=binding
+        )
+        rows = self._parse_ls_remote(output)
+        has_branch = branch_ref is not None and branch_ref in rows
+        has_tag = tag_ref is not None and (
+            tag_ref in rows or f"{tag_ref}^{{}}" in rows
+        )
+        if branch_ref is not None and tag_ref is not None and has_branch and has_tag:
+            raise ResolutionError(
+                "Git short ref is ambiguous between branch and tag"
+            )
+        if has_branch:
+            return rows[branch_ref]
+        if has_tag:
+            peeled = rows.get(f"{tag_ref}^{{}}")
+            if peeled is not None:
+                return peeled
+            return rows[tag_ref]
+        raise ResolutionError("Git remote did not resolve the requested ref")
+
     def materialize(
         self, repository_id: int, ref: str
     ) -> MaterializedRepository:
@@ -1916,10 +2007,10 @@ class GitCliProvider:
         checkout_td, repo, commit = self._checkout(binding, ref)
         snapshot_td = tempfile.TemporaryDirectory(prefix="learning-os-snapshot-")
         snapshot = Path(snapshot_td.name)
+        entries: list[tuple[str, str, str]] = []
         try:
-            self._materialize_blobs(
-                repo, self._tree_entries(repo, commit), snapshot
-            )
+            entries = self._tree_entries(repo, commit)
+            self._materialize_blobs(repo, entries, snapshot)
         except Exception:
             snapshot_td.cleanup()
             raise
@@ -1935,7 +2026,43 @@ class GitCliProvider:
             binding.repository_id,
             commit,
             binding.full_name,
+            tuple((path, blob_sha) for path, blob_sha, _ in entries),
         )
+
+    def read_materialized_text(
+        self, snapshot: MaterializedRepository, path: str
+    ) -> tuple[str, str]:
+        binding = self._binding(snapshot.repository_id)
+        if snapshot.full_name and binding.full_name and snapshot.full_name != binding.full_name:
+            raise ResolutionError("materialized repository binding changed")
+        pure = self._safe_path(path)
+        blob_shas = snapshot.blob_shas
+        if blob_shas is None:
+            raise ResolutionError("materialized Git snapshot lacks blob identity metadata")
+        blob_by_path = dict(blob_shas)
+        blob_sha = blob_by_path.get(pure.as_posix())
+        if blob_sha is None or not EXACT_COMMIT.fullmatch(blob_sha):
+            raise ResolutionError("Git path does not exist in materialized snapshot")
+        target = snapshot.root.joinpath(*pure.parts)
+        try:
+            if not target.is_file():
+                raise ResolutionError("materialized Git path is not a regular file")
+            if target.stat().st_size > MAX_TEXT_BLOB_BYTES:
+                raise ResolutionError("Git text blob exceeds Runtime read limit")
+            raw = target.read_bytes()
+        except ResolutionError:
+            raise
+        except OSError as exc:
+            raise ResolutionError(
+                f"materialized Git content is unreadable: {exc.__class__.__name__}"
+            ) from None
+        if len(raw) > MAX_TEXT_BLOB_BYTES:
+            raise ResolutionError("Git text blob exceeds Runtime read limit")
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            raise ResolutionError("Git content is not valid UTF-8") from None
+        return text, blob_sha
 
     def read_text(
         self, repository_id: int, ref: str, path: str
@@ -2185,6 +2312,11 @@ class GitHubApiProvider:
         output.parent.mkdir(parents=True, exist_ok=True)
         return output
 
+    def resolve_ref(self, repository_id: int, ref: str) -> str:
+        repo = self._repo(repository_id)
+        full_name = _nonempty(repo.get("full_name"), "repository.full_name")
+        return self._commit(full_name, ref)
+
     def materialize(self, repository_id: int, ref: str) -> MaterializedRepository:
         with self._tempdirs_lock:
             if self._closed:
@@ -2223,6 +2355,18 @@ class GitHubApiProvider:
                 raise ResolutionError("repository provider closed during materialization")
             self._tempdirs.append(td)
         return MaterializedRepository(root, repository_id, commit, full_name)
+
+    def read_materialized_text(
+        self, snapshot: MaterializedRepository, path: str
+    ) -> tuple[str, str]:
+        text, blob_sha, commit = self.read_text(
+            snapshot.repository_id, snapshot.commit_sha, path
+        )
+        if commit != snapshot.commit_sha:
+            raise ResolutionError(
+                "GitHub materialized content provenance changed"
+            )
+        return text, blob_sha
 
     def read_text(self, repository_id: int, ref: str, path: str) -> tuple[str, str, str]:
         repo = self._repo(repository_id)

@@ -139,7 +139,8 @@ class BrokerProvider:
     def __init__(self, control: Path, instance: Path):
         self.control = control
         self.instance = instance
-        self.contract = contract()
+        self._contract = contract()
+        self.control_head = RC_COMMIT
         self.calls = []
         self.instance_head = INSTANCE_COMMIT
         self.advance_on_update = False
@@ -158,6 +159,32 @@ class BrokerProvider:
             WRITE_PATH: "f" * 40,
         }
         self._seed_materialized_instance()
+
+    @property
+    def contract(self):
+        return self._contract
+
+    @contract.setter
+    def contract(self, value):
+        self._contract = value
+        next_value = (int(self.control_head, 16) + 1) % (1 << 160)
+        self.control_head = f"{next_value:040x}"
+
+    def resolve_ref(self, repository_id, ref):
+        self.calls.append(("resolve", repository_id, ref))
+        if repository_id == RC_ID:
+            if ref == "main":
+                return self.control_head
+            if ref == self.control_head:
+                return ref
+        if repository_id == INSTANCE_ID:
+            if ref == "main":
+                return self.instance_head
+            if ref == self.instance_head:
+                return ref
+        if repository_id == CORE_ID and ref == CORE_COMMIT:
+            return CORE_COMMIT
+        raise ResolutionError("unexpected ref")
 
     def _seed_materialized_instance(self):
         (self.instance / "config").mkdir(parents=True, exist_ok=True)
@@ -180,7 +207,9 @@ class BrokerProvider:
             (self.control / "deployment.yaml").write_text(
                 yaml.safe_dump(self.contract, sort_keys=False), encoding="utf-8"
             )
-            return MaterializedRepository(self.control, RC_ID, RC_COMMIT, "synthetic/rc")
+            return MaterializedRepository(
+                self.control, RC_ID, self.control_head, "synthetic/rc"
+            )
         if repository_id == CORE_ID:
             if ref != CORE_COMMIT:
                 raise ResolutionError("exact Core unavailable")
@@ -208,9 +237,34 @@ class BrokerProvider:
                     content, encoding="utf-8", newline="\n"
                 )
             return MaterializedRepository(
-                self.instance, INSTANCE_ID, self.instance_head, "synthetic/instance"
+                self.instance,
+                INSTANCE_ID,
+                self.instance_head,
+                "synthetic/instance",
+                tuple(
+                    (path, self.blobs[path])
+                    for path in snapshot_docs
+                    if path in self.blobs
+                ),
             )
         raise ResolutionError("unknown repository")
+
+    def read_materialized_text(self, snapshot, path):
+        self.calls.append(("snapshot_read", snapshot.repository_id, snapshot.commit_sha, path))
+        if snapshot.repository_id != INSTANCE_ID or path not in self.docs:
+            raise ResolutionError("unexpected materialized read")
+        blob_by_path = dict(snapshot.blob_shas or ())
+        if path not in blob_by_path:
+            raise ResolutionError("materialized blob identity is unavailable")
+        content = self.docs[path]
+        blob = blob_by_path[path]
+        if path == READ_PATH and self.promote_after_target_read:
+            self.promote_after_target_read = False
+            self.contract = contract(epoch=2)
+        if path == READ_PATH and self.advance_branch_after_target_read:
+            self.advance_branch_after_target_read = False
+            self.set_generation(4)
+        return content, blob
 
     def release_materialization(self, snapshot):
         self.calls.append((
@@ -223,10 +277,14 @@ class BrokerProvider:
         self.calls.append(("read", repository_id, ref, path))
         if (
             repository_id == RC_ID
-            and ref in {"main", RC_COMMIT}
+            and ref in {"main", self.control_head}
             and path == "deployment.yaml"
         ):
-            return yaml.safe_dump(self.contract, sort_keys=False), "1" * 40, RC_COMMIT
+            return (
+                yaml.safe_dump(self.contract, sort_keys=False),
+                "1" * 40,
+                self.control_head,
+            )
         if (
             repository_id == CORE_ID
             and ref == CORE_COMMIT
@@ -387,7 +445,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             call for call in self.provider.calls if call[0] == "release"
         ]
         self.assertEqual(
-            [("release", RC_ID, RC_COMMIT)],
+            [("release", RC_ID, self.provider.control_head)],
             releases,
         )
 
@@ -886,21 +944,29 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
 
     def test_promotion_during_final_branch_validation_discards_result(self):
         session = self.open()
-        original_read = self.provider.read_text
+        original_snapshot_read = self.provider.read_materialized_text
+        original_resolve = self.provider.resolve_ref
         target_read = False
 
-        def racing_read(repository_id, ref, path):
+        def racing_snapshot_read(snapshot, path):
             nonlocal target_read
-            result = original_read(repository_id, ref, path)
+            result = original_snapshot_read(snapshot, path)
             if path == READ_PATH:
                 target_read = True
-            elif path == RUNTIME_PATH and target_read:
-                # Simulate Runtime-Control promotion immediately after the
-                # final Branch authority/handoff validation read completes.
+            return result
+
+        def racing_resolve(repository_id, ref):
+            nonlocal target_read
+            result = original_resolve(repository_id, ref)
+            if repository_id == INSTANCE_ID and target_read:
+                # Simulate Runtime-Control promotion after final Instance
+                # authority validation but before the final control-head check.
+                target_read = False
                 self.provider.contract = contract(epoch=2)
             return result
 
-        self.provider.read_text = racing_read
+        self.provider.read_materialized_text = racing_snapshot_read
+        self.provider.resolve_ref = racing_resolve
         with self.assertRaisesRegex(GuardRejected, "epoch"):
             self.broker.read_instance_text(session, READ_PATH)
 
@@ -921,28 +987,29 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             "to_generation": 2,
         }, sort_keys=False)
         self.provider.blobs[HANDOFF_PATH] = "3" * 40
-        original_read = self.provider.read_text
-        original_materialize = self.provider.materialize
+        original_snapshot_read = self.provider.read_materialized_text
+        original_resolve = self.provider.resolve_ref
         target_read = False
 
-        def racing_read(repository_id, ref, path):
+        def racing_snapshot_read(snapshot, path):
             nonlocal target_read
-            result = original_read(repository_id, ref, path)
+            result = original_snapshot_read(snapshot, path)
             if path == READ_PATH:
                 target_read = True
             return result
 
-        def racing_materialize(repository_id, ref):
-            result = original_materialize(repository_id, ref)
+        def racing_resolve(repository_id, ref):
+            nonlocal target_read
             if repository_id == INSTANCE_ID and target_read:
+                target_read = False
                 self.provider.set_generation(4)
-            return result
+            return original_resolve(repository_id, ref)
 
-        self.provider.read_text = racing_read
-        self.provider.materialize = racing_materialize
+        self.provider.read_materialized_text = racing_snapshot_read
+        self.provider.resolve_ref = racing_resolve
         with self.assertRaisesRegex(
             GuardRejected,
-            "authority head changed|Branch registry fresh-read failed closed",
+            "generation|authority head changed|Branch registry fresh-read failed closed",
         ):
             self.broker.read_instance_text(session, READ_PATH)
 
@@ -1833,6 +1900,38 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 contract=self.provider.contract,
             )
 
+    def test_pinned_authority_unexpected_exception_releases_snapshot(self):
+        session = self.open()
+        self.provider.calls.clear()
+
+        def unexpected_registry_failure(**kwargs):
+            raise RuntimeError("synthetic unexpected registry failure")
+
+        with mock.patch.object(
+            self.broker,
+            "_read_branch_registry_from_snapshot",
+            side_effect=unexpected_registry_failure,
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError, "unexpected registry failure"
+            ):
+                self.broker._pin_instance_authority(
+                    self.broker._session_state(session)
+                )
+
+        materialized = [
+            call[1]
+            for call in self.provider.calls
+            if call[0] == "materialize"
+        ]
+        released = [
+            call[1]
+            for call in self.provider.calls
+            if call[0] == "release"
+        ]
+        self.assertEqual([INSTANCE_ID], materialized)
+        self.assertEqual([INSTANCE_ID], released)
+
     def test_candidate_cleanup_attempts_all_releases_when_one_fails(self):
         session = self.open()
         released = []
@@ -1893,7 +1992,7 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             for call in self.provider.calls
             if call[0] == "release"
         ]
-        self.assertEqual([CORE_ID, CORE_ID, INSTANCE_ID], released)
+        self.assertEqual([INSTANCE_ID, CORE_ID], released)
 
     def test_revisioned_replacement_rejects_non_advancing_revision_before_cas(self):
         path = READ_PATH
@@ -2248,6 +2347,36 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             )
         self.assertEqual(WRITE_V1, self.provider.docs[WRITE_PATH])
 
+    def test_prewrite_cleanup_failure_blocks_canonical_update(self):
+        session = self.open()
+        self.provider.calls.clear()
+        original_release = self.provider.release_materialization
+        failed_once = False
+
+        def flaky_release(snapshot):
+            nonlocal failed_once
+            if snapshot.repository_id == INSTANCE_ID and not failed_once:
+                failed_once = True
+                raise RuntimeError("synthetic prewrite cleanup failure")
+            original_release(snapshot)
+
+        self.provider.release_materialization = flaky_release
+        with self.assertRaisesRegex(
+            GuardRejected, "materialization cleanup failed"
+        ):
+            self.broker.guarded_update(
+                session,
+                path=WRITE_PATH,
+                content=WRITE_V2,
+                expected_blob_sha="f" * 40,
+                message="cleanup failure must reject before update",
+            )
+
+        self.assertEqual(WRITE_V1, self.provider.docs[WRITE_PATH])
+        self.assertFalse(
+            any(call[0] == "update" for call in self.provider.calls)
+        )
+
     def test_allowed_write_uses_deployment_generation_branch_and_target_cas(self):
         session = self.open()
         self.provider.calls.clear()
@@ -2269,12 +2398,63 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         self.assertEqual(previous_head, update[5])
         names = [call[0] for call in self.provider.calls]
         self.assertLess(names.index("read"), names.index("update"))
+        materialized = [
+            call[1]
+            for call in self.provider.calls
+            if call[0] == "materialize"
+        ]
+        self.assertEqual([INSTANCE_ID, CORE_ID], materialized)
         released = [
             call[1]
             for call in self.provider.calls
             if call[0] == "release"
         ]
-        self.assertEqual([CORE_ID, CORE_ID, INSTANCE_ID], released)
+        self.assertEqual([INSTANCE_ID, CORE_ID], released)
+
+    def test_read_reuses_one_exact_instance_authority_snapshot(self):
+        session = self.open()
+        self.provider.calls.clear()
+        result = self.broker.read_instance_text(session, READ_PATH)
+        self.assertEqual(READ_V1, result.content)
+        materialized = [
+            call[1]
+            for call in self.provider.calls
+            if call[0] == "materialize"
+        ]
+        self.assertEqual([INSTANCE_ID], materialized)
+        self.assertEqual(
+            2,
+            sum(
+                1
+                for call in self.provider.calls
+                if call[:3] == ("resolve", INSTANCE_ID, "main")
+            ),
+        )
+        self.assertEqual(
+            1,
+            sum(
+                1
+                for call in self.provider.calls
+                if call[0] == "read"
+                and call[1] == RC_ID
+                and call[3] == "deployment.yaml"
+            ),
+        )
+        self.assertFalse(
+            any(
+                call[0] == "read" and call[1] == INSTANCE_ID
+                for call in self.provider.calls
+            )
+        )
+        self.assertEqual(
+            1,
+            sum(
+                1
+                for call in self.provider.calls
+                if call[:4]
+                == ("snapshot_read", INSTANCE_ID, INSTANCE_COMMIT, READ_PATH)
+            ),
+        )
 
 
 if __name__ == "__main__":
