@@ -2216,8 +2216,24 @@ class GitCliProvider:
 
 
 class GitHubApiProvider:
-    """GitHub REST materializer and Instance CAS writer."""
-    def __init__(self, token: str | None = None, api_url: str = "https://api.github.com"):
+    """Bounded REST materializer; legacy blob-CAS writes require host opt-in.
+
+    Exact branch-head CAS remains unsupported, so this provider is not a
+    replacement for GitCliProvider on broker-authorized write paths.
+    """
+    def __init__(
+        self,
+        token: str | None = None,
+        api_url: str = "https://api.github.com",
+        *,
+        writable_repository_ids: tuple[int, ...] = (),
+    ):
+        # Host-owned opt-in for legacy blob-CAS callers; never inferred from
+        # token scope, repository content, or a successful read.
+        self.writable_repository_ids = frozenset(
+            _positive_id(value, "writable_repository_ids")
+            for value in writable_repository_ids
+        )
         self.token = token or os.environ.get("LEARNING_OS_GITHUB_TOKEN")
         self.api_url = api_url.rstrip("/")
         self._tempdirs: list[tempfile.TemporaryDirectory] = []
@@ -2254,6 +2270,18 @@ class GitHubApiProvider:
         if owned is not None:
             owned.cleanup()
 
+    @staticmethod
+    def _read_bounded(response, limit: int, where: str) -> bytes:
+        """Bound actual bytes, including responses without Content-Length."""
+        data = bytearray()
+        while True:
+            chunk = response.read(min(64 * 1024, limit - len(data) + 1))
+            if not chunk:
+                return bytes(data)
+            data.extend(chunk)
+            if len(data) > limit:
+                raise ResolutionError(f"{where} exceeds the byte limit")
+
     def _request(self, method: str, path: str, payload: dict | None = None) -> object:
         body = json.dumps(payload).encode() if payload is not None else None
         request = urllib.request.Request(self.api_url + path, data=body, method=method)
@@ -2266,7 +2294,9 @@ class GitHubApiProvider:
             request.add_header("Content-Type", "application/json")
         try:
             with urllib.request.urlopen(request, timeout=30) as response:
-                return json.loads(response.read().decode("utf-8"))
+                return json.loads(self._read_bounded(
+                    response, 2 * MAX_TEXT_BLOB_BYTES, "GitHub JSON response"
+                ).decode("utf-8"))
         except urllib.error.HTTPError as exc:
             if exc.code in (409, 412, 422):
                 raise CasConflict(f"GitHub rejected compare-and-swap ({exc.code})") from None
@@ -2283,13 +2313,16 @@ class GitHubApiProvider:
             request.add_header("Authorization", f"Bearer {self.token}")
         try:
             with urllib.request.urlopen(request, timeout=60) as response:
-                return response.read()
+                return self._read_bounded(
+                    response, MAX_FETCH_OBJECT_BYTES, "GitHub archive response"
+                )
         except urllib.error.HTTPError as exc:
             raise ResolutionError(f"GitHub archive request failed ({exc.code})") from None
         except (urllib.error.URLError, TimeoutError) as exc:
             raise ResolutionError(f"GitHub archive request failed: {exc.__class__.__name__}") from None
 
     def _repo(self, repository_id: int) -> dict:
+        _positive_id(repository_id, "repository_id")
         data = self._request("GET", f"/repositories/{repository_id}")
         if not isinstance(data, dict) or data.get("id") != repository_id:
             raise ResolutionError("GitHub repository numeric identity mismatch")
@@ -2305,12 +2338,84 @@ class GitHubApiProvider:
 
     @staticmethod
     def _safe_output(root: Path, repository_path: str) -> Path:
-        pure = PurePosixPath(repository_path)
-        if pure.is_absolute() or ".." in pure.parts or not pure.parts:
+        pure = GitCliProvider._safe_path(repository_path)
+        if not pure.parts:
             raise ResolutionError("repository tree contains an unsafe path")
         output = root.joinpath(*pure.parts)
         output.parent.mkdir(parents=True, exist_ok=True)
         return output
+
+    @staticmethod
+    def _archive_files(bundle: zipfile.ZipFile) -> list[tuple[zipfile.ZipInfo, str]]:
+        """Validate the complete namespace and expansion budget before writing."""
+        entries = bundle.infolist()
+        if len(entries) > MAX_SNAPSHOT_TREE_ENTRIES:
+            raise ResolutionError("GitHub archive exceeds the entry limit")
+        prefix = None
+        total_size = total_path_bytes = namespace_bytes = 0
+        explicit_paths: set[str] = set()
+        namespaces: tuple[dict[str, tuple[str, bool]], ...] = ({}, {})
+        files: list[tuple[zipfile.ZipInfo, str]] = []
+        for entry in entries:
+            name = entry.filename
+            if entry.orig_filename != name or entry.flag_bits & 1:
+                raise ResolutionError("GitHub archive entry is malformed or encrypted")
+            is_dir = entry.is_dir()
+            raw = name[:-1] if is_dir else name
+            pure = GitCliProvider._safe_path(raw)
+            if not pure.parts:
+                raise ResolutionError("GitHub archive path is malformed")
+            if prefix is None:
+                prefix = pure.parts[0]
+            if pure.parts[0] != prefix:
+                raise ResolutionError("GitHub archive has an ambiguous root")
+            mode = (entry.external_attr >> 16) & 0o170000
+            if mode not in ((0, 0o040000) if is_dir else (0, 0o100000)):
+                raise ResolutionError("snapshot archive contains a non-regular entry")
+            if raw in explicit_paths:
+                raise ResolutionError("GitHub archive contains duplicate entries")
+            explicit_paths.add(raw)
+            if len(pure.parts) == 1:
+                if not is_dir:
+                    raise ResolutionError("GitHub archive path is malformed")
+                continue
+            parts = pure.parts[1:]
+            rel = "/".join(parts)
+            path_bytes = len(rel.encode("utf-8"))
+            total_path_bytes += path_bytes
+            if (
+                len(parts) > MAX_SNAPSHOT_PATH_DEPTH
+                or path_bytes > MAX_SNAPSHOT_PATH_BYTES
+                or any(len(part.encode("utf-8")) > MAX_SNAPSHOT_PATH_COMPONENT_BYTES for part in parts)
+                or total_path_bytes > MAX_SNAPSHOT_EXPANDED_PATH_BYTES
+            ):
+                raise ResolutionError("GitHub archive exceeds the path budget")
+            for depth in range(1, len(parts) + 1):
+                partial = "/".join(parts[:depth])
+                leaf_file = depth == len(parts) and not is_dir
+                keys = GitCliProvider._portable_snapshot_keys(partial)
+                if keys[0] not in namespaces[0]:
+                    namespace_bytes += len(partial.encode("utf-8"))
+                    if (
+                        len(namespaces[0]) >= MAX_SNAPSHOT_TREE_ENTRIES
+                        or namespace_bytes > MAX_SNAPSHOT_EXPANDED_PATH_BYTES
+                    ):
+                        raise ResolutionError("GitHub archive expanded namespace exceeds its budget")
+                for namespace, key in zip(namespaces, keys):
+                    previous = namespace.get(key)
+                    if previous is not None and (previous[0] != partial or previous[1] != leaf_file):
+                        raise ResolutionError("GitHub archive has a portable path collision")
+                    namespace[key] = (partial, leaf_file)
+            if not is_dir:
+                if entry.file_size > MAX_SNAPSHOT_BLOB_BYTES:
+                    raise ResolutionError("GitHub archive file exceeds the size budget")
+                total_size += entry.file_size
+                if total_size > MAX_SNAPSHOT_TOTAL_BLOB_BYTES:
+                    raise ResolutionError("GitHub archive exceeds the total-size budget")
+                files.append((entry, rel))
+        if not files:
+            raise ResolutionError("GitHub archive contains no regular files")
+        return files
 
     def resolve_ref(self, repository_id: int, ref: str) -> str:
         repo = self._repo(repository_id)
@@ -2328,21 +2433,24 @@ class GitHubApiProvider:
         td = tempfile.TemporaryDirectory(prefix="learning-os-snapshot-")
         root = Path(td.name)
         try:
+            if len(archive) > MAX_FETCH_OBJECT_BYTES:
+                raise ResolutionError("GitHub archive exceeds the byte limit")
             with zipfile.ZipFile(BytesIO(archive)) as bundle:
-                files = [entry for entry in bundle.infolist() if not entry.is_dir()]
-                prefixes = {PurePosixPath(entry.filename).parts[0] for entry in files}
-                if len(prefixes) != 1:
-                    raise ResolutionError("GitHub archive has an ambiguous root")
-                prefix = prefixes.pop()
-                for entry in files:
-                    pure = PurePosixPath(entry.filename)
-                    if len(pure.parts) < 2 or pure.parts[0] != prefix:
-                        raise ResolutionError("GitHub archive path is malformed")
-                    unix_mode = (entry.external_attr >> 16) & 0o170000
-                    if unix_mode not in (0, 0o100000):
-                        raise ResolutionError("snapshot archive contains a non-regular file")
-                    rel = PurePosixPath(*pure.parts[1:]).as_posix()
-                    self._safe_output(root, rel).write_bytes(bundle.read(entry))
+                files = self._archive_files(bundle)
+                for entry, rel in files:
+                    output = self._safe_output(root, rel)
+                    with bundle.open(entry) as source, output.open("xb") as target:
+                        written = 0
+                        while True:
+                            chunk = source.read(min(64 * 1024, entry.file_size - written + 1))
+                            if not chunk:
+                                break
+                            written += len(chunk)
+                            if written > entry.file_size or written > MAX_SNAPSHOT_BLOB_BYTES:
+                                raise ResolutionError("GitHub archive expanded beyond its size budget")
+                            target.write(chunk)
+                        if written != entry.file_size:
+                            raise ResolutionError("GitHub archive entry size is inconsistent")
         except zipfile.BadZipFile:
             td.cleanup()
             raise ResolutionError("GitHub archive is not a valid ZIP") from None
@@ -2400,6 +2508,12 @@ class GitHubApiProvider:
             raise CasConflict(
                 "exact branch-head CAS is unsupported by GitHub REST provider"
             )
+        _positive_id(repository_id, "repository_id")
+        if repository_id not in self.writable_repository_ids:
+            raise GuardRejected("GitHub repository binding is read-only")
+        GitCliProvider._safe_path(path)
+        if len(content.encode("utf-8")) > MAX_TEXT_BLOB_BYTES:
+            raise GuardRejected("GitHub write exceeds the text byte limit")
         repo = self._repo(repository_id)
         full_name = _nonempty(repo.get("full_name"), "repository.full_name")
         if not EXACT_COMMIT.fullmatch(str(expected_blob_sha)):

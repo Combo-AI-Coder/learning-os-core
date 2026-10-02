@@ -55,3 +55,15 @@ materialized.
 Core mutation follows PR-required governance. Deployed Runtime resolves and
 reads the exact Core commit pinned by Runtime-Control; advancement of this
 repository's `main` branch alone does not change the deployed Core.
+
+## REST provider safety and compatibility
+
+`GitHubApiProvider` is read-only by default and bounds response/archive expansion.
+It uses the same portable path policy as the Git CLI provider. Legacy Contents API
+blob-CAS callers must explicitly opt into numeric repository identities with the
+keyword-only `writable_repository_ids` constructor argument, using host-trusted
+configuration. A token with write scope is not this opt-in.
+
+The REST provider still rejects exact branch-head CAS, even with an allowlist;
+it is not a replacement for `GitCliProvider` on broker-authorized write paths.
+See `docs/audits/2026-10-02-rest-provider.md` for tests and remaining limits.
