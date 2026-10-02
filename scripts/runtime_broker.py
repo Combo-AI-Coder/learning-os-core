@@ -407,6 +407,10 @@ class RuntimeSessionBroker:
         self.write_admission = write_admission
         self._session_condition = threading.Condition()
         self._issued_sessions: dict[str, _IssuedSessionRecord] = {}
+        self._write_policy_cache_lock = threading.Lock()
+        self._verified_core_write_policy_fingerprints: dict[
+            tuple[int, str], str
+        ] = {}
 
     def close_session(self, session: LearningRuntimeSession) -> None:
         """Revoke one capability and drain operations already using it."""
@@ -1326,84 +1330,116 @@ class RuntimeSessionBroker:
                 "repository materialization cleanup failed"
             ) from first_error
 
+    def _verified_deployed_core_write_policy_fingerprint(
+        self,
+        state: _LearningRuntimeSessionState,
+        *,
+        core_snapshot: MaterializedRepository | None = None,
+    ) -> str:
+        key = (
+            state.deployment.core_repository_id,
+            state.deployment.core_commit,
+        )
+        if core_snapshot is not None and (
+            core_snapshot.repository_id != key[0]
+            or core_snapshot.commit_sha != key[1]
+        ):
+            raise GuardRejected(
+                "deployed Core write policy provenance changed during validation"
+            )
+
+        with self._write_policy_cache_lock:
+            cached = self._verified_core_write_policy_fingerprints.get(key)
+            if cached is not None:
+                return cached
+
+            snapshots: list[MaterializedRepository] = []
+            core = core_snapshot
+            if core is None:
+                core = self.provider.materialize(key[0], key[1])
+                snapshots.append(core)
+            try:
+                if core.repository_id != key[0] or core.commit_sha != key[1]:
+                    raise GuardRejected(
+                        "deployed Core write policy provenance changed during validation"
+                    )
+                core_config_path = core.root / "config" / "core.yaml"
+                validator_path = core.root / "scripts" / "validate_learning_os.py"
+                if not core_config_path.is_file() or not validator_path.is_file():
+                    raise GuardRejected(
+                        "deployed Core write policy implementation is unavailable"
+                    )
+                try:
+                    core_config = yaml.safe_load(
+                        core_config_path.read_text(encoding="utf-8")
+                    )
+                except (OSError, UnicodeError, yaml.YAMLError) as exc:
+                    raise GuardRejected(
+                        "deployed Core write policy declaration is unreadable: "
+                        f"{exc.__class__.__name__}"
+                    ) from None
+                manifest = (
+                    core_config.get("manifest")
+                    if isinstance(core_config, dict)
+                    else None
+                )
+                declared_fingerprint = (
+                    manifest.get("runtime_session_write_policy_fingerprint")
+                    if isinstance(manifest, dict)
+                    else None
+                )
+                command = [
+                    sys.executable,
+                    str(validator_path),
+                    "--write-policy-fingerprint",
+                ]
+                implementation_fingerprint = (
+                    _compute_bounded_write_policy_fingerprint(
+                        command, cwd=core.root
+                    )
+                )
+                if (
+                    len(implementation_fingerprint) != 64
+                    or any(
+                        char not in "0123456789abcdef"
+                        for char in implementation_fingerprint
+                    )
+                ):
+                    raise GuardRejected(
+                        "deployed Core write policy computation failed closed"
+                    )
+                if implementation_fingerprint != declared_fingerprint:
+                    raise GuardRejected(
+                        "deployed Core manifest write policy does not match "
+                        "the exact deployed implementation"
+                    )
+            finally:
+                self._release_materializations(snapshots)
+
+            # One RuntimeSessionBroker follows one Runtime-Control deployment.
+            # Retain only the most recently verified exact Core identity so
+            # long-lived hosts do not accumulate historical promotion entries.
+            self._verified_core_write_policy_fingerprints.clear()
+            self._verified_core_write_policy_fingerprints[key] = (
+                implementation_fingerprint
+            )
+            return implementation_fingerprint
+
     def _assert_deployed_write_policy_compatible(
         self,
         state: _LearningRuntimeSessionState,
         *,
         core_snapshot: MaterializedRepository | None = None,
     ) -> None:
-        snapshots: list[MaterializedRepository] = []
-        try:
-            core = core_snapshot
-            if core is None:
-                core = self.provider.materialize(
-                    state.deployment.core_repository_id,
-                    state.deployment.core_commit,
-                )
-                snapshots.append(core)
-            if (
-                core.repository_id != state.deployment.core_repository_id
-                or core.commit_sha != state.deployment.core_commit
-            ):
-                raise GuardRejected(
-                    "deployed Core write policy provenance changed during validation"
-                )
-            core_config_path = core.root / "config" / "core.yaml"
-            validator_path = core.root / "scripts" / "validate_learning_os.py"
-            if not core_config_path.is_file() or not validator_path.is_file():
-                raise GuardRejected(
-                    "deployed Core write policy implementation is unavailable"
-                )
-            try:
-                core_config = yaml.safe_load(
-                    core_config_path.read_text(encoding="utf-8")
-                )
-            except (OSError, UnicodeError, yaml.YAMLError) as exc:
-                raise GuardRejected(
-                    "deployed Core write policy declaration is unreadable: "
-                    f"{exc.__class__.__name__}"
-                ) from None
-            manifest = (
-                core_config.get("manifest")
-                if isinstance(core_config, dict)
-                else None
+        implementation_fingerprint = (
+            self._verified_deployed_core_write_policy_fingerprint(
+                state, core_snapshot=core_snapshot
             )
-            declared_fingerprint = (
-                manifest.get("runtime_session_write_policy_fingerprint")
-                if isinstance(manifest, dict)
-                else None
+        )
+        if implementation_fingerprint != instance_write_policy_fingerprint():
+            raise GuardRejected(
+                "Runtime broker write policy does not match the exact deployed Core"
             )
-            command = [
-                sys.executable,
-                str(validator_path),
-                "--write-policy-fingerprint",
-            ]
-            implementation_fingerprint = (
-                _compute_bounded_write_policy_fingerprint(
-                    command, cwd=core.root
-                )
-            )
-            if (
-                len(implementation_fingerprint) != 64
-                or any(
-                    char not in "0123456789abcdef"
-                    for char in implementation_fingerprint
-                )
-            ):
-                raise GuardRejected(
-                    "deployed Core write policy computation failed closed"
-                )
-            if implementation_fingerprint != declared_fingerprint:
-                raise GuardRejected(
-                    "deployed Core manifest write policy does not match "
-                    "the exact deployed implementation"
-                )
-            if implementation_fingerprint != instance_write_policy_fingerprint():
-                raise GuardRejected(
-                    "Runtime broker write policy does not match the exact deployed Core"
-                )
-        finally:
-            self._release_materializations(snapshots)
 
     @staticmethod
     def _assert_replace_role_compatible(
