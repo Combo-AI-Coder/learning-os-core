@@ -22,9 +22,39 @@ Read only the persistent state that can change the startup decision:
 
 Do not ask again for learner-authoritative information already recorded unless it is ambiguous, stale because of an explicit newer statement, or newly decision-relevant in a different scope.
 
-## 2. Compact intake
+## 2. Learner-controlled intake depth
 
-Collect only missing information likely to materially change the initial route. Prefer one compact intake message.
+Resolve depth in this order: **current explicit instruction > Topic preference >
+learner-global preference > Core default (`balanced`)**. The pure reference
+resolver is `scripts/intake_policy.py`; it returns depth, source and question scope,
+not a teaching plan or permission to write.
+
+- `minimal`: ask only missing route-blocking information; otherwise start a
+  provisional route and learn more through natural observation.
+- `balanced`: preserve the existing compact intake; ask missing information likely
+  to materially change the initial route, preferably in one message.
+- `thorough`: invite a deeper but still relevant discussion of background, goals,
+  constraints and preferences before settling the route. Do not turn this into an
+  exhaustive questionnaire, mandatory placement test, or a gate to starting.
+
+A current request to ask fewer questions can select `minimal` for this intake
+without changing a durable default. A request to first understand more background
+can select `thorough`. Persist a Topic/global default only when the learner
+explicitly chooses that durable scope; a default for future new Topics is global
+rather than an inferred Topic preference. Briefly explain the effective choice
+when material, and let the learner change or reset it. Remove the scoped
+`intake_depth` key to restore inheritance.
+
+`goal.preferences.intake_depth` in the existing Topic Goal owns a Topic override;
+`preferences.intake_depth` in the existing lazy Learner Execution document owns a
+learner-global default. Never eagerly create either document just to store
+`balanced`, copy a one-turn instruction into global state, or store preferences in
+Core/Runtime-Control. Existing generation, role, revision and CAS guards still apply.
+
+In every mode, use already-known context instead of asking again. A current request
+to start immediately takes precedence over intake depth (`defer_intake`); begin a
+provisional route and handle only genuinely blocking uncertainty without a survey.
+Depth changes neither evidence/Knowledge semantics nor privacy or write authority.
 
 High-value fields, when unknown and relevant:
 
