@@ -12,6 +12,7 @@ from unittest import mock
 
 import yaml
 
+import scripts.runtime_broker as runtime_broker
 from scripts.runtime_adapter import (
     CasConflict,
     DeploymentResolver,
@@ -2239,6 +2240,10 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         self.assertFalse(
             any(call[0] == "update" for call in self.provider.calls)
         )
+        self.assertEqual(
+            {},
+            self.broker._verified_core_write_policy_fingerprints,
+        )
 
     def test_deployed_write_policy_manifest_mismatch_fails_before_update(self):
         session = self.open()
@@ -2270,6 +2275,10 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             )
         self.assertFalse(
             any(call[0] == "update" for call in self.provider.calls)
+        )
+        self.assertEqual(
+            {},
+            self.broker._verified_core_write_policy_fingerprints,
         )
 
     def test_deployed_write_policy_is_computed_from_exact_core_code(self):
@@ -2306,6 +2315,281 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         self.assertFalse(
             any(call[0] == "update" for call in self.provider.calls)
         )
+
+    def test_deployed_core_policy_verification_is_cached_but_host_policy_rechecked(self):
+        session = self.open()
+        state = self.broker._session_state(session)
+        core_root = self.deployed_core_snapshot()
+        core = MaterializedRepository(
+            core_root, CORE_ID, CORE_COMMIT, "synthetic/core"
+        )
+        expected = runtime_broker.instance_write_policy_fingerprint()
+        real_compute = runtime_broker._compute_bounded_write_policy_fingerprint
+        real_host = runtime_broker.instance_write_policy_fingerprint
+
+        with mock.patch.object(
+            runtime_broker,
+            "_compute_bounded_write_policy_fingerprint",
+            wraps=real_compute,
+        ) as compute_policy, mock.patch.object(
+            runtime_broker,
+            "instance_write_policy_fingerprint",
+            wraps=real_host,
+        ) as host_policy:
+            self.broker._assert_deployed_write_policy_compatible(
+                state, core_snapshot=core
+            )
+            self.broker._assert_deployed_write_policy_compatible(
+                state, core_snapshot=core
+            )
+
+        self.assertEqual(1, compute_policy.call_count)
+        self.assertEqual(2, host_policy.call_count)
+        self.assertEqual(
+            {(CORE_ID, CORE_COMMIT): expected},
+            self.broker._verified_core_write_policy_fingerprints,
+        )
+
+    def test_malformed_core_policy_fingerprint_does_not_populate_cache(self):
+        session = self.open()
+        state = self.broker._session_state(session)
+        core_root = self.deployed_core_snapshot()
+        core = MaterializedRepository(
+            core_root, CORE_ID, CORE_COMMIT, "synthetic/core"
+        )
+
+        for malformed in ("abc", "g" * 64):
+            self.broker._verified_core_write_policy_fingerprints.clear()
+            with mock.patch.object(
+                runtime_broker,
+                "_compute_bounded_write_policy_fingerprint",
+                return_value=malformed,
+            ):
+                with self.assertRaisesRegex(
+                    GuardRejected,
+                    "write policy computation failed closed",
+                ):
+                    self.broker._verified_deployed_core_write_policy_fingerprint(
+                        state, core_snapshot=core
+                    )
+            self.assertEqual(
+                {},
+                self.broker._verified_core_write_policy_fingerprints,
+            )
+
+    def test_warm_core_policy_cache_hit_without_snapshot_does_not_materialize(self):
+        session = self.open()
+        state = self.broker._session_state(session)
+        core_root = self.deployed_core_snapshot()
+        core = MaterializedRepository(
+            core_root, CORE_ID, CORE_COMMIT, "synthetic/core"
+        )
+        expected = runtime_broker.instance_write_policy_fingerprint()
+
+        with mock.patch.object(
+            runtime_broker,
+            "_compute_bounded_write_policy_fingerprint",
+            return_value=expected,
+        ) as compute_policy:
+            self.broker._assert_deployed_write_policy_compatible(
+                state, core_snapshot=core
+            )
+            original_materialize = self.provider.materialize
+
+            def reject_core_materialize(repository_id, ref):
+                if repository_id == CORE_ID:
+                    raise AssertionError("warm policy cache must not materialize Core")
+                return original_materialize(repository_id, ref)
+
+            self.provider.materialize = reject_core_materialize
+            self.broker._assert_deployed_write_policy_compatible(state)
+
+        self.assertEqual(1, compute_policy.call_count)
+
+    def test_concurrent_core_policy_cache_miss_computes_once(self):
+        session = self.open()
+        state = self.broker._session_state(session)
+        core_root = self.deployed_core_snapshot()
+        core = MaterializedRepository(
+            core_root, CORE_ID, CORE_COMMIT, "synthetic/core"
+        )
+        expected = runtime_broker.instance_write_policy_fingerprint()
+        barrier = threading.Barrier(6)
+        errors = []
+
+        def worker():
+            try:
+                barrier.wait()
+                self.broker._assert_deployed_write_policy_compatible(
+                    state, core_snapshot=core
+                )
+            except Exception as exc:
+                errors.append(exc)
+
+        with mock.patch.object(
+            runtime_broker,
+            "_compute_bounded_write_policy_fingerprint",
+            return_value=expected,
+        ) as compute_policy:
+            threads = [
+                threading.Thread(target=worker)
+                for _ in range(6)
+            ]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join(timeout=5)
+
+        self.assertTrue(all(not thread.is_alive() for thread in threads))
+        self.assertEqual([], errors)
+        self.assertEqual(1, compute_policy.call_count)
+        self.assertEqual(
+            {(CORE_ID, CORE_COMMIT): expected},
+            self.broker._verified_core_write_policy_fingerprints,
+        )
+
+    def test_cached_core_policy_still_fails_on_host_policy_drift(self):
+        session = self.open()
+        state = self.broker._session_state(session)
+        core_root = self.deployed_core_snapshot()
+        core = MaterializedRepository(
+            core_root, CORE_ID, CORE_COMMIT, "synthetic/core"
+        )
+        expected = runtime_broker.instance_write_policy_fingerprint()
+
+        with mock.patch.object(
+            runtime_broker,
+            "_compute_bounded_write_policy_fingerprint",
+            return_value=expected,
+        ) as compute_policy, mock.patch.object(
+            runtime_broker,
+            "instance_write_policy_fingerprint",
+            side_effect=[expected, "0" * 64],
+        ) as host_policy:
+            self.broker._assert_deployed_write_policy_compatible(
+                state, core_snapshot=core
+            )
+            with self.assertRaisesRegex(
+                GuardRejected,
+                "Runtime broker write policy does not match",
+            ):
+                self.broker._assert_deployed_write_policy_compatible(
+                    state, core_snapshot=core
+                )
+
+        self.assertEqual(1, compute_policy.call_count)
+        self.assertEqual(2, host_policy.call_count)
+
+    def test_deployed_core_policy_cache_is_keyed_by_exact_core_identity(self):
+        session = self.open()
+        state = self.broker._session_state(session)
+        core_root = self.deployed_core_snapshot()
+        expected = runtime_broker.instance_write_policy_fingerprint()
+        next_commit = "b" * 40
+        next_state = replace(
+            state,
+            deployment=replace(
+                state.deployment,
+                core_commit=next_commit,
+            ),
+        )
+        first = MaterializedRepository(
+            core_root, CORE_ID, CORE_COMMIT, "synthetic/core"
+        )
+        second = MaterializedRepository(
+            core_root, CORE_ID, next_commit, "synthetic/core"
+        )
+
+        with mock.patch.object(
+            runtime_broker,
+            "_compute_bounded_write_policy_fingerprint",
+            return_value=expected,
+        ) as compute_policy:
+            self.broker._assert_deployed_write_policy_compatible(
+                state, core_snapshot=first
+            )
+            self.broker._assert_deployed_write_policy_compatible(
+                next_state, core_snapshot=second
+            )
+
+        self.assertEqual(2, compute_policy.call_count)
+        self.assertEqual(
+            {(CORE_ID, next_commit): expected},
+            self.broker._verified_core_write_policy_fingerprints,
+        )
+
+    def test_failed_core_policy_cleanup_does_not_populate_cache(self):
+        session = self.open()
+        state = self.broker._session_state(session)
+        expected = runtime_broker.instance_write_policy_fingerprint()
+        original_release = self.provider.release_materialization
+        failed_once = False
+
+        def flaky_release(snapshot):
+            nonlocal failed_once
+            if snapshot.repository_id == CORE_ID and not failed_once:
+                failed_once = True
+                raise RuntimeError("synthetic Core cleanup failure")
+            return original_release(snapshot)
+
+        self.provider.release_materialization = flaky_release
+        with mock.patch.object(
+            runtime_broker,
+            "_compute_bounded_write_policy_fingerprint",
+            return_value=expected,
+        ) as compute_policy:
+            with self.assertRaisesRegex(
+                GuardRejected,
+                "materialization cleanup failed",
+            ):
+                self.broker._verified_deployed_core_write_policy_fingerprint(
+                    state
+                )
+            self.assertEqual(
+                {},
+                self.broker._verified_core_write_policy_fingerprints,
+            )
+            self.broker._verified_deployed_core_write_policy_fingerprint(
+                state
+            )
+
+        self.assertEqual(2, compute_policy.call_count)
+        self.assertEqual(
+            {(CORE_ID, CORE_COMMIT): expected},
+            self.broker._verified_core_write_policy_fingerprints,
+        )
+
+    def test_cached_core_policy_does_not_bypass_snapshot_provenance(self):
+        session = self.open()
+        state = self.broker._session_state(session)
+        core_root = self.deployed_core_snapshot()
+        expected = runtime_broker.instance_write_policy_fingerprint()
+        correct = MaterializedRepository(
+            core_root, CORE_ID, CORE_COMMIT, "synthetic/core"
+        )
+        wrong_commit = MaterializedRepository(
+            core_root, CORE_ID, "b" * 40, "synthetic/core"
+        )
+        wrong_repository = MaterializedRepository(
+            core_root, CORE_ID + 1, CORE_COMMIT, "synthetic/core"
+        )
+
+        with mock.patch.object(
+            runtime_broker,
+            "_compute_bounded_write_policy_fingerprint",
+            return_value=expected,
+        ):
+            self.broker._assert_deployed_write_policy_compatible(
+                state, core_snapshot=correct
+            )
+            for wrong in (wrong_commit, wrong_repository):
+                with self.assertRaisesRegex(
+                    GuardRejected,
+                    "provenance changed",
+                ):
+                    self.broker._assert_deployed_write_policy_compatible(
+                        state, core_snapshot=wrong
+                    )
 
     def test_invalid_candidate_state_is_rejected_before_provider_update(self):
         session = self.open()
