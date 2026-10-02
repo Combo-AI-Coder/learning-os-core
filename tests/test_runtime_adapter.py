@@ -1338,15 +1338,24 @@ class GitCliProviderTests(unittest.TestCase):
                     ])
 
     def test_relative_filesystem_remote_is_stabilized_at_construction(self):
-        relative = os.path.relpath(self.remote, Path.cwd())
-        provider = GitCliProvider([
-            GitRepositoryBinding(self.REPO_ID, relative)
-        ])
-        self.addCleanup(provider.close)
+        from contextlib import chdir
+
+        # Hosted Windows may put the checkout and temporary files on different
+        # drives. A relative remote only exists within one filesystem, so own
+        # both the construction directory and remote in the synthetic fixture.
+        with chdir(self.root):
+            relative = os.path.relpath(self.remote, Path.cwd())
+            expected_remote = os.path.abspath(relative)
+            provider = GitCliProvider([
+                GitRepositoryBinding(self.REPO_ID, relative)
+            ])
+            self.addCleanup(provider.close)
         binding = provider._binding(self.REPO_ID)
         self.assertTrue(os.path.isabs(binding.remote))
-        self.assertEqual(os.path.abspath(relative), binding.remote)
-        snapshot = provider.materialize(self.REPO_ID, "main")
+        self.assertEqual(expected_remote, binding.remote)
+        # Verify stabilization after the caller actually changes directories.
+        with chdir(self.seed):
+            snapshot = provider.materialize(self.REPO_ID, "main")
         self.assertEqual(self.initial_commit, snapshot.commit_sha)
 
     def test_ambient_netrc_credentials_are_not_inherited(self):

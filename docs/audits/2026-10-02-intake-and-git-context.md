@@ -87,3 +87,19 @@ independent security assessment or formal proof.
 The prior REST provider hardening is already in baseline PR #26; this work does
 not re-credit those changes. There is no Runtime-Control pin/epoch update, live
 Instance write, canary activation, main-branch merge or production promotion.
+
+## 5. Hosted Windows fixture correction
+
+The first hosted run, `37030858220` at `55c9bdf`, passed Linux but found one
+Windows fixture error in 503 tests. The pre-existing relative-filesystem-remote
+test called `os.path.relpath` from the checkout on drive D: to a temporary remote
+on drive C:. That relative path cannot exist; the exception happened before any
+provider operation. All intake and new Git-context controls passed in that run.
+
+The fixture now constructs the relative remote from its own temporary directory,
+then explicitly changes the caller directory before materialization. It preserves
+the absolute-binding and exact-commit assertions and strengthens the actual
+stabilization check. No production code, platform skip or CI error suppression
+is introduced. The focused test passes on native Windows and Linux. Hosted
+verification for the correction is recorded in the accompanying PR checks; the
+failed first run is retained as evidence rather than being described as a pass.
