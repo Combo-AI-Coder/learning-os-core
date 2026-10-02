@@ -1014,6 +1014,35 @@ class GitCliProviderTests(unittest.TestCase):
         self.assertEqual(self.initial_blob, blob)
         self.assertEqual(self.initial_commit, commit)
 
+    def test_materialized_text_reuses_exact_snapshot_blob_identity(self):
+        provider = self.provider()
+        snapshot = provider.materialize(self.REPO_ID, "main")
+        self.addCleanup(provider.release_materialization, snapshot)
+        with mock.patch.object(
+            provider,
+            "_checkout",
+            side_effect=AssertionError("materialized read must not refetch"),
+        ):
+            text, blob = provider.read_materialized_text(
+                snapshot, "state.txt"
+            )
+        self.assertEqual("one\n", text)
+        self.assertEqual(self.initial_blob, blob)
+        self.assertEqual(
+            self.initial_blob,
+            dict(snapshot.blob_shas or ())["state.txt"],
+        )
+
+    def test_materialized_text_rejects_blob_above_runtime_limit(self):
+        provider = self.provider()
+        snapshot = provider.materialize(self.REPO_ID, "main")
+        self.addCleanup(provider.release_materialization, snapshot)
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_TEXT_BLOB_BYTES", 3
+        ):
+            with self.assertRaisesRegex(ResolutionError, "exceeds"):
+                provider.read_materialized_text(snapshot, "state.txt")
+
     def test_read_text_rejects_blob_above_runtime_limit_before_buffering(self):
         provider = self.provider()
         with mock.patch(
@@ -1540,6 +1569,53 @@ class GitCliProviderTests(unittest.TestCase):
         self.assertEqual(
             self.initial_commit,
             self._git("--git-dir", str(self.remote), "rev-parse", "refs/heads/main"),
+        )
+
+    def test_resolve_ref_rejects_unsafe_ref_before_remote_access(self):
+        provider = self.provider()
+        with mock.patch.object(
+            provider,
+            "_git",
+            wraps=provider._git,
+        ) as git_call:
+            with self.assertRaisesRegex(ResolutionError, "unsafe"):
+                provider.resolve_ref(self.REPO_ID, "-bad")
+        self.assertFalse(
+            any(
+                call.args and call.args[0] == "ls-remote"
+                for call in git_call.call_args_list
+            )
+        )
+
+    def test_resolve_ref_rejects_ambiguous_short_ref_and_peels_tag(self):
+        self._git("branch", "release", cwd=self.seed)
+        self._git("tag", "-a", "release", "-m", "release", cwd=self.seed)
+        self._git(
+            "push", "-q", "origin",
+            "refs/heads/release:refs/heads/release",
+            "refs/tags/release:refs/tags/release",
+            cwd=self.seed,
+        )
+        provider = self.provider()
+        with self.assertRaisesRegex(ResolutionError, "ambiguous"):
+            provider.resolve_ref(self.REPO_ID, "release")
+        self.assertEqual(
+            self.initial_commit,
+            provider.resolve_ref(self.REPO_ID, "refs/tags/release"),
+        )
+
+    def test_resolve_ref_returns_branch_head_without_checkout(self):
+        provider = self.provider()
+        with mock.patch.object(
+            provider,
+            "_checkout",
+            side_effect=AssertionError("resolve_ref must not materialize"),
+        ):
+            resolved = provider.resolve_ref(self.REPO_ID, "main")
+        self.assertEqual(self.initial_commit, resolved)
+        self.assertEqual(
+            self.initial_commit,
+            provider.resolve_ref(self.REPO_ID, self.initial_commit),
         )
 
     def test_fully_qualified_branch_and_tag_refs_resolve(self):
@@ -2105,6 +2181,31 @@ class GitHubApiProviderTests(unittest.TestCase):
         provider.close()
         with self.assertRaisesRegex(ResolutionError, "closed"):
             provider.materialize(self.REPO_ID, "main")
+
+    def test_resolve_ref_uses_commit_resolution_without_materialization(self):
+        provider = GitHubApiProvider(
+            token="synthetic-token",
+            api_url="https://example.invalid",
+        )
+        self.addCleanup(provider.close)
+        provider._repo = lambda repository_id: {
+            "id": repository_id,
+            "full_name": "synthetic/instance",
+        }
+        calls = []
+
+        def request(method, path, payload=None):
+            calls.append((method, path, payload))
+            if method == "GET" and path.endswith("/commits/main"):
+                return {"sha": self.HEAD}
+            raise AssertionError(f"unexpected request: {method} {path}")
+
+        provider._request = request
+        self.assertEqual(self.HEAD, provider.resolve_ref(self.REPO_ID, "main"))
+        self.assertEqual(
+            [("GET", "/repos/synthetic/instance/commits/main", None)],
+            calls,
+        )
 
     def test_read_text_pins_content_to_resolved_commit(self):
         provider = GitHubApiProvider(
