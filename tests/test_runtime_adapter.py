@@ -2075,10 +2075,11 @@ class GitHubApiProviderTests(unittest.TestCase):
     NEW_TREE = "5" * 40
     NEW_COMMIT = "6" * 40
 
-    def provider(self, *, current_head=None):
+    def provider(self, *, current_head=None, writable_repository_ids=()):
         provider = GitHubApiProvider(
             token="synthetic-token",
             api_url="https://example.invalid",
+            writable_repository_ids=writable_repository_ids,
         )
         self.addCleanup(provider.close)
         provider.calls = []
@@ -2259,8 +2260,8 @@ class GitHubApiProviderTests(unittest.TestCase):
         provider._repo.assert_not_called()
         self.assertEqual([], provider.calls)
 
-    def test_legacy_contents_update_remains_available_without_head_cas(self):
-        provider = self.provider()
+    def test_legacy_contents_update_requires_explicit_opt_in_without_head_cas(self):
+        provider = self.provider(writable_repository_ids=(self.REPO_ID,))
         result = provider.update_text(
             self.REPO_ID,
             "main",
