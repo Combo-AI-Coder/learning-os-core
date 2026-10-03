@@ -2515,6 +2515,10 @@ class GitHubApiProvider:
             raise ResolutionError("GitHub content is not valid base64") from None
         if len(raw) > MAX_TEXT_BLOB_BYTES:
             raise ResolutionError("GitHub text exceeds the Runtime read limit")
+        # validate=True checks alphabet/padding placement, not unused pad bits.
+        # Compare the canonical encoding after accepting only CR/LF wrapping.
+        if base64.b64encode(raw).decode("ascii") != encoded:
+            raise ResolutionError("GitHub content is not canonical base64")
         try:
             text = raw.decode("utf-8")
         except UnicodeError:

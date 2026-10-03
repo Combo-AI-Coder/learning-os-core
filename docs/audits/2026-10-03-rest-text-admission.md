@@ -9,7 +9,7 @@ GitHubApiProvider text reads must reject malformed or oversized inputs rather th
 1. Validate the requested path with the shared portable-path validator before repository lookup or any network call; require a file path rather than a root directory.
 2. Resolve the requested ref to an exact commit and request content at that immutable commit.
 3. Require an object describing a file with base64 encoding and an exact 40-character hexadecimal blob identity.
-4. Accept GitHub's CR/LF line wrapping, but reject other non-base64 bytes and malformed encodings rather than silently discarding them.
+4. Accept GitHub's CR/LF line wrapping, but reject other non-base64 bytes and malformed encodings rather than silently discarding them. Compare the decoded bytes' canonical re-encoding to reject nonzero unused pad bits as well as alphabet/padding-placement errors.
 5. Check both the encoded upper bound and actual decoded byte length against the text budget, then decode UTF-8 strictly.
 6. Preserve empty files, valid Unicode, exact-budget inputs and immutable content addressing.
 

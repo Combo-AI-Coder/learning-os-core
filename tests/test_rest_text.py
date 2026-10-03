@@ -68,3 +68,10 @@ class RestTextTests(unittest.TestCase):
                 p = self.provider(**change)
                 with self.assertRaises(adapter.ResolutionError):
                     p.read_text(RID, 'main', 'state.txt')
+
+    def test_nonzero_base64_pad_bits_are_not_canonical_content(self):
+        for value in ("AB==", "AAF=", "//==", "aGVsbG9="):
+            with self.subTest(value=value):
+                p = self.provider(content=value)
+                with self.assertRaises(adapter.ResolutionError):
+                    p.read_text(RID, "main", "state.txt")
