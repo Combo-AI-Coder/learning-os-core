@@ -425,6 +425,33 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             shutil.copy2(ROOT / "scripts" / filename, root / "scripts" / filename)
         return root
 
+    def test_open_rejects_numeric_generation_aliases(self):
+        for generation, alias in ((1, True), (1, 1.0), (3, 3.0)):
+            with self.subTest(generation=generation, alias=alias):
+                self.provider.set_generation(generation)
+                with self.assertRaises(ResolutionError):
+                    self.open(expected_generation=alias)
+
+    def test_open_rejects_invalid_generation_before_provider_io(self):
+        for value in (False, 0, -1, "3", [], {}, 3.0, float("nan")):
+            with self.subTest(value=value):
+                self.provider.calls.clear()
+                with self.assertRaises(ResolutionError):
+                    self.open(expected_generation=value)
+                self.assertEqual([], self.provider.calls)
+
+    def test_read_only_open_may_omit_expected_generation(self):
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=RuntimeCapabilityPolicy(readable_roots=("learner",)),
+        )
+        self.assertEqual(3, self.broker._session_state(session).binding.generation)
+        self.broker.close_session(session)
+
+    def test_dot_is_not_a_canonical_capability_root(self):
+        with self.assertRaises(ResolutionError):
+            RuntimeCapabilityPolicy(readable_roots=(".",))
+
     def test_open_session_binds_active_branch_generation(self):
         session = self.open(expected_generation=3)
         state = self.broker._session_state(session)
