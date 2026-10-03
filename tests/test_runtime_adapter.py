@@ -2262,6 +2262,7 @@ class GitHubApiProviderTests(unittest.TestCase):
             expected = f"/contents/state.txt?ref={self.HEAD}"
             if method == "GET" and expected in path:
                 return {
+                    "type": "file",
                     "encoding": "base64",
                     "content": base64.b64encode(b"state-v1\n").decode("ascii"),
                     "sha": self.TARGET_BLOB,

@@ -2483,22 +2483,43 @@ class GitHubApiProvider:
         return text, blob_sha
 
     def read_text(self, repository_id: int, ref: str, path: str) -> tuple[str, str, str]:
+        pure = GitCliProvider._safe_path(path)
+        if not pure.parts:
+            raise ResolutionError("GitHub text path must identify a file")
         repo = self._repo(repository_id)
         full_name = _nonempty(repo.get("full_name"), "repository.full_name")
         commit = self._commit(full_name, ref)
-        quoted_path = urllib.parse.quote(path, safe="/")
+        quoted_path = urllib.parse.quote(pure.as_posix(), safe="/")
         quoted_commit = urllib.parse.quote(commit, safe="")
         data = self._request(
             "GET",
             f"/repos/{full_name}/contents/{quoted_path}?ref={quoted_commit}",
         )
-        if not isinstance(data, dict) or data.get("encoding") != "base64":
-            raise ResolutionError("GitHub content response is malformed")
+        if (not isinstance(data, dict) or data.get("type") != "file"
+                or data.get("encoding") != "base64"):
+            raise ResolutionError("GitHub content response is not a base64 file")
+        blob_sha = data.get("sha")
+        if not isinstance(blob_sha, str) or not EXACT_COMMIT.fullmatch(blob_sha):
+            raise ResolutionError("GitHub content returned no exact blob SHA")
+        encoded = data.get("content")
+        if not isinstance(encoded, str):
+            raise ResolutionError("GitHub content is not valid base64")
+        # GitHub wraps base64 with newlines. Accept CR/LF, not arbitrary junk
+        # silently discarded by b64decode's permissive default.
+        encoded = encoded.replace("\r", "").replace("\n", "")
+        if len(encoded) > 4 * ((MAX_TEXT_BLOB_BYTES + 2) // 3):
+            raise ResolutionError("GitHub text exceeds the Runtime read limit")
         try:
-            text = base64.b64decode(data["content"]).decode("utf-8")
-        except (KeyError, TypeError, ValueError, UnicodeError):
+            raw = base64.b64decode(encoded, validate=True)
+        except (TypeError, ValueError):
+            raise ResolutionError("GitHub content is not valid base64") from None
+        if len(raw) > MAX_TEXT_BLOB_BYTES:
+            raise ResolutionError("GitHub text exceeds the Runtime read limit")
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeError:
             raise ResolutionError("GitHub content is not valid UTF-8") from None
-        return text, _nonempty(data.get("sha"), "content.sha"), commit
+        return text, blob_sha, commit
 
     def update_text(
         self,
