@@ -421,10 +421,8 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         (root / "config").mkdir(parents=True)
         (root / "scripts").mkdir(parents=True)
         shutil.copy2(ROOT / "config/core.yaml", root / "config/core.yaml")
-        shutil.copy2(
-            ROOT / "scripts/validate_learning_os.py",
-            root / "scripts/validate_learning_os.py",
-        )
+        for filename in ("validate_learning_os.py", "intake_policy.py"):
+            shutil.copy2(ROOT / "scripts" / filename, root / "scripts" / filename)
         return root
 
     def test_open_session_binds_active_branch_generation(self):

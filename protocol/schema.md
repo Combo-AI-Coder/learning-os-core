@@ -275,6 +275,12 @@ engagement:
 
 `weekly_budget` here means learner-global total budget. Topic-specific desired hours belong to Topic Goal and MUST NOT be silently promoted to global budget. Inferred duration/scope calibration belongs in learner calibration, not learner execution defaults.
 
+`preferences.intake_depth` MAY be `minimal`, `balanced` or `thorough` when the
+learner explicitly chooses a global default. Missing key means inheritance, not
+an automatically persisted `balanced`; remove it to reset. Explicit null, booleans
+and unknown labels are invalid. Other existing preference keys remain unchanged.
+See `new-topic-start.md` for scope, precedence and immediate-start behavior.
+
 `last_meaningful_learning_at` is a recoverable convenience projection; execution records are stronger factual sources.
 
 ## 8. Learner knowledge
@@ -340,6 +346,13 @@ goal:
 ```
 
 Topic Goal stores learner-specific goal facts, not lifecycle, current progress, cross-Topic relative priority, or execution allocation.
+
+`goal.preferences.intake_depth` MAY store an explicitly chosen Topic override:
+`minimal`, `balanced` or `thorough`. Absence inherits the learner-global preference
+and then Core's balanced default; remove the key to reset. A current instruction
+overrides this stored value without automatically changing it. This optional field
+uses the existing Goal revision/CAS boundary, not a new document or schema axis.
+It never represents capability evidence, mastery or a waiver of Runtime guards.
 
 ## 10. Topic Plan
 

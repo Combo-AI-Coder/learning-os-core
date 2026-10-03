@@ -492,6 +492,32 @@ class GitCliProviderTests(unittest.TestCase):
         self.addCleanup(provider.close)
         return provider
 
+    def test_ref_resolution_is_independent_of_broken_caller_repository(self):
+        provider = self.provider()
+        unrelated = self.root / "broken-caller"
+        unrelated.mkdir()
+        (unrelated / ".git").write_text("gitdir: nonexistent-synthetic-gitdir" + chr(10), encoding="utf-8")
+        previous = Path.cwd()
+        try:
+            os.chdir(unrelated)
+            snapshot = provider.materialize(self.REPO_ID, "main")
+            self.assertEqual(snapshot.commit_sha, self.initial_commit)
+            self.assertEqual((snapshot.root / "state.txt").read_text(), "one" + chr(10))
+        finally:
+            os.chdir(previous)
+
+    def test_context_free_git_does_not_discover_isolated_home_parent(self):
+        provider = self.provider()
+        isolated = self.seed / "synthetic-isolated-home"
+        isolated.mkdir()
+        self._git("config", "audit.syntheticMarker", "must-not-inherit", cwd=self.seed)
+        from types import SimpleNamespace
+        from contextlib import chdir
+        with chdir(self.seed), mock.patch.object(provider, "_isolated_home", SimpleNamespace(name=str(isolated))):
+            with self.assertRaises(ResolutionError):
+                provider._git("config", "--get", "audit.syntheticMarker")
+            self.assertEqual(provider._git("check-ref-format", "--branch", "main"), "main")
+
     def test_materialize_uses_host_bound_identity_and_strips_git_metadata(self):
         snapshot = self.provider().materialize(self.REPO_ID, "main")
         self.assertEqual(self.REPO_ID, snapshot.repository_id)
@@ -1312,15 +1338,24 @@ class GitCliProviderTests(unittest.TestCase):
                     ])
 
     def test_relative_filesystem_remote_is_stabilized_at_construction(self):
-        relative = os.path.relpath(self.remote, Path.cwd())
-        provider = GitCliProvider([
-            GitRepositoryBinding(self.REPO_ID, relative)
-        ])
-        self.addCleanup(provider.close)
+        from contextlib import chdir
+
+        # Hosted Windows may put the checkout and temporary files on different
+        # drives. A relative remote only exists within one filesystem, so own
+        # both the construction directory and remote in the synthetic fixture.
+        with chdir(self.root):
+            relative = os.path.relpath(self.remote, Path.cwd())
+            expected_remote = os.path.abspath(relative)
+            provider = GitCliProvider([
+                GitRepositoryBinding(self.REPO_ID, relative)
+            ])
+            self.addCleanup(provider.close)
         binding = provider._binding(self.REPO_ID)
         self.assertTrue(os.path.isabs(binding.remote))
-        self.assertEqual(os.path.abspath(relative), binding.remote)
-        snapshot = provider.materialize(self.REPO_ID, "main")
+        self.assertEqual(expected_remote, binding.remote)
+        # Verify stabilization after the caller actually changes directories.
+        with chdir(self.seed):
+            snapshot = provider.materialize(self.REPO_ID, "main")
         self.assertEqual(self.initial_commit, snapshot.commit_sha)
 
     def test_ambient_netrc_credentials_are_not_inherited(self):

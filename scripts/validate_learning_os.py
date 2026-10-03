@@ -6,6 +6,11 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import yaml
 
+if __package__:
+    from .intake_policy import validate_intake_preferences
+else:
+    from intake_policy import validate_intake_preferences
+
 ROOTS={"config","runtime","learner","domains","topics","execution","coordination","evidence"}
 # Current production-style V0.3 canonical YAML document types. Historical
 # V0.2 learner-project types and V0.4 split-plane contract types are excluded.
@@ -1043,6 +1048,14 @@ class InstanceValidator:
                         p,
                         "revisioned document requires a positive integer revision",
                     )
+            if t in {"learner_execution", "topic_goal"}:
+                owner = d.get("goal", {}) if t == "topic_goal" else d
+                try:
+                    if not isinstance(owner, dict):
+                        raise ValueError("goal must be a mapping")
+                    validate_intake_preferences(owner.get("preferences"))
+                except ValueError as exc:
+                    self.error("intake.preference", p, str(exc))
             if t=="topic_plan":self.enum(p,"plan.status",(d.get("plan")or{}).get("status"),{"awaiting_intake","provisional","active","paused"})
             elif t=="topic_progress":
                 self.enum(p,"lifecycle",d.get("lifecycle"),TLIFE)
