@@ -96,6 +96,7 @@ def _relative_path(value: object, where: str) -> str:
     pure = PurePosixPath(value)
     if (
         "\\" in value
+        or not pure.parts
         or pure.is_absolute()
         or ".." in pure.parts
         or "." in pure.parts
@@ -897,6 +898,13 @@ class RuntimeSessionBroker:
             raise GuardRejected(
                 "learning session requires shared deployment operation admission"
             )
+        # bool and float compare equal to some integers in Python. A caller
+        # must supply the actual positive-integer generation identity, not an
+        # equality-compatible value. Reject before repository/provider effects.
+        if expected_generation is not None and (
+            type(expected_generation) is not int or expected_generation < 1
+        ):
+            raise ResolutionError("expected generation must be a positive integer")
         resolved = DeploymentResolver(self.provider).resolve(self.locator)
         try:
             deployment = resolved.context
