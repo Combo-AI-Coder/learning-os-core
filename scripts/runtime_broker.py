@@ -2211,6 +2211,7 @@ class RuntimeSessionBroker:
         document: dict,
         *,
         label: str,
+        allow_legacy_duplicates: bool = False,
     ) -> dict[tuple[str, str, str, str], tuple[str, ...]]:
         domain = document.get("domain")
         if not isinstance(domain, str) or not domain.strip():
@@ -2264,9 +2265,11 @@ class RuntimeSessionBroker:
                             f"{label} Knowledge {side} evidence refs must be non-empty strings"
                         )
                     if len(set(values)) != len(values):
-                        raise GuardRejected(
-                            f"{label} Knowledge {side} evidence refs are duplicated"
-                        )
+                        if not allow_legacy_duplicates:
+                            raise GuardRejected(
+                                f"{label} Knowledge {side} evidence refs are duplicated"
+                            )
+                        values = list(dict.fromkeys(values))
                     result[(domain, concept, capability, side)] = tuple(values)
         return result
 
@@ -2279,7 +2282,9 @@ class RuntimeSessionBroker:
         candidate: dict,
     ) -> None:
         current_refs = self._knowledge_evidence_ref_map(
-            current, label="current"
+            current,
+            label="current",
+            allow_legacy_duplicates=True,
         )
         candidate_refs = self._knowledge_evidence_ref_map(
             candidate, label="candidate"

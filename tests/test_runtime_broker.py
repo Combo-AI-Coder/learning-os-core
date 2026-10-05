@@ -1053,6 +1053,57 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             for call in self.provider.calls
         ))
 
+    def test_reconcile_knowledge_can_remove_legacy_duplicate_evidence_refs(self):
+        self.seed_knowledge_evidence()
+        current = yaml.safe_load(knowledge_candidate(revision=1))
+        current_refs = current["concepts"]["token-identity"]["capabilities"][
+            "explanation"
+        ]["evidence_refs"]["support"]
+        current_refs.append(KNOWLEDGE_EVIDENCE_ID)
+        self.provider.docs[READ_PATH] = yaml.safe_dump(
+            current, sort_keys=False
+        )
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("learner",),
+            writable_roots=(READ_PATH,),
+        )
+        session = self.open()
+        self.provider.calls.clear()
+        candidate = knowledge_candidate(revision=2)
+        result = self.broker.reconcile_knowledge(
+            session,
+            content=candidate,
+            expected_blob_sha="e" * 40,
+            message="test: remove legacy duplicate Knowledge Evidence ref",
+        )
+        self.assertTrue(result.applied)
+        self.assertEqual(candidate, self.provider.docs[READ_PATH])
+        self.assertFalse(any(
+            call[0] == "snapshot_read" and call[3].startswith("evidence/")
+            for call in self.provider.calls
+        ))
+
+    def test_reconcile_knowledge_rejects_duplicate_candidate_evidence_refs(self):
+        self.seed_knowledge_evidence()
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("learner", "evidence"),
+            writable_roots=(READ_PATH,),
+        )
+        session = self.open()
+        candidate = yaml.safe_load(knowledge_candidate())
+        candidate["concepts"]["token-identity"]["capabilities"][
+            "explanation"
+        ]["evidence_refs"]["support"].append(KNOWLEDGE_EVIDENCE_ID)
+        with self.assertRaisesRegex(
+            GuardRejected, "candidate Knowledge support evidence refs are duplicated"
+        ):
+            self.broker.reconcile_knowledge(
+                session,
+                content=yaml.safe_dump(candidate, sort_keys=False),
+                expected_blob_sha="e" * 40,
+                message="test: reject duplicate candidate Evidence refs",
+            )
+
     def test_reconcile_knowledge_requires_read_capability_for_new_evidence(self):
         self.seed_knowledge_evidence()
         self.policy = RuntimeCapabilityPolicy(
