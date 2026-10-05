@@ -84,6 +84,67 @@ EVIDENCE_V1 = yaml.safe_dump({
     "targets": ["modern-language-models.tokens"],
 }, sort_keys=False)
 
+KNOWLEDGE_EVIDENCE_ID = "evi-synthetic-knowledge-001"
+
+def typed_evidence(
+    *,
+    evidence_id=KNOWLEDGE_EVIDENCE_ID,
+    domain="synthetic",
+    concept="token-identity",
+    capability="explanation",
+    direction="support",
+):
+    return yaml.safe_dump({
+        "schema_version": "0.3",
+        "document_type": "evidence",
+        "id": evidence_id,
+        "observed_at": "2026-10-05T00:05:00Z",
+        "observation": {
+            "kind": "synthetic",
+            "summary": "synthetic typed capability observation",
+        },
+        "interpretation": {
+            "direction": direction,
+            "diagnosticity": "medium",
+            "novelty": "medium",
+            "confidence": "medium",
+        },
+        "targets": [{
+            "type": "capability",
+            "domain": domain,
+            "concept": concept,
+            "capability": capability,
+        }],
+    }, sort_keys=False)
+
+def knowledge_candidate(
+    *,
+    domain="synthetic",
+    revision=2,
+    evidence_id=KNOWLEDGE_EVIDENCE_ID,
+    side="support",
+):
+    refs = {"support": [], "challenge": []}
+    refs[side] = [evidence_id]
+    return yaml.safe_dump({
+        "schema_version": "0.3",
+        "document_type": "learner_knowledge",
+        "revision": revision,
+        "domain": domain,
+        "concepts": {
+            "token-identity": {
+                "capabilities": {
+                    "explanation": {
+                        "state": "provisional",
+                        "confidence": "low",
+                        "evidence_refs": refs,
+                        "basis_summary": "synthetic bounded reconciliation",
+                    }
+                }
+            }
+        },
+    }, sort_keys=False)
+
 
 def locator():
     return {
@@ -933,6 +994,158 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         self.assertFalse(
             any(call[0] == "create" for call in self.provider.calls)
         )
+
+    def seed_knowledge_evidence(
+        self,
+        *,
+        domain="synthetic",
+        concept="token-identity",
+        capability="explanation",
+        direction="support",
+        evidence_id=KNOWLEDGE_EVIDENCE_ID,
+    ):
+        path = f"evidence/{evidence_id}.yaml"
+        self.provider.docs[path] = typed_evidence(
+            evidence_id=evidence_id,
+            domain=domain,
+            concept=concept,
+            capability=capability,
+            direction=direction,
+        )
+        self.provider.blobs[path] = "a" * 40
+        return path
+
+    def test_generic_update_rejects_learner_knowledge_without_dedicated_operation(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("learner",),
+            writable_roots=(READ_PATH,),
+        )
+        session = self.open()
+        with self.assertRaisesRegex(
+            GuardRejected, "dedicated Knowledge reconciliation"
+        ):
+            self.broker.guarded_update(
+                session,
+                path=READ_PATH,
+                content=knowledge_candidate(),
+                expected_blob_sha="e" * 40,
+                message="test: generic Knowledge write must fail",
+            )
+
+    def test_reconcile_knowledge_updates_existing_with_exact_typed_evidence(self):
+        self.seed_knowledge_evidence()
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("learner", "evidence"),
+            writable_roots=(READ_PATH,),
+        )
+        session = self.open()
+        candidate = knowledge_candidate()
+        result = self.broker.reconcile_knowledge(
+            session,
+            content=candidate,
+            expected_blob_sha="e" * 40,
+            message="test: reconcile synthetic Knowledge",
+        )
+        self.assertTrue(result.applied)
+        self.assertEqual(candidate, self.provider.docs[READ_PATH])
+        self.assertTrue(any(
+            call[0] == "update" and call[3] == READ_PATH
+            for call in self.provider.calls
+        ))
+
+    def test_reconcile_knowledge_rejects_unrelated_new_evidence_target(self):
+        self.seed_knowledge_evidence(concept="other-concept")
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("learner", "evidence"),
+            writable_roots=(READ_PATH,),
+        )
+        session = self.open()
+        with self.assertRaisesRegex(
+            GuardRejected, "does not exactly target"
+        ):
+            self.broker.reconcile_knowledge(
+                session,
+                content=knowledge_candidate(),
+                expected_blob_sha="e" * 40,
+                message="test: reject unrelated Evidence",
+            )
+        self.assertFalse(any(call[0] == "update" for call in self.provider.calls))
+
+    def test_reconcile_knowledge_rejects_support_direction_mismatch(self):
+        self.seed_knowledge_evidence(direction="challenge")
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("learner", "evidence"),
+            writable_roots=(READ_PATH,),
+        )
+        session = self.open()
+        with self.assertRaisesRegex(
+            GuardRejected, "cannot populate support"
+        ):
+            self.broker.reconcile_knowledge(
+                session,
+                content=knowledge_candidate(),
+                expected_blob_sha="e" * 40,
+                message="test: reject direction mismatch",
+            )
+
+    def test_reconcile_knowledge_creates_first_owner_at_revision_one(self):
+        self.provider.docs.pop(READ_PATH)
+        self.provider.blobs.pop(READ_PATH)
+        evidence_id = "evi-synthetic-new-domain-001"
+        self.seed_knowledge_evidence(
+            domain="new-domain",
+            evidence_id=evidence_id,
+        )
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("learner", "evidence"),
+            writable_roots=("learner/knowledge",),
+        )
+        session = self.open()
+        candidate = knowledge_candidate(
+            domain="new-domain",
+            revision=1,
+            evidence_id=evidence_id,
+        )
+        result = self.broker.reconcile_knowledge(
+            session,
+            content=candidate,
+            expected_blob_sha=None,
+            message="test: create first synthetic Knowledge owner",
+        )
+        self.assertTrue(result.applied)
+        path = "learner/knowledge/new-domain.yaml"
+        self.assertEqual(candidate, self.provider.docs[path])
+        self.assertTrue(any(
+            call[0] == "create" and call[3] == path
+            for call in self.provider.calls
+        ))
+
+    def test_reconcile_knowledge_rejects_noninitial_first_revision(self):
+        self.provider.docs.pop(READ_PATH)
+        self.provider.blobs.pop(READ_PATH)
+        evidence_id = "evi-synthetic-new-domain-002"
+        self.seed_knowledge_evidence(
+            domain="new-domain",
+            evidence_id=evidence_id,
+        )
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("learner", "evidence"),
+            writable_roots=("learner/knowledge",),
+        )
+        session = self.open()
+        with self.assertRaisesRegex(
+            GuardRejected, "must use revision 1"
+        ):
+            self.broker.reconcile_knowledge(
+                session,
+                content=knowledge_candidate(
+                    domain="new-domain",
+                    revision=2,
+                    evidence_id=evidence_id,
+                ),
+                expected_blob_sha=None,
+                message="test: reject invalid first Knowledge revision",
+            )
 
     def test_read_only_open_may_omit_expected_generation(self):
         session = self.broker.open_session(
@@ -2258,13 +2471,12 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             any(call[0] == "update" for call in self.provider.calls)
         )
 
-    def test_candidate_knowledge_domain_must_match_canonical_filename(self):
-        current = yaml.safe_load(READ_V1)
-        current["revision"] = 2
-        current["domain"] = "physics"
+    def test_knowledge_candidate_domain_must_form_canonical_filename(self):
+        candidate = yaml.safe_load(READ_V1)
+        candidate["domain"] = "physics/escape"
         policy = RuntimeCapabilityPolicy(
             readable_roots=("learner/knowledge",),
-            writable_roots=(READ_PATH,),
+            writable_roots=("learner/knowledge",),
         )
         session = self.broker.open_session(
             branch_runtime_path=RUNTIME_PATH,
@@ -2273,17 +2485,16 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         )
         self.provider.calls.clear()
         with self.assertRaisesRegex(
-            GuardRejected, "canonical validation"
+            GuardRejected, "canonical Knowledge path"
         ):
-            self.broker.guarded_update(
+            self.broker.reconcile_knowledge(
                 session,
-                path=READ_PATH,
-                content=yaml.safe_dump(current, sort_keys=False),
-                expected_blob_sha="e" * 40,
-                message="must bind Knowledge domain to canonical filename",
+                content=yaml.safe_dump(candidate, sort_keys=False),
+                expected_blob_sha=None,
+                message="must derive one canonical Knowledge filename",
             )
         self.assertFalse(
-            any(call[0] == "update" for call in self.provider.calls)
+            any(call[0] in {"update", "create"} for call in self.provider.calls)
         )
 
     def test_branch_head_advance_after_generation_check_blocks_write(self):
@@ -2539,9 +2750,8 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 with self.assertRaisesRegex(
                     GuardRejected, "advance semantic revision"
                 ):
-                    self.broker.guarded_update(
+                    self.broker.reconcile_knowledge(
                         session,
-                        path=path,
                         content=yaml.safe_dump(
                             candidate, sort_keys=False
                         ),
@@ -2714,9 +2924,8 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         with self.assertRaisesRegex(
             GuardRejected, "revisioned replacement revision is invalid"
         ):
-            self.broker.guarded_update(
+            self.broker.reconcile_knowledge(
                 session,
-                path=path,
                 content=invalid,
                 expected_blob_sha="e" * 40,
                 message="must reject malformed revision",
