@@ -524,6 +524,20 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 required_paths=("learner/execution.yaml",),
             )
 
+    def test_learning_context_rejects_excess_paths_before_normalizing_entries(self):
+        class ExplodingPath:
+            def __str__(self):
+                raise AssertionError("path normalization must not run")
+
+        self.provider.calls.clear()
+        required = [ExplodingPath()] * 33
+        with self.assertRaisesRegex(ResolutionError, "path count"):
+            self.broker.read_learning_context(
+                object(),
+                required_paths=required,
+            )
+        self.assertEqual([], self.provider.calls)
+
     def test_learning_context_rejects_duplicate_and_excess_paths_before_io(self):
         self.policy = RuntimeCapabilityPolicy(readable_roots=("learner",))
         session = self.open()
@@ -593,6 +607,32 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             call for call in self.provider.calls if call[0] == "create"
         ]
         self.assertEqual(1, len(create_calls))
+
+    def test_create_evidence_idempotency_handles_reordered_large_mapping(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("evidence", "learner"),
+            writable_roots=("evidence",),
+        )
+        session = self.open()
+        first = yaml.safe_load(EVIDENCE_V1)
+        first["context"] = {
+            f"k{index:04d}": {"value": index, "flag": bool(index % 2)}
+            for index in range(1000)
+        }
+        first_text = yaml.safe_dump(first, sort_keys=False)
+        self.broker.create_evidence(
+            session,
+            content=first_text,
+            message="test: create reordered-map Evidence",
+        )
+        second = dict(first)
+        second["context"] = dict(reversed(list(first["context"].items())))
+        result = self.broker.create_evidence(
+            session,
+            content=yaml.safe_dump(second, sort_keys=False),
+            message="test: retry reordered-map Evidence",
+        )
+        self.assertFalse(result.applied)
 
     def test_create_evidence_idempotency_is_type_sensitive(self):
         self.policy = RuntimeCapabilityPolicy(

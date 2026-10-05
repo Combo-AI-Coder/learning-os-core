@@ -2718,28 +2718,6 @@ class GitHubApiProvider:
             raise CasConflict(
                 "exact branch-head CAS is unsupported by GitHub REST provider"
             )
-        _positive_id(repository_id, "repository_id")
-        if repository_id not in self.writable_repository_ids:
-            raise GuardRejected("GitHub repository binding is read-only")
-        GitCliProvider._safe_path(path)
-        if len(content.encode("utf-8")) > MAX_TEXT_BLOB_BYTES:
-            raise GuardRejected("GitHub write exceeds the text byte limit")
-        repo = self._repo(repository_id)
-        full_name = _nonempty(repo.get("full_name"), "repository.full_name")
-        quoted_path = urllib.parse.quote(path, safe="/")
-        data = self._request(
-            "PUT",
-            f"/repos/{full_name}/contents/{quoted_path}",
-            {
-                "message": message,
-                "content": base64.b64encode(
-                    content.encode("utf-8")
-                ).decode("ascii"),
-                "branch": branch,
-            },
+        raise GuardRejected(
+            "GitHub REST provider does not expose create-only Runtime writes"
         )
-        commit = data.get("commit") if isinstance(data, dict) else None
-        sha = commit.get("sha") if isinstance(commit, dict) else None
-        if not isinstance(sha, str) or not EXACT_COMMIT.fullmatch(sha):
-            raise CasConflict("GitHub create returned no exact commit")
-        return sha

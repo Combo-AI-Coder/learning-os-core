@@ -1833,6 +1833,10 @@ class RuntimeSessionBroker:
             raise ResolutionError("required_paths must be a list or tuple")
         if not isinstance(optional_paths, (tuple, list)):
             raise ResolutionError("optional_paths must be a list or tuple")
+        if len(required_paths) + len(optional_paths) > LEARNING_CONTEXT_MAX_DOCUMENTS:
+            raise ResolutionError(
+                "learning context path count exceeds the bounded limit"
+            )
         required = tuple(
             _relative_path(path, "required learning context path")
             for path in required_paths
@@ -1844,10 +1848,6 @@ class RuntimeSessionBroker:
         combined = required + optional
         if not combined:
             raise ResolutionError("learning context requires at least one path")
-        if len(combined) > LEARNING_CONTEXT_MAX_DOCUMENTS:
-            raise ResolutionError(
-                "learning context path count exceeds the bounded limit"
-            )
         if len(set(combined)) != len(combined):
             raise ResolutionError(
                 "learning context paths must be unique across required and optional sets"
@@ -1924,56 +1924,59 @@ class RuntimeSessionBroker:
                         self._release_materializations([authority.snapshot])
 
     @staticmethod
-    def _type_sensitive_semantic_equal(left: object, right: object) -> bool:
-        """Compare parsed YAML values without Python bool/int key/value aliasing."""
-        if type(left) is not type(right):
-            return False
-        if isinstance(left, dict):
-            if len(left) != len(right):
-                return False
-            unmatched = list(right.items())
-            for left_key, left_value in left.items():
-                match_index = None
-                for index, (right_key, right_value) in enumerate(unmatched):
-                    if (
-                        RuntimeSessionBroker._type_sensitive_semantic_equal(
-                            left_key, right_key
-                        )
-                        and RuntimeSessionBroker._type_sensitive_semantic_equal(
-                            left_value, right_value
-                        )
-                    ):
-                        match_index = index
-                        break
-                if match_index is None:
-                    return False
-                unmatched.pop(match_index)
-            return not unmatched
-        if isinstance(left, (list, tuple)):
-            return len(left) == len(right) and all(
-                RuntimeSessionBroker._type_sensitive_semantic_equal(a, b)
-                for a, b in zip(left, right)
-            )
-        if isinstance(left, (set, frozenset)):
-            if len(left) != len(right):
-                return False
-            unmatched = list(right)
-            for item in left:
-                match_index = next(
-                    (
-                        index
-                        for index, candidate in enumerate(unmatched)
-                        if RuntimeSessionBroker._type_sensitive_semantic_equal(
-                            item, candidate
-                        )
-                    ),
-                    None,
+    def _type_sensitive_semantic_key(value: object) -> tuple:
+        """Build an order-independent typed key for bounded parsed YAML."""
+        if value is None:
+            return ("null",)
+        if isinstance(value, bool):
+            return ("bool", value)
+        if isinstance(value, int):
+            return ("int", str(value))
+        if isinstance(value, float):
+            return ("float", value.hex())
+        if isinstance(value, str):
+            return ("str", value)
+        if isinstance(value, bytes):
+            return ("bytes", value.hex())
+        if isinstance(value, dict):
+            entries = [
+                (
+                    RuntimeSessionBroker._type_sensitive_semantic_key(key),
+                    RuntimeSessionBroker._type_sensitive_semantic_key(item),
                 )
-                if match_index is None:
-                    return False
-                unmatched.pop(match_index)
-            return not unmatched
-        return left == right
+                for key, item in value.items()
+            ]
+            entries.sort(key=lambda pair: repr(pair[0]))
+            return ("dict", tuple(entries))
+        if isinstance(value, (list, tuple)):
+            return (
+                "sequence",
+                tuple(
+                    RuntimeSessionBroker._type_sensitive_semantic_key(item)
+                    for item in value
+                ),
+            )
+        if isinstance(value, (set, frozenset)):
+            items = [
+                RuntimeSessionBroker._type_sensitive_semantic_key(item)
+                for item in value
+            ]
+            items.sort(key=repr)
+            return ("set", tuple(items))
+        return (
+            "scalar",
+            type(value).__module__,
+            type(value).__qualname__,
+            repr(value),
+        )
+
+    @staticmethod
+    def _type_sensitive_semantic_equal(left: object, right: object) -> bool:
+        """Compare bounded YAML semantics without bool/int aliasing or O(n^2) maps."""
+        return (
+            RuntimeSessionBroker._type_sensitive_semantic_key(left)
+            == RuntimeSessionBroker._type_sensitive_semantic_key(right)
+        )
 
     @staticmethod
     def _evidence_candidate(content: str) -> tuple[dict, str]:

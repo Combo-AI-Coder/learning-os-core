@@ -2470,6 +2470,20 @@ class GitHubApiProviderTests(unittest.TestCase):
         provider._repo.assert_not_called()
         self.assertEqual([], provider.calls)
 
+    def test_rest_create_is_not_exposed_even_with_write_allowlist(self):
+        provider = self.provider(writable_repository_ids=(self.REPO_ID,))
+        with self.assertRaisesRegex(
+            GuardRejected, "does not expose create-only"
+        ):
+            provider.create_text(
+                self.REPO_ID,
+                "main",
+                "new.txt",
+                "created\n",
+                "test: REST create remains unavailable",
+            )
+        self.assertEqual([], provider.calls)
+
     def test_legacy_contents_update_requires_explicit_opt_in_without_head_cas(self):
         provider = self.provider(writable_repository_ids=(self.REPO_ID,))
         result = provider.update_text(
