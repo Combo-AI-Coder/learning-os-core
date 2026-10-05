@@ -555,6 +555,16 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 required_paths=(READ_PATH, WRITE_PATH),
             )
 
+    def test_learning_context_detects_instance_head_drift_after_batch_read(self):
+        self.policy = RuntimeCapabilityPolicy(readable_roots=("learner",))
+        session = self.open()
+        self.provider.advance_branch_after_target_read = True
+        with self.assertRaises(GuardRejected):
+            self.broker.read_learning_context(
+                session,
+                required_paths=(READ_PATH, WRITE_PATH),
+            )
+
     def test_create_evidence_is_create_only_and_idempotent_for_same_payload(self):
         self.policy = RuntimeCapabilityPolicy(
             readable_roots=("evidence", "learner"),
@@ -583,6 +593,52 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             call for call in self.provider.calls if call[0] == "create"
         ]
         self.assertEqual(1, len(create_calls))
+
+    def test_create_evidence_idempotency_is_type_sensitive(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("evidence", "learner"),
+            writable_roots=("evidence",),
+        )
+        session = self.open()
+        first = yaml.safe_load(EVIDENCE_V1)
+        first["context"] = {"synthetic_flag": True}
+        first_text = yaml.safe_dump(first, sort_keys=False)
+        self.broker.create_evidence(
+            session,
+            content=first_text,
+            message="test: create typed synthetic evidence",
+        )
+        changed = yaml.safe_load(first_text)
+        changed["context"]["synthetic_flag"] = 1
+        with self.assertRaisesRegex(
+            GuardRejected, "already exists with different content"
+        ):
+            self.broker.create_evidence(
+                session,
+                content=yaml.safe_dump(changed, sort_keys=False),
+                message="test: typed Evidence collision",
+            )
+
+    def test_create_evidence_idempotent_retry_still_validates_exact_core_candidate(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("evidence", "learner"),
+            writable_roots=("evidence",),
+        )
+        session = self.open()
+        invalid = yaml.safe_load(EVIDENCE_V1)
+        invalid.pop("observed_at")
+        invalid_text = yaml.safe_dump(invalid, sort_keys=False)
+        self.provider.docs[EVIDENCE_PATH] = invalid_text
+        self.provider.blobs[EVIDENCE_PATH] = "a" * 40
+        self.provider.instance_head = "8" * 40
+        with self.assertRaisesRegex(
+            GuardRejected, "candidate Instance state failed canonical validation"
+        ):
+            self.broker.create_evidence(
+                session,
+                content=invalid_text,
+                message="test: invalid existing Evidence must not noop",
+            )
 
     def test_create_evidence_rejects_same_id_with_different_content(self):
         self.policy = RuntimeCapabilityPolicy(

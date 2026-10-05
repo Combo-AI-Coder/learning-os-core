@@ -2329,6 +2329,22 @@ class GitCliProvider:
             if not EXACT_COMMIT.fullmatch(new_commit):
                 raise CasConflict("Git create returned no exact commit")
 
+            # Creation increases the blob count, which can lower the
+            # conservative per-blob hydration ceiling. Validate the complete
+            # resulting snapshot under that new ceiling before publishing it.
+            try:
+                next_objects = self._verify_regular_tree(repo, new_commit)
+                next_blob_cap = self._bounded_blob_fetch_cap(next_objects)
+                self._validate_snapshot_budget(
+                    repo,
+                    next_objects,
+                    fetched_blob_cap=next_blob_cap,
+                )
+            except ResolutionError as exc:
+                raise CasConflict(
+                    f"created snapshot is not Runtime-materializable: {exc}"
+                ) from None
+
             self._git(
                 "push", "-q",
                 f"--force-with-lease={branch_ref}:{commit}",

@@ -1924,6 +1924,58 @@ class RuntimeSessionBroker:
                         self._release_materializations([authority.snapshot])
 
     @staticmethod
+    def _type_sensitive_semantic_equal(left: object, right: object) -> bool:
+        """Compare parsed YAML values without Python bool/int key/value aliasing."""
+        if type(left) is not type(right):
+            return False
+        if isinstance(left, dict):
+            if len(left) != len(right):
+                return False
+            unmatched = list(right.items())
+            for left_key, left_value in left.items():
+                match_index = None
+                for index, (right_key, right_value) in enumerate(unmatched):
+                    if (
+                        RuntimeSessionBroker._type_sensitive_semantic_equal(
+                            left_key, right_key
+                        )
+                        and RuntimeSessionBroker._type_sensitive_semantic_equal(
+                            left_value, right_value
+                        )
+                    ):
+                        match_index = index
+                        break
+                if match_index is None:
+                    return False
+                unmatched.pop(match_index)
+            return not unmatched
+        if isinstance(left, (list, tuple)):
+            return len(left) == len(right) and all(
+                RuntimeSessionBroker._type_sensitive_semantic_equal(a, b)
+                for a, b in zip(left, right)
+            )
+        if isinstance(left, (set, frozenset)):
+            if len(left) != len(right):
+                return False
+            unmatched = list(right)
+            for item in left:
+                match_index = next(
+                    (
+                        index
+                        for index, candidate in enumerate(unmatched)
+                        if RuntimeSessionBroker._type_sensitive_semantic_equal(
+                            item, candidate
+                        )
+                    ),
+                    None,
+                )
+                if match_index is None:
+                    return False
+                unmatched.pop(match_index)
+            return not unmatched
+        return left == right
+
+    @staticmethod
     def _evidence_candidate(content: str) -> tuple[dict, str]:
         _preflight_candidate_yaml(content)
         try:
@@ -1975,6 +2027,7 @@ class RuntimeSessionBroker:
                     existing_path = _candidate_output_path(
                         authority.snapshot.root, path
                     )
+                    existing_matches = False
                     if existing_path.exists():
                         try:
                             existing_text, _ = self.provider.read_materialized_text(
@@ -1986,17 +2039,13 @@ class RuntimeSessionBroker:
                             raise GuardRejected(
                                 "existing Evidence record is unreadable"
                             ) from exc
-                        if existing != candidate:
+                        if not self._type_sensitive_semantic_equal(
+                            existing, candidate
+                        ):
                             raise GuardRejected(
                                 "Evidence id already exists with different content"
                             )
-                        release_attempted = True
-                        self._release_materializations([authority.snapshot])
-                        self._assert_pinned_instance_current(state, authority)
-                        self.guard.assert_snapshot_current(
-                            state.deployment, deployment
-                        )
-                        return InstanceWriteAck(applied=False)
+                        existing_matches = True
 
                     core = self.provider.materialize(
                         state.deployment.core_repository_id,
@@ -2031,6 +2080,8 @@ class RuntimeSessionBroker:
                     self._release_materializations(
                         [core, authority.snapshot]
                     )
+                    if existing_matches:
+                        return InstanceWriteAck(applied=False)
                     try:
                         self.provider.create_text(
                             state.deployment.instance_repository_id,

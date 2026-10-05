@@ -1824,6 +1824,32 @@ class GitCliProviderTests(unittest.TestCase):
             ),
         )
 
+    def test_create_rejects_snapshot_that_new_blob_count_cannot_rematerialize(self):
+        provider = self.provider()
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_TOTAL_BLOB_BYTES", 7
+        ), mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_BLOB_BYTES", 7
+        ):
+            with self.assertRaisesRegex(
+                CasConflict, "not Runtime-materializable"
+            ):
+                provider.create_text(
+                    self.REPO_ID,
+                    "main",
+                    "new.txt",
+                    "x\n",
+                    "test: create must preserve future materialization",
+                    expected_ref_sha=self.initial_commit,
+                )
+        self.assertEqual(
+            self.initial_commit,
+            self._git(
+                "--git-dir", str(self.remote),
+                "rev-parse", "refs/heads/main",
+            ),
+        )
+
     def test_create_rejects_existing_path(self):
         provider = self.provider()
         with self.assertRaisesRegex(CasConflict, "already exists"):
@@ -1834,6 +1860,62 @@ class GitCliProviderTests(unittest.TestCase):
                 "replacement\n",
                 "test: must not replace",
                 expected_ref_sha=self.initial_commit,
+            )
+
+    def test_concurrent_branch_advance_rejects_create_push(self):
+        test = self
+
+        class RacingCreateProvider(GitCliProvider):
+            raced = False
+
+            def _git(self, *args, cwd=None, cas=False, binding=None):
+                if args and args[0] == "push" and cas and not self.raced:
+                    self.raced = True
+                    (test.seed / "other-create.txt").write_text(
+                        "race\n", encoding="utf-8"
+                    )
+                    test._git("add", "other-create.txt", cwd=test.seed)
+                    test._git(
+                        "commit", "-q", "-m", "concurrent create advance",
+                        cwd=test.seed,
+                    )
+                    test._git(
+                        "push", "-q", "origin", "HEAD:refs/heads/main",
+                        cwd=test.seed,
+                    )
+                return super()._git(
+                    *args, cwd=cwd, cas=cas, binding=binding
+                )
+
+        provider = RacingCreateProvider([
+            GitRepositoryBinding(
+                self.REPO_ID,
+                str(self.remote),
+                "synthetic/instance",
+                writable=True,
+            )
+        ])
+        self.addCleanup(provider.close)
+        with self.assertRaises(Exception):
+            provider.create_text(
+                self.REPO_ID,
+                "main",
+                "new.txt",
+                "created\n",
+                "test: create must not cross branch advance",
+                expected_ref_sha=self.initial_commit,
+            )
+        self.assertNotEqual(
+            self.initial_commit,
+            self._git(
+                "--git-dir", str(self.remote),
+                "rev-parse", "refs/heads/main",
+            ),
+        )
+        with self.assertRaises(AssertionError):
+            self._git(
+                "--git-dir", str(self.remote),
+                "show", "refs/heads/main:new.txt",
             )
 
     def test_concurrent_branch_advance_rejects_non_force_push(self):
