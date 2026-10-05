@@ -617,7 +617,7 @@ INSTANCE_GENERIC_WRITE_TRANSITION_RULES={
 }
 INSTANCE_DEDICATED_RUNTIME_OPERATIONS={
     "create_evidence":"v1",
-    "reconcile_knowledge":"v1",
+    "reconcile_knowledge":"v2",
 }
 
 def instance_expected_types(p,rules=None):

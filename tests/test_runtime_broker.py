@@ -1053,6 +1053,61 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             for call in self.provider.calls
         ))
 
+    def test_reconcile_knowledge_requires_read_capability_for_new_evidence(self):
+        self.seed_knowledge_evidence()
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("learner",),
+            writable_roots=(READ_PATH,),
+        )
+        session = self.open()
+        self.provider.calls.clear()
+        with self.assertRaisesRegex(
+            GuardRejected, "read capability policy"
+        ):
+            self.broker.reconcile_knowledge(
+                session,
+                content=knowledge_candidate(),
+                expected_blob_sha="e" * 40,
+                message="test: Evidence read capability must be enforced",
+            )
+        self.assertFalse(any(
+            call[0] == "snapshot_read" and call[3].startswith("evidence/")
+            for call in self.provider.calls
+        ))
+        self.assertFalse(any(call[0] == "update" for call in self.provider.calls))
+
+    def test_reconcile_knowledge_bounds_new_evidence_refs_before_evidence_io(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("learner", "evidence"),
+            writable_roots=(READ_PATH,),
+        )
+        session = self.open()
+        candidate = yaml.safe_load(knowledge_candidate())
+        refs = [
+            f"evi-synthetic-many-{index:03d}"
+            for index in range(
+                runtime_broker.KNOWLEDGE_RECONCILE_MAX_NEW_EVIDENCE_REFS + 1
+            )
+        ]
+        candidate["concepts"]["token-identity"]["capabilities"][
+            "explanation"
+        ]["evidence_refs"]["support"] = refs
+        self.provider.calls.clear()
+        with self.assertRaisesRegex(
+            GuardRejected, "too many new Evidence references"
+        ):
+            self.broker.reconcile_knowledge(
+                session,
+                content=yaml.safe_dump(candidate, sort_keys=False),
+                expected_blob_sha="e" * 40,
+                message="test: bound Knowledge Evidence fanout",
+            )
+        self.assertFalse(any(
+            call[0] == "snapshot_read" and call[3].startswith("evidence/")
+            for call in self.provider.calls
+        ))
+        self.assertFalse(any(call[0] == "update" for call in self.provider.calls))
+
     def test_reconcile_knowledge_rejects_unrelated_new_evidence_target(self):
         self.seed_knowledge_evidence(concept="other-concept")
         self.policy = RuntimeCapabilityPolicy(
@@ -3266,6 +3321,68 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 )
         self.assertFalse(
             any(call[0] == "create" for call in self.provider.calls)
+        )
+
+    def test_reconcile_knowledge_requires_deployed_core_operation_fingerprint(self):
+        self.seed_knowledge_evidence()
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("learner", "evidence"),
+            writable_roots=(READ_PATH,),
+        )
+        session = self.open()
+        with mock.patch.object(
+            validate_learning_os,
+            "INSTANCE_DEDICATED_RUNTIME_OPERATIONS",
+            {"create_evidence": "v1"},
+        ):
+            legacy_fingerprint = (
+                validate_learning_os.instance_write_policy_fingerprint()
+            )
+        current_fingerprint = (
+            validate_learning_os.instance_write_policy_fingerprint()
+        )
+        self.assertNotEqual(legacy_fingerprint, current_fingerprint)
+
+        core_root = self.deployed_core_snapshot()
+        core_config_path = core_root / "config/core.yaml"
+        core_config = yaml.safe_load(
+            core_config_path.read_text(encoding="utf-8")
+        )
+        core_config["manifest"][
+            "runtime_session_write_policy_fingerprint"
+        ] = legacy_fingerprint
+        core_config_path.write_text(
+            yaml.safe_dump(core_config, sort_keys=False),
+            encoding="utf-8",
+        )
+        original_materialize = self.provider.materialize
+
+        def materialize(repository_id, ref):
+            if repository_id == CORE_ID:
+                return MaterializedRepository(
+                    core_root, CORE_ID, CORE_COMMIT, "synthetic/core"
+                )
+            return original_materialize(repository_id, ref)
+
+        self.provider.materialize = materialize
+        self.provider.calls.clear()
+        with mock.patch.object(
+            runtime_broker,
+            "_compute_bounded_write_policy_fingerprint",
+            return_value=legacy_fingerprint,
+        ):
+            with self.assertRaisesRegex(
+                GuardRejected,
+                "does not match the exact deployed Core",
+            ):
+                self.broker.reconcile_knowledge(
+                    session,
+                    content=knowledge_candidate(),
+                    expected_blob_sha="e" * 40,
+                    message="test: old Core cannot authorize Knowledge reconcile",
+                )
+        self.assertFalse(
+            any(call[0] in {"update", "create"} for call in self.provider.calls)
         )
 
     def test_deployed_core_policy_cache_is_keyed_by_exact_core_identity(self):

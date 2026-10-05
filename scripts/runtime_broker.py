@@ -69,6 +69,7 @@ CANDIDATE_YAML_MAX_NODES = BOUNDED_YAML_MAX_NODES
 CANDIDATE_YAML_MAX_DEPTH = BOUNDED_YAML_MAX_DEPTH
 CANDIDATE_VALIDATION_TIMEOUT_SECONDS = 10
 LEARNING_CONTEXT_MAX_DOCUMENTS = 32
+KNOWLEDGE_RECONCILE_MAX_NEW_EVIDENCE_REFS = 32
 FINGERPRINT_STDOUT_MAX_BYTES = 128
 FINGERPRINT_POLL_SECONDS = 0.01
 BRANCH_RUNTIME_REQUIRED_FIELDS = frozenset({
@@ -2272,6 +2273,7 @@ class RuntimeSessionBroker:
     def _assert_new_knowledge_evidence_relevant(
         self,
         *,
+        state: _LearningRuntimeSessionState,
         snapshot: MaterializedRepository,
         current: dict,
         candidate: dict,
@@ -2282,20 +2284,34 @@ class RuntimeSessionBroker:
         candidate_refs = self._knowledge_evidence_ref_map(
             candidate, label="candidate"
         )
+        pending: list[tuple[tuple[str, str, str, str], str]] = []
         for key, refs in candidate_refs.items():
-            domain, concept, capability, side = key
             previous = frozenset(current_refs.get(key, ()))
             for evidence_id in refs:
-                if evidence_id in previous:
-                    continue
-                evidence_path = _relative_path(
-                    f"evidence/{evidence_id}.yaml",
-                    "Knowledge Evidence reference",
+                if evidence_id not in previous:
+                    pending.append((key, evidence_id))
+        if len(pending) > KNOWLEDGE_RECONCILE_MAX_NEW_EVIDENCE_REFS:
+            raise GuardRejected(
+                "Knowledge reconciliation adds too many new Evidence references"
+            )
+
+        evidence_cache: dict[str, dict] = {}
+        for key, evidence_id in pending:
+            domain, concept, capability, side = key
+            evidence_path = _relative_path(
+                f"evidence/{evidence_id}.yaml",
+                "Knowledge Evidence reference",
+            )
+            if instance_expected_types(evidence_path) != ("evidence",):
+                raise GuardRejected(
+                    "Knowledge Evidence reference is not a canonical Evidence path"
                 )
-                if instance_expected_types(evidence_path) != ("evidence",):
-                    raise GuardRejected(
-                        "Knowledge Evidence reference is not a canonical Evidence path"
-                    )
+            if not state.policy.may_read(evidence_path):
+                raise GuardRejected(
+                    "Knowledge Evidence reference is outside the session read capability policy"
+                )
+            evidence = evidence_cache.get(evidence_id)
+            if evidence is None:
                 try:
                     evidence_text, _ = self.provider.read_materialized_text(
                         snapshot, evidence_path
@@ -2306,47 +2322,51 @@ class RuntimeSessionBroker:
                     raise GuardRejected(
                         f"Knowledge Evidence reference {evidence_id!r} is unreadable"
                     ) from exc
-                if (
-                    not isinstance(evidence, dict)
-                    or evidence.get("document_type") != "evidence"
-                    or evidence.get("id") != evidence_id
-                ):
+                if not isinstance(evidence, dict):
                     raise GuardRejected(
                         f"Knowledge Evidence reference {evidence_id!r} has invalid identity"
                     )
-                expected_target = {
-                    "type": "capability",
-                    "domain": domain,
-                    "concept": concept,
-                    "capability": capability,
-                }
-                targets = evidence.get("targets")
-                if not isinstance(targets, list) or not any(
-                    isinstance(target, dict)
-                    and all(
-                        target.get(field) == value
-                        for field, value in expected_target.items()
-                    )
-                    for target in targets
-                ):
-                    raise GuardRejected(
-                        f"Knowledge Evidence reference {evidence_id!r} does not exactly target "
-                        f"{domain}/{concept}/{capability}"
-                    )
-                interpretation = evidence.get("interpretation")
-                direction = (
-                    interpretation.get("direction")
-                    if isinstance(interpretation, dict)
-                    else None
+                evidence_cache[evidence_id] = evidence
+            if (
+                evidence.get("document_type") != "evidence"
+                or evidence.get("id") != evidence_id
+            ):
+                raise GuardRejected(
+                    f"Knowledge Evidence reference {evidence_id!r} has invalid identity"
                 )
-                expected_direction = (
-                    "support" if side == "support" else "challenge"
+            expected_target = {
+                "type": "capability",
+                "domain": domain,
+                "concept": concept,
+                "capability": capability,
+            }
+            targets = evidence.get("targets")
+            if not isinstance(targets, list) or not any(
+                isinstance(target, dict)
+                and all(
+                    target.get(field) == value
+                    for field, value in expected_target.items()
                 )
-                if direction != expected_direction:
-                    raise GuardRejected(
-                        f"Knowledge Evidence reference {evidence_id!r} direction "
-                        f"{direction!r} cannot populate {side}"
-                    )
+                for target in targets
+            ):
+                raise GuardRejected(
+                    f"Knowledge Evidence reference {evidence_id!r} does not exactly target "
+                    f"{domain}/{concept}/{capability}"
+                )
+            interpretation = evidence.get("interpretation")
+            direction = (
+                interpretation.get("direction")
+                if isinstance(interpretation, dict)
+                else None
+            )
+            expected_direction = (
+                "support" if side == "support" else "challenge"
+            )
+            if direction != expected_direction:
+                raise GuardRejected(
+                    f"Knowledge Evidence reference {evidence_id!r} direction "
+                    f"{direction!r} cannot populate {side}"
+                )
 
     def reconcile_knowledge(
         self,
@@ -2422,6 +2442,7 @@ class RuntimeSessionBroker:
                             )
 
                     self._assert_new_knowledge_evidence_relevant(
+                        state=state,
                         snapshot=authority.snapshot,
                         current=current,
                         candidate=candidate,

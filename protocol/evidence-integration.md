@@ -40,7 +40,8 @@ When the ordinary Runtime persists a learner Knowledge change, use the dedicated
 
 - a missing Knowledge owner may be first-materialized only at revision 1;
 - an existing owner is fresh-read and updated under semantic revision + blob/head CAS;
-- every newly added support/challenge Evidence reference must resolve in the same exact Instance snapshot;
+- every newly added support/challenge Evidence reference must be readable under the session's host-owned capability policy and resolve in the same exact Instance snapshot;
+- one reconciliation may add at most 32 new Evidence references, with the bound checked before per-Evidence repository I/O;
 - newly added references must carry an exact typed capability target matching the Knowledge domain/concept/capability;
 - Evidence interpretation.direction must agree with the support/challenge side.
 
