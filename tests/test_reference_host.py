@@ -217,6 +217,118 @@ class ReferenceLearningHostTests(unittest.TestCase):
         self.assertEqual(
             checkpoint_progress(), self.provider.docs[CHECKPOINT_PATH]
         )
+    def test_fresh_consumers_recover_durable_checkpoint_and_knowledge(self):
+        producer_session_id = self.host._session.session_id
+        initial = self.invoke(
+            "read_learning_context",
+            required_paths=[CHECKPOINT_PATH, READ_PATH],
+        )
+        self.assertTrue(initial["ok"])
+        by_path = {
+            item["path"]: item
+            for item in initial["result"]["documents"]
+        }
+
+        checkpoint = {
+            "milestone": ["next-step"],
+            "return_point": {
+                "kind": "teaching_thread",
+                "milestone": "next-step",
+                "focus": "fresh consumers resume from durable state",
+            },
+            "ready_next": ["apply the concept to a fresh example"],
+        }
+        saved = self.invoke(
+            "save_learning_checkpoint",
+            checkpoint=checkpoint,
+            expected_version_token=by_path[CHECKPOINT_PATH]["version_token"],
+        )
+        self.assertTrue(saved["ok"])
+        self.assertTrue(saved["result"]["applied"])
+
+        evidence = typed_evidence(
+            evidence_id=KNOWLEDGE_EVIDENCE_ID,
+        )
+        created = self.invoke("create_evidence", content=evidence)
+        self.assertTrue(created["ok"])
+        self.assertTrue(created["result"]["applied"])
+
+        candidate = knowledge_candidate()
+        reconciled = self.invoke(
+            "reconcile_knowledge",
+            content=candidate,
+            expected_version_token=by_path[READ_PATH]["version_token"],
+        )
+        self.assertTrue(reconciled["ok"])
+        self.assertTrue(reconciled["result"]["applied"])
+
+        self.host.close()
+
+        recovered = []
+        consumer_session_ids = []
+        for _ in range(2):
+            consumer = ReferenceLearningHost.open(
+                provider=self.provider,
+                locator_source=locator(),
+                branch_runtime_path=RUNTIME_PATH,
+                policy=RuntimeCapabilityPolicy(
+                    readable_roots=(
+                        "learner",
+                        "evidence",
+                        "topics/synthetic/subtopics/unit",
+                    ),
+                    writable_roots=(
+                        READ_PATH,
+                        "learner/knowledge/new-domain.yaml",
+                        "evidence",
+                        CHECKPOINT_PATH,
+                    ),
+                ),
+                write_admission=DeploymentWriteGate(),
+                expected_generation=3,
+            )
+            try:
+                consumer_session_ids.append(consumer._session.session_id)
+                result = consumer.invoke({
+                    "operation": "read_learning_context",
+                    "arguments": {
+                        "required_paths": [CHECKPOINT_PATH, READ_PATH],
+                    },
+                })
+                self.assertTrue(result["ok"])
+                recovered.append(result["result"]["documents"])
+            finally:
+                consumer.close()
+
+        self.assertNotIn(producer_session_id, consumer_session_ids)
+        self.assertEqual(2, len(set(consumer_session_ids)))
+        self.assertEqual(recovered[0], recovered[1])
+
+        recovered_by_path = {
+            item["path"]: item
+            for item in recovered[0]
+        }
+        progress = yaml.safe_load(
+            recovered_by_path[CHECKPOINT_PATH]["content"]
+        )
+        knowledge = yaml.safe_load(
+            recovered_by_path[READ_PATH]["content"]
+        )
+        self.assertEqual(
+            checkpoint["milestone"], progress["current"]["milestone"]
+        )
+        self.assertEqual(
+            checkpoint["return_point"], progress["resume"]["return_point"]
+        )
+        self.assertEqual(
+            checkpoint["ready_next"], progress["resume"]["ready_next"]
+        )
+        self.assertEqual(
+            [KNOWLEDGE_EVIDENCE_ID],
+            knowledge["concepts"]["token-identity"]["capabilities"]
+            ["explanation"]["evidence_refs"]["support"],
+        )
+
     def test_reference_host_can_first_materialize_knowledge_owner(self):
         evidence_id = "evi-reference-host-new-domain-001"
         evidence = typed_evidence(

@@ -54,7 +54,10 @@ Internal repository paths, remotes, commits and credential material are not refl
 5. idempotent Evidence retry;
 6. visible CAS failure;
 7. rejection of generic/continuity operations;
-8. session close / revocation.
+8. session close / revocation;
+9. producer-session revocation followed by two fresh consumer sessions independently recovering the same durable checkpoint and Knowledge state.
+
+The fresh-consumer journey proves mechanical cross-session recoverability only. It does not by itself prove that a model chooses a better teaching action from that state.
 
 This is mechanical host/broker evidence. It does not decide whether an observation qualifies as Evidence, infer learner capability state, establish teaching quality, deploy a new Core, mutate real learner state, or constitute learner acceptance.
 
