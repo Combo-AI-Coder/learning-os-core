@@ -56,6 +56,16 @@ Core mutation follows PR-required governance. Deployed Runtime resolves and
 reads the exact Core commit pinned by Runtime-Control; advancement of this
 repository's `main` branch alone does not change the deployed Core.
 
+## Thin reference host
+
+The development reference host façade in `scripts/reference_host.py` exposes
+only the bounded learning-context, Evidence-create, and Knowledge-reconcile
+operations needed by the synthetic reference journey. Trusted locator,
+repository/provider bindings, capability policy and broker session authority
+remain host-side. See [`docs/reference-host.md`](docs/reference-host.md) for the
+public-safe boundary and synthetic coverage; this is not a deployment or a
+model-provider/RPC implementation.
+
 ## REST provider safety and compatibility
 
 `GitHubApiProvider` is read-only by default and bounds response/archive expansion.
