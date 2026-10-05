@@ -1975,10 +1975,24 @@ class RuntimeSessionBroker:
             offset = value.utcoffset() if value.tzinfo is not None else None
             if offset is None:
                 return ("datetime-naive", value.isoformat())
-            normalized = value.astimezone(
-                datetime_module.timezone.utc
-            ).replace(tzinfo=None)
-            return ("datetime-aware", normalized.isoformat())
+            local_microseconds = (
+                (
+                    value.toordinal() * 86400
+                    + value.hour * 3600
+                    + value.minute * 60
+                    + value.second
+                )
+                * 1_000_000
+                + value.microsecond
+            )
+            offset_microseconds = (
+                (offset.days * 86400 + offset.seconds) * 1_000_000
+                + offset.microseconds
+            )
+            return (
+                "datetime-aware",
+                local_microseconds - offset_microseconds,
+            )
         if isinstance(value, datetime_module.date):
             return ("date", value.isoformat())
         if isinstance(value, dict):
@@ -1992,20 +2006,22 @@ class RuntimeSessionBroker:
             entries.sort(key=lambda pair: repr(pair[0]))
             return ("dict", tuple(entries))
         if isinstance(value, (list, tuple)):
+            sequence_type = "list" if type(value) is list else "tuple"
             return (
-                "sequence",
+                sequence_type,
                 tuple(
                     RuntimeSessionBroker._type_sensitive_semantic_key(item)
                     for item in value
                 ),
             )
         if isinstance(value, (set, frozenset)):
+            set_type = "set" if type(value) is set else "frozenset"
             items = [
                 RuntimeSessionBroker._type_sensitive_semantic_key(item)
                 for item in value
             ]
             items.sort(key=repr)
-            return ("set", tuple(items))
+            return (set_type, tuple(items))
         return (
             "scalar",
             type(value).__module__,

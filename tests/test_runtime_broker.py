@@ -13,6 +13,7 @@ from unittest import mock
 import yaml
 
 import scripts.runtime_broker as runtime_broker
+import scripts.validate_learning_os as validate_learning_os
 from scripts.runtime_adapter import (
     CasConflict,
     DeploymentResolver,
@@ -737,6 +738,43 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             message="test: retry equal float-key Evidence",
         )
         self.assertFalse(result.applied)
+
+    def test_type_sensitive_semantics_distinguish_yaml_pairs_from_plain_lists(self):
+        pairs = yaml.safe_load(
+            "value: !!pairs\n"
+            "- a: b\n"
+        )["value"]
+        plain = [["a", "b"]]
+        self.assertIsInstance(pairs[0], tuple)
+        self.assertIsInstance(plain[0], list)
+        self.assertFalse(
+            self.broker._type_sensitive_semantic_equal(pairs, plain)
+        )
+
+    def test_create_evidence_idempotency_handles_boundary_aware_timestamp(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("evidence", "learner"),
+            writable_roots=("evidence",),
+        )
+        session = self.open()
+        first = yaml.safe_load(EVIDENCE_V1)
+        first["observed_at"] = "0001-01-01T00:00:00+14:00"
+        text = yaml.safe_dump(first, sort_keys=False).replace(
+            "'0001-01-01T00:00:00+14:00'",
+            "0001-01-01T00:00:00+14:00",
+        )
+        first_result = self.broker.create_evidence(
+            session,
+            content=text,
+            message="test: create boundary-timestamp Evidence",
+        )
+        self.assertTrue(first_result.applied)
+        second_result = self.broker.create_evidence(
+            session,
+            content=text,
+            message="test: retry boundary-timestamp Evidence",
+        )
+        self.assertFalse(second_result.applied)
 
     def test_create_evidence_idempotency_is_type_sensitive(self):
         self.policy = RuntimeCapabilityPolicy(
@@ -2885,6 +2923,66 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
 
         self.assertEqual(1, compute_policy.call_count)
         self.assertEqual(2, host_policy.call_count)
+
+    def test_create_evidence_requires_deployed_core_operation_fingerprint(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("evidence", "learner"),
+            writable_roots=("evidence",),
+        )
+        session = self.open()
+        with mock.patch.object(
+            validate_learning_os,
+            "INSTANCE_DEDICATED_RUNTIME_OPERATIONS",
+            {},
+        ):
+            legacy_fingerprint = (
+                validate_learning_os.instance_write_policy_fingerprint()
+            )
+        current_fingerprint = (
+            validate_learning_os.instance_write_policy_fingerprint()
+        )
+        self.assertNotEqual(legacy_fingerprint, current_fingerprint)
+
+        core_root = self.deployed_core_snapshot()
+        core_config_path = core_root / "config/core.yaml"
+        core_config = yaml.safe_load(
+            core_config_path.read_text(encoding="utf-8")
+        )
+        core_config["manifest"][
+            "runtime_session_write_policy_fingerprint"
+        ] = legacy_fingerprint
+        core_config_path.write_text(
+            yaml.safe_dump(core_config, sort_keys=False),
+            encoding="utf-8",
+        )
+        original_materialize = self.provider.materialize
+
+        def materialize(repository_id, ref):
+            if repository_id == CORE_ID:
+                return MaterializedRepository(
+                    core_root, CORE_ID, CORE_COMMIT, "synthetic/core"
+                )
+            return original_materialize(repository_id, ref)
+
+        self.provider.materialize = materialize
+        self.provider.calls.clear()
+        with mock.patch.object(
+            runtime_broker,
+            "_compute_bounded_write_policy_fingerprint",
+            return_value=legacy_fingerprint,
+        ):
+            with self.assertRaisesRegex(
+                GuardRejected,
+                "does not match the exact deployed Core",
+            ):
+                self.broker.create_evidence(
+                    session,
+                    content=EVIDENCE_V1,
+                    message="test: old Core cannot authorize create Evidence",
+                )
+        self.assertFalse(
+            any(call[0] == "create" for call in self.provider.calls)
+        )
 
     def test_deployed_core_policy_cache_is_keyed_by_exact_core_identity(self):
         session = self.open()
