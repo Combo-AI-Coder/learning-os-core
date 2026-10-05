@@ -69,6 +69,8 @@ CANDIDATE_YAML_MAX_NODES = BOUNDED_YAML_MAX_NODES
 CANDIDATE_YAML_MAX_DEPTH = BOUNDED_YAML_MAX_DEPTH
 CANDIDATE_VALIDATION_TIMEOUT_SECONDS = 10
 LEARNING_CONTEXT_MAX_DOCUMENTS = 32
+LEARNING_CHECKPOINT_MAX_CURRENT_MILESTONES = 16
+LEARNING_CHECKPOINT_MAX_READY_NEXT = 32
 KNOWLEDGE_RECONCILE_MAX_NEW_EVIDENCE_REFS = 32
 FINGERPRINT_STDOUT_MAX_BYTES = 128
 FINGERPRINT_POLL_SECONDS = 0.01
@@ -1957,6 +1959,383 @@ class RuntimeSessionBroker:
                 finally:
                     if not authority_release_attempted:
                         self._release_materializations([authority.snapshot])
+
+    def _authorize_learning_checkpoint_noop(
+        self,
+        session: LearningRuntimeSession,
+        *,
+        path: str,
+        expected_blob_sha: str,
+        validation_content: str,
+    ) -> None:
+        """Apply the normal write fences even when checkpoint state is unchanged."""
+        with self._session_operation(session) as state:
+            if not state.policy.may_write(path):
+                raise GuardRejected(
+                    "learning checkpoint is outside the session capability policy"
+                )
+            if self.write_admission is None:
+                raise GuardRejected(
+                    "writable learning session requires shared deployment write admission"
+                )
+            with self.write_admission.write_lease():
+                deployment = self.guard.snapshot(state.deployment)
+                authority = self._pin_instance_authority(state)
+                core = None
+                release_attempted = False
+                try:
+                    _, current_blob_sha = self.provider.read_materialized_text(
+                        authority.snapshot, path
+                    )
+                    if current_blob_sha != expected_blob_sha:
+                        raise CasConflict(
+                            "learning checkpoint version token is stale"
+                        )
+                    core = self.provider.materialize(
+                        state.deployment.core_repository_id,
+                        state.deployment.core_commit,
+                    )
+                    if (
+                        core.repository_id
+                        != state.deployment.core_repository_id
+                        or core.commit_sha
+                        != state.deployment.core_commit
+                    ):
+                        raise GuardRejected(
+                            "deployed Core provenance changed during learning checkpoint"
+                        )
+                    self._assert_deployed_write_policy_compatible(
+                        state, core_snapshot=core
+                    )
+                    self._validate_candidate(
+                        state,
+                        authority_head=authority.head,
+                        path=path,
+                        content=validation_content,
+                        contract=deployment.contract,
+                        instance_snapshot=authority.snapshot,
+                        core_snapshot=core,
+                    )
+                    self._assert_pinned_instance_current(state, authority)
+                    self.guard.assert_snapshot_current(
+                        state.deployment, deployment
+                    )
+                    release_attempted = True
+                    self._release_materializations(
+                        [core, authority.snapshot]
+                    )
+                finally:
+                    if not release_attempted:
+                        pending = [
+                            snapshot
+                            for snapshot in (core, authority.snapshot)
+                            if snapshot is not None
+                        ]
+                        if pending:
+                            self._release_materializations(pending)
+
+    @staticmethod
+    def _preflight_learning_checkpoint_object(value: object) -> None:
+        """Bound caller-owned checkpoint objects before YAML serialization."""
+        stack: list[tuple[object, int]] = [(value, 1)]
+        nodes = 0
+        scalar_bytes = 0
+
+        while stack:
+            item, depth = stack.pop()
+            nodes += 1
+            if nodes > CANDIDATE_YAML_MAX_NODES:
+                raise ResolutionError(
+                    "learning checkpoint exceeds the node limit"
+                )
+            if depth > CANDIDATE_YAML_MAX_DEPTH:
+                raise ResolutionError(
+                    "learning checkpoint exceeds the nesting-depth limit"
+                )
+
+            if item is None:
+                scalar_bytes += 4
+            elif isinstance(item, bool):
+                scalar_bytes += 5
+            elif isinstance(item, str):
+                remaining_bytes = CANDIDATE_YAML_MAX_BYTES - scalar_bytes
+                if len(item) > remaining_bytes:
+                    raise ResolutionError(
+                        "learning checkpoint exceeds the scalar byte limit"
+                    )
+                try:
+                    scalar_bytes += len(item.encode("utf-8"))
+                except UnicodeEncodeError:
+                    raise ResolutionError(
+                        "learning checkpoint contains invalid UTF-8 text"
+                    ) from None
+            elif isinstance(item, int):
+                bits = item.bit_length()
+                decimal_digits = max(1, (bits * 30103) // 100000 + 1)
+                max_digits = (
+                    sys.get_int_max_str_digits()
+                    if hasattr(sys, "get_int_max_str_digits")
+                    else 0
+                )
+                if max_digits and decimal_digits > max_digits:
+                    raise ResolutionError(
+                        "learning checkpoint integer exceeds the serialization digit limit"
+                    )
+                scalar_bytes += decimal_digits
+                if item < 0:
+                    scalar_bytes += 1
+            elif isinstance(item, float):
+                scalar_bytes += 32
+            elif isinstance(item, dict):
+                if nodes + (2 * len(item)) > CANDIDATE_YAML_MAX_NODES:
+                    raise ResolutionError(
+                        "learning checkpoint exceeds the node limit"
+                    )
+                for key, child in item.items():
+                    if not isinstance(key, str) or not key:
+                        raise ResolutionError(
+                            "learning checkpoint mapping keys must be non-empty strings"
+                        )
+                    nodes += 1
+                    if nodes > CANDIDATE_YAML_MAX_NODES:
+                        raise ResolutionError(
+                            "learning checkpoint exceeds the node limit"
+                        )
+                    remaining_bytes = CANDIDATE_YAML_MAX_BYTES - scalar_bytes
+                    if len(key) > remaining_bytes:
+                        raise ResolutionError(
+                            "learning checkpoint exceeds the scalar byte limit"
+                        )
+                    try:
+                        scalar_bytes += len(key.encode("utf-8"))
+                    except UnicodeEncodeError:
+                        raise ResolutionError(
+                            "learning checkpoint contains invalid UTF-8 text"
+                        ) from None
+                    stack.append((child, depth + 1))
+            elif isinstance(item, list):
+                if nodes + len(item) > CANDIDATE_YAML_MAX_NODES:
+                    raise ResolutionError(
+                        "learning checkpoint exceeds the node limit"
+                    )
+                stack.extend((child, depth + 1) for child in item)
+            else:
+                raise ResolutionError(
+                    "learning checkpoint contains an unsupported value type"
+                )
+
+            if scalar_bytes > CANDIDATE_YAML_MAX_BYTES:
+                raise ResolutionError(
+                    "learning checkpoint exceeds the scalar byte limit"
+                )
+
+    @staticmethod
+    def _normalize_learning_checkpoint(checkpoint: object) -> dict[str, object]:
+        if not isinstance(checkpoint, dict):
+            raise ResolutionError("learning checkpoint must be a mapping")
+        if any(not isinstance(key, str) for key in checkpoint):
+            raise ResolutionError("learning checkpoint keys must be strings")
+        required = frozenset({"milestone", "return_point", "ready_next"})
+        if frozenset(checkpoint) != required:
+            raise ResolutionError(
+                "learning checkpoint must contain exactly milestone, return_point and ready_next"
+            )
+
+        milestones = checkpoint["milestone"]
+        if not isinstance(milestones, list):
+            raise ResolutionError("learning checkpoint milestone must be an array")
+        if len(milestones) > LEARNING_CHECKPOINT_MAX_CURRENT_MILESTONES:
+            raise ResolutionError(
+                "learning checkpoint milestone count exceeds the bounded limit"
+            )
+        ready_next = checkpoint["ready_next"]
+        if not isinstance(ready_next, list):
+            raise ResolutionError("learning checkpoint ready_next must be an array")
+        if len(ready_next) > LEARNING_CHECKPOINT_MAX_READY_NEXT:
+            raise ResolutionError(
+                "learning checkpoint ready_next count exceeds the bounded limit"
+            )
+
+        RuntimeSessionBroker._preflight_learning_checkpoint_object(checkpoint)
+        if any(not isinstance(item, str) or not item for item in milestones):
+            raise ResolutionError(
+                "learning checkpoint milestone entries must be non-empty strings"
+            )
+        if len(set(milestones)) != len(milestones):
+            raise ResolutionError(
+                "learning checkpoint milestone entries must be unique"
+            )
+
+        return_point = checkpoint["return_point"]
+        if return_point is not None:
+            if not isinstance(return_point, dict):
+                raise ResolutionError(
+                    "learning checkpoint return_point must be a mapping or null"
+                )
+            if any(
+                not isinstance(key, str) or not key
+                for key in return_point
+            ):
+                raise ResolutionError(
+                    "learning checkpoint return_point keys must be non-empty strings"
+                )
+
+        if any(not isinstance(item, str) or not item for item in ready_next):
+            raise ResolutionError(
+                "learning checkpoint ready_next entries must be non-empty strings"
+            )
+        if len(set(ready_next)) != len(ready_next):
+            raise ResolutionError(
+                "learning checkpoint ready_next entries must be unique"
+            )
+
+        return {
+            "milestone": list(milestones),
+            "return_point": return_point,
+            "ready_next": list(ready_next),
+        }
+
+    def save_learning_checkpoint(
+        self,
+        session: LearningRuntimeSession,
+        *,
+        checkpoint: object,
+        expected_blob_sha: str,
+        message: str,
+    ) -> InstanceWriteAck:
+        """Persist only the bound Main Subtopic's local resume checkpoint."""
+        normalized = self._normalize_learning_checkpoint(checkpoint)
+        if not isinstance(expected_blob_sha, str) or not expected_blob_sha:
+            raise ResolutionError(
+                "learning checkpoint expected version token must be a non-empty string"
+            )
+
+        state = self._session_state(session)
+        if state.binding.role != "main":
+            raise GuardRejected(
+                "learning checkpoint requires the bound Main Branch"
+            )
+        if not state.binding.subtopic:
+            raise GuardRejected(
+                "learning checkpoint requires a bound Subtopic"
+            )
+        path = _relative_path(
+            "topics/"
+            f"{state.binding.topic}/subtopics/{state.binding.subtopic}/progress.yaml",
+            "learning checkpoint canonical path",
+        )
+
+        current_text = self.read_instance_text(session, path)
+        if current_text.version_token != expected_blob_sha:
+            raise CasConflict("learning checkpoint version token is stale")
+        _preflight_candidate_yaml(current_text.content)
+        try:
+            current_document = yaml.safe_load(current_text.content)
+        except (yaml.YAMLError, ValueError, OverflowError) as exc:
+            raise GuardRejected(
+                f"Subtopic Progress YAML is malformed: {exc.__class__.__name__}"
+            ) from None
+        if not isinstance(current_document, dict):
+            raise GuardRejected("Subtopic Progress must be a mapping")
+        if current_document.get("document_type") != "subtopic_progress":
+            raise GuardRejected(
+                "learning checkpoint requires document_type subtopic_progress"
+            )
+        mismatches = instance_path_identity_mismatches(
+            path, current_document, "subtopic_progress"
+        )
+        if mismatches:
+            raise GuardRejected(
+                "learning checkpoint target identity mismatch: "
+                + "; ".join(mismatches)
+            )
+        revision = current_document.get("revision")
+        if (
+            not isinstance(revision, int)
+            or isinstance(revision, bool)
+            or revision < 1
+        ):
+            raise GuardRejected(
+                "learning checkpoint current revision is invalid"
+            )
+        milestone_records = current_document.get("milestones")
+        current_section = current_document.get("current")
+        resume_section = current_document.get("resume")
+        if not isinstance(milestone_records, dict):
+            raise GuardRejected(
+                "learning checkpoint milestones section must be a mapping"
+            )
+        if not isinstance(current_section, dict):
+            raise GuardRejected(
+                "learning checkpoint current section must be a mapping"
+            )
+        if not isinstance(resume_section, dict):
+            raise GuardRejected(
+                "learning checkpoint resume section must be a mapping"
+            )
+        unknown_milestones = [
+            milestone
+            for milestone in normalized["milestone"]
+            if milestone not in milestone_records
+        ]
+        if unknown_milestones:
+            raise GuardRejected(
+                "learning checkpoint references an unknown current milestone"
+            )
+        return_point = normalized["return_point"]
+        if isinstance(return_point, dict) and "milestone" in return_point:
+            return_point_milestone = return_point["milestone"]
+            if (
+                not isinstance(return_point_milestone, str)
+                or not return_point_milestone
+                or return_point_milestone not in milestone_records
+            ):
+                raise GuardRejected(
+                    "learning checkpoint return_point references an unknown milestone"
+                )
+
+        existing_checkpoint = {
+            "milestone": current_section.get("milestone"),
+            "return_point": resume_section.get("return_point"),
+            "ready_next": resume_section.get("ready_next"),
+        }
+
+        candidate = dict(current_document)
+        candidate_current = dict(current_section)
+        candidate_resume = dict(resume_section)
+        candidate_current["milestone"] = normalized["milestone"]
+        candidate_resume["return_point"] = normalized["return_point"]
+        candidate_resume["ready_next"] = normalized["ready_next"]
+        candidate["revision"] = revision + 1
+        candidate["updated_at"] = (
+            datetime_module.datetime.now(datetime_module.timezone.utc)
+            .replace(microsecond=0)
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
+        candidate["current"] = candidate_current
+        candidate["resume"] = candidate_resume
+        content = yaml.safe_dump(
+            candidate, sort_keys=False, allow_unicode=True
+        )
+        _preflight_candidate_yaml(content)
+        if self._type_sensitive_semantic_equal(
+            existing_checkpoint, normalized
+        ):
+            self._authorize_learning_checkpoint_noop(
+                session,
+                path=path,
+                expected_blob_sha=expected_blob_sha,
+                validation_content=content,
+            )
+            return InstanceWriteAck(applied=False)
+        return self.guarded_update(
+            session,
+            path=path,
+            content=content,
+            expected_blob_sha=expected_blob_sha,
+            message=message,
+        )
 
     @staticmethod
     def _type_sensitive_semantic_key(value: object) -> tuple:

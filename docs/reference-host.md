@@ -14,9 +14,10 @@ The trusted host owns:
 - the shared deployment-operation admission object;
 - the broker-issued opaque session capability and its lifetime.
 
-The external conversation/model surface receives none of those objects. It can submit only one of three versioned reference-host operations:
+The external conversation/model surface receives none of those objects. It can submit only one of four versioned reference-host operations:
 
 - `read_learning_context`;
+- `save_learning_checkpoint`;
 - `create_evidence`;
 - `reconcile_knowledge`.
 
@@ -32,6 +33,8 @@ The successful read result contains only canonical document paths, document cont
 
 Write operations return only `{"applied": <bool>}`. Commit messages are host-generated rather than model-controlled.
 
+`save_learning_checkpoint` is deliberately narrower than generic Progress replacement. It derives the canonical Progress path from the host-bound Main Topic/Subtopic and accepts only the local checkpoint fields `milestone`, `return_point`, and `ready_next`, plus the version token obtained from the prior read. The broker preserves unrelated Progress fields, advances the document revision only when the local checkpoint changes, and retains the existing deployment / generation / head / blob fences.
+
 Expected broker failures use stable public codes:
 
 - `resolution_failed`;
@@ -45,12 +48,13 @@ Internal repository paths, remotes, commits and credential material are not refl
 `tests/test_reference_host.py` composes the thin host surface with the existing synthetic broker fixture and exercises:
 
 1. one bounded learning-context read;
-2. create-only typed Evidence persistence;
-3. Knowledge reconciliation using the version token returned by the read;
-4. idempotent Evidence retry;
-5. visible CAS failure;
-6. rejection of generic/continuity operations;
-7. session close / revocation.
+2. one Main-bound local learning checkpoint while preserving unrelated Progress state;
+3. create-only typed Evidence persistence;
+4. Knowledge reconciliation using the version token returned by the read;
+5. idempotent Evidence retry;
+6. visible CAS failure;
+7. rejection of generic/continuity operations;
+8. session close / revocation.
 
 This is mechanical host/broker evidence. It does not decide whether an observation qualifies as Evidence, infer learner capability state, establish teaching quality, deploy a new Core, mutate real learner state, or constitute learner acceptance.
 
