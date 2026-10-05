@@ -635,6 +635,31 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         ]
         self.assertEqual(1, len(create_calls))
 
+    def test_create_evidence_rejects_tagged_container_before_persistence(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("evidence", "learner"),
+            writable_roots=("evidence",),
+        )
+        session = self.open()
+        for tagged_context in (
+            "!!set {secret: null}",
+            "!!pairs [{secret: value}]",
+        ):
+            with self.subTest(tagged_context=tagged_context):
+                candidate = EVIDENCE_V1 + f"context: {tagged_context}\n"
+                self.provider.calls.clear()
+                with self.assertRaisesRegex(
+                    GuardRejected, "tagged collections are not allowed"
+                ):
+                    self.broker.create_evidence(
+                        session,
+                        content=candidate,
+                        message="test: reject tagged Evidence container",
+                    )
+                self.assertFalse(
+                    any(call[0] == "create" for call in self.provider.calls)
+                )
+
     def test_create_evidence_idempotency_handles_reordered_large_mapping(self):
         self.policy = RuntimeCapabilityPolicy(
             readable_roots=("evidence", "learner"),

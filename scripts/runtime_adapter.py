@@ -102,6 +102,15 @@ def _preflight_bounded_yaml(content: str, where: str) -> None:
                     f"{where} aliases and anchors are not allowed"
                 )
             if isinstance(event, starts):
+                allowed_tag = (
+                    "tag:yaml.org,2002:map"
+                    if isinstance(event, MappingStartEvent)
+                    else "tag:yaml.org,2002:seq"
+                )
+                if event.tag not in (None, allowed_tag):
+                    raise ResolutionError(
+                        f"{where} tagged collections are not allowed"
+                    )
                 depth += 1
                 nodes += 1
                 if depth > BOUNDED_YAML_MAX_DEPTH:
