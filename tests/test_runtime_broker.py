@@ -635,6 +635,56 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         ]
         self.assertEqual(1, len(create_calls))
 
+    def test_create_evidence_rejects_binary_scalar_before_persistence(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("evidence", "learner"),
+            writable_roots=("evidence",),
+        )
+        session = self.open()
+        candidate = (
+            EVIDENCE_V1
+            + "context:\n"
+            + "  leaked: !!binary Z2hwX3N5bnRoZXRpY190b2tlbg==\n"
+        )
+        self.provider.calls.clear()
+        with self.assertRaisesRegex(
+            GuardRejected, "tagged scalars are not allowed"
+        ):
+            self.broker.create_evidence(
+                session,
+                content=candidate,
+                message="test: reject binary scalar Evidence",
+            )
+        self.assertFalse(any(
+            call[0] == "create" for call in self.provider.calls
+        ))
+
+    def test_create_evidence_idempotency_handles_huge_hex_integer(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("evidence", "learner"),
+            writable_roots=("evidence",),
+        )
+        session = self.open()
+        candidate = (
+            EVIDENCE_V1
+            + "context:\n"
+            + "  huge_int: 0x"
+            + ("f" * 4200)
+            + "\n"
+        )
+        first = self.broker.create_evidence(
+            session,
+            content=candidate,
+            message="test: create huge-integer Evidence",
+        )
+        self.assertTrue(first.applied)
+        second = self.broker.create_evidence(
+            session,
+            content=candidate,
+            message="test: retry huge-integer Evidence",
+        )
+        self.assertFalse(second.applied)
+
     def test_create_evidence_rejects_tagged_container_before_persistence(self):
         self.policy = RuntimeCapabilityPolicy(
             readable_roots=("evidence", "learner"),

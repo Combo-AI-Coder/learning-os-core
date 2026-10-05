@@ -1961,16 +1961,18 @@ class RuntimeSessionBroker:
         if isinstance(value, bool):
             return ("bool", value)
         if isinstance(value, int):
-            return ("int", str(value))
+            return ("int", value)
         if isinstance(value, float):
-            # Python float equality treats signed zero as equal. Normalize
-            # it before this key is also used for order-independent mapping
-            # sorting, otherwise 0.0 / -0.0 keys can reorder equal maps.
+            # Preserve Python/YAML equality semantics without stringifying
+            # arbitrarily large numeric values. NaN needs one stable key,
+            # while signed zero compares equal by design.
+            if value != value:
+                return ("float-nan",)
             return ("float", 0.0 if value == 0.0 else value)
         if isinstance(value, str):
             return ("str", value)
         if isinstance(value, bytes):
-            return ("bytes", value.hex())
+            return ("bytes", value)
         if isinstance(value, datetime_module.datetime):
             offset = value.utcoffset() if value.tzinfo is not None else None
             if offset is None:
@@ -1996,15 +1998,16 @@ class RuntimeSessionBroker:
         if isinstance(value, datetime_module.date):
             return ("date", value.isoformat())
         if isinstance(value, dict):
-            entries = [
-                (
-                    RuntimeSessionBroker._type_sensitive_semantic_key(key),
-                    RuntimeSessionBroker._type_sensitive_semantic_key(item),
-                )
-                for key, item in value.items()
-            ]
-            entries.sort(key=lambda pair: repr(pair[0]))
-            return ("dict", tuple(entries))
+            return (
+                "dict",
+                frozenset(
+                    (
+                        RuntimeSessionBroker._type_sensitive_semantic_key(key),
+                        RuntimeSessionBroker._type_sensitive_semantic_key(item),
+                    )
+                    for key, item in value.items()
+                ),
+            )
         if isinstance(value, (list, tuple)):
             sequence_type = "list" if type(value) is list else "tuple"
             return (
@@ -2016,17 +2019,15 @@ class RuntimeSessionBroker:
             )
         if isinstance(value, (set, frozenset)):
             set_type = "set" if type(value) is set else "frozenset"
-            items = [
-                RuntimeSessionBroker._type_sensitive_semantic_key(item)
-                for item in value
-            ]
-            items.sort(key=repr)
-            return (set_type, tuple(items))
-        return (
-            "scalar",
-            type(value).__module__,
-            type(value).__qualname__,
-            repr(value),
+            return (
+                set_type,
+                frozenset(
+                    RuntimeSessionBroker._type_sensitive_semantic_key(item)
+                    for item in value
+                ),
+            )
+        raise GuardRejected(
+            "Evidence semantic comparison encountered an unsupported YAML scalar type"
         )
 
     @staticmethod

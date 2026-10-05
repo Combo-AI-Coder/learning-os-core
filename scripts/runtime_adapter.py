@@ -118,6 +118,18 @@ def _preflight_bounded_yaml(content: str, where: str) -> None:
                         f"{where} exceeds the nesting-depth limit"
                     )
             elif isinstance(event, ScalarEvent):
+                if event.tag not in {
+                    None,
+                    "tag:yaml.org,2002:null",
+                    "tag:yaml.org,2002:bool",
+                    "tag:yaml.org,2002:int",
+                    "tag:yaml.org,2002:float",
+                    "tag:yaml.org,2002:timestamp",
+                    "tag:yaml.org,2002:str",
+                }:
+                    raise ResolutionError(
+                        f"{where} tagged scalars are not allowed"
+                    )
                 nodes += 1
             elif isinstance(event, ends):
                 depth = max(0, depth - 1)
