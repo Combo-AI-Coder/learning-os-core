@@ -41,6 +41,7 @@ class GitHubBoundaryTests(unittest.TestCase):
         snapshot = provider.materialize(REPO_ID, "main")
         self.assertEqual(HEAD, snapshot.commit_sha)
         self.assertEqual(REPO_ID, snapshot.repository_id)
+        self.assertEqual(("docs/readme.md",), snapshot.paths)
         self.assertEqual(b"hello", (snapshot.root / "docs/readme.md").read_bytes())
         provider.release_materialization(snapshot)
         self.assertFalse(snapshot.root.exists())

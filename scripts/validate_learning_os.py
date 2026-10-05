@@ -614,6 +614,9 @@ INSTANCE_GENERIC_WRITE_ROLE_RULES={
 INSTANCE_GENERIC_WRITE_TRANSITION_RULES={
     "daily_execution":"preserve_locked_daily_baseline_v1",
 }
+INSTANCE_DEDICATED_RUNTIME_OPERATIONS={
+    "create_evidence":"v1",
+}
 
 def instance_expected_types(p,rules=None):
     """Return every split Instance document type whose canonical family matches p."""
@@ -695,7 +698,7 @@ def instance_generic_write_transition_rule(document_type):
     return INSTANCE_GENERIC_WRITE_TRANSITION_RULES.get(document_type)
 
 def instance_write_policy_fingerprint():
-    """Stable semantic fingerprint for path classification + generic mutation modes."""
+    """Stable semantic fingerprint for Runtime-session mutation semantics."""
     payload={
         "schema":"learning-os-runtime-session-write-policy-v1",
         "path_rules":[
@@ -726,6 +729,12 @@ def instance_write_policy_fingerprint():
             t:rule
             for t,rule in sorted(
                 INSTANCE_GENERIC_WRITE_TRANSITION_RULES.items()
+            )
+        },
+        "dedicated_operations":{
+            name:version
+            for name,version in sorted(
+                INSTANCE_DEDICATED_RUNTIME_OPERATIONS.items()
             )
         },
     }

@@ -1684,6 +1684,37 @@ class GitCliProviderTests(unittest.TestCase):
             self._git("--git-dir", str(self.remote), "rev-parse", "refs/heads/main"),
         )
 
+    def test_read_only_binding_cannot_create(self):
+        provider = self.provider(writable=False)
+        with self.assertRaisesRegex(CasConflict, "read-only"):
+            provider.create_text(
+                self.REPO_ID,
+                "main",
+                "new.txt",
+                "created\n",
+                "test: should not create",
+                expected_ref_sha=self.initial_commit,
+            )
+        self.assertEqual(
+            self.initial_commit,
+            self._git(
+                "--git-dir", str(self.remote),
+                "rev-parse", "refs/heads/main",
+            ),
+        )
+
+    def test_stale_branch_head_create_is_rejected(self):
+        provider = self.provider()
+        with self.assertRaisesRegex(CasConflict, "branch head"):
+            provider.create_text(
+                self.REPO_ID,
+                "main",
+                "new.txt",
+                "created\n",
+                "test: stale create",
+                expected_ref_sha="f" * 40,
+            )
+
     def test_stale_blob_cas_is_rejected(self):
         provider = self.provider()
         with self.assertRaisesRegex(CasConflict, "compare-and-swap"):
@@ -1760,6 +1791,132 @@ class GitCliProviderTests(unittest.TestCase):
             "two",
             self._git("--git-dir", str(self.remote), "show", "refs/heads/main:state.txt"),
         )
+
+    def test_successful_create_pushes_one_new_file_on_bound_branch(self):
+        provider = self.provider()
+        commit = provider.create_text(
+            self.REPO_ID,
+            "main",
+            "new/nested.txt",
+            "created\n",
+            "test: create synthetic state",
+            expected_ref_sha=self.initial_commit,
+        )
+        self.assertEqual(
+            commit,
+            self._git(
+                "--git-dir", str(self.remote),
+                "rev-parse", "refs/heads/main",
+            ),
+        )
+        self.assertEqual(
+            "created",
+            self._git(
+                "--git-dir", str(self.remote),
+                "show", "refs/heads/main:new/nested.txt",
+            ),
+        )
+        self.assertEqual(
+            "one",
+            self._git(
+                "--git-dir", str(self.remote),
+                "show", "refs/heads/main:state.txt",
+            ),
+        )
+
+    def test_create_rejects_snapshot_that_new_blob_count_cannot_rematerialize(self):
+        provider = self.provider()
+        with mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_TOTAL_BLOB_BYTES", 7
+        ), mock.patch(
+            "scripts.runtime_adapter.MAX_SNAPSHOT_BLOB_BYTES", 7
+        ):
+            with self.assertRaisesRegex(
+                CasConflict, "not Runtime-materializable"
+            ):
+                provider.create_text(
+                    self.REPO_ID,
+                    "main",
+                    "new.txt",
+                    "x\n",
+                    "test: create must preserve future materialization",
+                    expected_ref_sha=self.initial_commit,
+                )
+        self.assertEqual(
+            self.initial_commit,
+            self._git(
+                "--git-dir", str(self.remote),
+                "rev-parse", "refs/heads/main",
+            ),
+        )
+
+    def test_create_rejects_existing_path(self):
+        provider = self.provider()
+        with self.assertRaisesRegex(CasConflict, "already exists"):
+            provider.create_text(
+                self.REPO_ID,
+                "main",
+                "state.txt",
+                "replacement\n",
+                "test: must not replace",
+                expected_ref_sha=self.initial_commit,
+            )
+
+    def test_concurrent_branch_advance_rejects_create_push(self):
+        test = self
+
+        class RacingCreateProvider(GitCliProvider):
+            raced = False
+
+            def _git(self, *args, cwd=None, cas=False, binding=None):
+                if args and args[0] == "push" and cas and not self.raced:
+                    self.raced = True
+                    (test.seed / "other-create.txt").write_text(
+                        "race\n", encoding="utf-8"
+                    )
+                    test._git("add", "other-create.txt", cwd=test.seed)
+                    test._git(
+                        "commit", "-q", "-m", "concurrent create advance",
+                        cwd=test.seed,
+                    )
+                    test._git(
+                        "push", "-q", "origin", "HEAD:refs/heads/main",
+                        cwd=test.seed,
+                    )
+                return super()._git(
+                    *args, cwd=cwd, cas=cas, binding=binding
+                )
+
+        provider = RacingCreateProvider([
+            GitRepositoryBinding(
+                self.REPO_ID,
+                str(self.remote),
+                "synthetic/instance",
+                writable=True,
+            )
+        ])
+        self.addCleanup(provider.close)
+        with self.assertRaises(Exception):
+            provider.create_text(
+                self.REPO_ID,
+                "main",
+                "new.txt",
+                "created\n",
+                "test: create must not cross branch advance",
+                expected_ref_sha=self.initial_commit,
+            )
+        self.assertNotEqual(
+            self.initial_commit,
+            self._git(
+                "--git-dir", str(self.remote),
+                "rev-parse", "refs/heads/main",
+            ),
+        )
+        with self.assertRaises(AssertionError):
+            self._git(
+                "--git-dir", str(self.remote),
+                "show", "refs/heads/main:new.txt",
+            )
 
     def test_concurrent_branch_advance_rejects_non_force_push(self):
         test = self
@@ -2294,6 +2451,37 @@ class GitHubApiProviderTests(unittest.TestCase):
                 expected_ref_sha=self.HEAD,
             )
         provider._repo.assert_not_called()
+        self.assertEqual([], provider.calls)
+
+    def test_exact_branch_head_create_is_rejected_before_requests(self):
+        provider = self.provider()
+        provider._repo = mock.Mock(
+            side_effect=AssertionError("repository lookup must not run")
+        )
+        with self.assertRaisesRegex(CasConflict, "unsupported"):
+            provider.create_text(
+                self.REPO_ID,
+                "main",
+                "new.txt",
+                "created\n",
+                "test: exact authority create",
+                expected_ref_sha=self.HEAD,
+            )
+        provider._repo.assert_not_called()
+        self.assertEqual([], provider.calls)
+
+    def test_rest_create_is_not_exposed_even_with_write_allowlist(self):
+        provider = self.provider(writable_repository_ids=(self.REPO_ID,))
+        with self.assertRaisesRegex(
+            GuardRejected, "does not expose create-only"
+        ):
+            provider.create_text(
+                self.REPO_ID,
+                "main",
+                "new.txt",
+                "created\n",
+                "test: REST create remains unavailable",
+            )
         self.assertEqual([], provider.calls)
 
     def test_legacy_contents_update_requires_explicit_opt_in_without_head_cas(self):

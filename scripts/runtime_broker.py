@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import os
+import datetime as datetime_module
 import secrets
 import shutil
 import subprocess
@@ -26,6 +27,9 @@ from scripts.runtime_adapter import (
     BOUNDED_YAML_MAX_BYTES,
     BOUNDED_YAML_MAX_DEPTH,
     BOUNDED_YAML_MAX_NODES,
+    MAX_SNAPSHOT_PATH_BYTES,
+    MAX_SNAPSHOT_PATH_COMPONENT_BYTES,
+    MAX_SNAPSHOT_PATH_DEPTH,
     CasConflict,
     DeploymentGuard,
     DeploymentResolver,
@@ -64,6 +68,7 @@ CANDIDATE_YAML_MAX_BYTES = BOUNDED_YAML_MAX_BYTES
 CANDIDATE_YAML_MAX_NODES = BOUNDED_YAML_MAX_NODES
 CANDIDATE_YAML_MAX_DEPTH = BOUNDED_YAML_MAX_DEPTH
 CANDIDATE_VALIDATION_TIMEOUT_SECONDS = 10
+LEARNING_CONTEXT_MAX_DOCUMENTS = 32
 FINGERPRINT_STDOUT_MAX_BYTES = 128
 FINGERPRINT_POLL_SECONDS = 0.01
 BRANCH_RUNTIME_REQUIRED_FIELDS = frozenset({
@@ -93,6 +98,22 @@ WINDOWS_RESERVED_BASENAMES = frozenset({
 def _relative_path(value: object, where: str) -> str:
     if not isinstance(value, str) or not value:
         raise ResolutionError(f"{where} must be a non-empty repository path")
+    try:
+        encoded = value.encode("utf-8")
+    except UnicodeEncodeError:
+        raise ResolutionError(f"{where} must be valid UTF-8") from None
+    if len(encoded) > MAX_SNAPSHOT_PATH_BYTES:
+        raise ResolutionError(f"{where} exceeds the repository path byte limit")
+    raw_parts = value.split("/")
+    if len(raw_parts) > MAX_SNAPSHOT_PATH_DEPTH:
+        raise ResolutionError(f"{where} exceeds the repository path depth limit")
+    if any(
+        len(part.encode("utf-8")) > MAX_SNAPSHOT_PATH_COMPONENT_BYTES
+        for part in raw_parts
+    ):
+        raise ResolutionError(
+            f"{where} exceeds the repository path component byte limit"
+        )
     pure = PurePosixPath(value)
     if (
         "\\" in value
@@ -349,6 +370,12 @@ class InstanceText:
 @dataclass(frozen=True)
 class InstanceWriteAck:
     applied: bool = True
+
+
+@dataclass(frozen=True)
+class LearningContextBundle:
+    documents: tuple[tuple[str, InstanceText], ...]
+    missing_optional: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1816,6 +1843,333 @@ class RuntimeSessionBroker:
                         self._release_materializations(
                             [authority.snapshot]
                         )
+
+    @staticmethod
+    def _normalize_learning_context_paths(
+        required_paths: tuple[str, ...] | list[str],
+        optional_paths: tuple[str, ...] | list[str],
+    ) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        if not isinstance(required_paths, (tuple, list)):
+            raise ResolutionError("required_paths must be a list or tuple")
+        if not isinstance(optional_paths, (tuple, list)):
+            raise ResolutionError("optional_paths must be a list or tuple")
+        if len(required_paths) + len(optional_paths) > LEARNING_CONTEXT_MAX_DOCUMENTS:
+            raise ResolutionError(
+                "learning context path count exceeds the bounded limit"
+            )
+        required = tuple(
+            _relative_path(path, "required learning context path")
+            for path in required_paths
+        )
+        optional = tuple(
+            _relative_path(path, "optional learning context path")
+            for path in optional_paths
+        )
+        combined = required + optional
+        if not combined:
+            raise ResolutionError("learning context requires at least one path")
+        if len(set(combined)) != len(combined):
+            raise ResolutionError(
+                "learning context paths must be unique across required and optional sets"
+            )
+        return required, optional
+
+    @staticmethod
+    def _snapshot_path_inventory(snapshot) -> frozenset[str]:
+        if snapshot.blob_shas is not None:
+            return frozenset(path for path, _ in snapshot.blob_shas)
+        if snapshot.paths is not None:
+            return frozenset(snapshot.paths)
+        raise GuardRejected(
+            "materialized Instance snapshot lacks immutable path inventory"
+        )
+
+    def read_learning_context(
+        self,
+        session: LearningRuntimeSession,
+        *,
+        required_paths: tuple[str, ...] | list[str],
+        optional_paths: tuple[str, ...] | list[str] = (),
+    ) -> LearningContextBundle:
+        """Read a bounded set of Instance documents from one exact authority snapshot."""
+        required, optional = self._normalize_learning_context_paths(
+            required_paths, optional_paths
+        )
+        optional_set = frozenset(optional)
+        with self._session_operation(session) as state:
+            for path in required + optional:
+                if not state.policy.may_read(path):
+                    raise GuardRejected(
+                        "learning context read is outside the session capability policy"
+                    )
+            if self.write_admission is None:
+                raise GuardRejected(
+                    "learning session requires shared deployment operation admission"
+                )
+            with self.write_admission.read_lease():
+                deployment = self.guard.snapshot(
+                    state.deployment, require_active=False
+                )
+                authority = self._pin_instance_authority(state)
+                authority_release_attempted = False
+                try:
+                    inventory = self._snapshot_path_inventory(
+                        authority.snapshot
+                    )
+                    documents: list[tuple[str, InstanceText]] = []
+                    missing_optional: list[str] = []
+                    for path in required + optional:
+                        if path not in inventory:
+                            if path in optional_set:
+                                missing_optional.append(path)
+                                continue
+                            raise GuardRejected(
+                                f"required learning context path is missing: {path}"
+                            )
+                        try:
+                            content, blob_sha = self.provider.read_materialized_text(
+                                authority.snapshot, path
+                            )
+                        except ResolutionError as exc:
+                            raise GuardRejected(
+                                f"learning context read failed closed for {path}: {exc}"
+                            ) from None
+                        documents.append(
+                            (path, InstanceText(content=content, version_token=blob_sha))
+                        )
+                    authority_release_attempted = True
+                    self._release_materializations([authority.snapshot])
+                    self._assert_pinned_instance_current(state, authority)
+                    self.guard.assert_snapshot_current(
+                        state.deployment,
+                        deployment,
+                        require_active=False,
+                    )
+                    return LearningContextBundle(
+                        documents=tuple(documents),
+                        missing_optional=tuple(missing_optional),
+                    )
+                finally:
+                    if not authority_release_attempted:
+                        self._release_materializations([authority.snapshot])
+
+    @staticmethod
+    def _type_sensitive_semantic_key(value: object) -> tuple:
+        """Build an order-independent typed key for bounded parsed YAML."""
+        if value is None:
+            return ("null",)
+        if isinstance(value, bool):
+            return ("bool", value)
+        if isinstance(value, int):
+            return ("int", value)
+        if isinstance(value, float):
+            # Preserve Python/YAML equality semantics without stringifying
+            # arbitrarily large numeric values. NaN needs one stable key,
+            # while signed zero compares equal by design.
+            if value != value:
+                return ("float-nan",)
+            return ("float", 0.0 if value == 0.0 else value)
+        if isinstance(value, str):
+            return ("str", value)
+        if isinstance(value, bytes):
+            return ("bytes", value)
+        if isinstance(value, datetime_module.datetime):
+            offset = value.utcoffset() if value.tzinfo is not None else None
+            if offset is None:
+                return ("datetime-naive", value.isoformat())
+            local_microseconds = (
+                (
+                    value.toordinal() * 86400
+                    + value.hour * 3600
+                    + value.minute * 60
+                    + value.second
+                )
+                * 1_000_000
+                + value.microsecond
+            )
+            offset_microseconds = (
+                (offset.days * 86400 + offset.seconds) * 1_000_000
+                + offset.microseconds
+            )
+            return (
+                "datetime-aware",
+                local_microseconds - offset_microseconds,
+            )
+        if isinstance(value, datetime_module.date):
+            return ("date", value.isoformat())
+        if isinstance(value, dict):
+            return (
+                "dict",
+                frozenset(
+                    (
+                        RuntimeSessionBroker._type_sensitive_semantic_key(key),
+                        RuntimeSessionBroker._type_sensitive_semantic_key(item),
+                    )
+                    for key, item in value.items()
+                ),
+            )
+        if isinstance(value, (list, tuple)):
+            sequence_type = "list" if type(value) is list else "tuple"
+            return (
+                sequence_type,
+                tuple(
+                    RuntimeSessionBroker._type_sensitive_semantic_key(item)
+                    for item in value
+                ),
+            )
+        if isinstance(value, (set, frozenset)):
+            set_type = "set" if type(value) is set else "frozenset"
+            return (
+                set_type,
+                frozenset(
+                    RuntimeSessionBroker._type_sensitive_semantic_key(item)
+                    for item in value
+                ),
+            )
+        raise GuardRejected(
+            "Evidence semantic comparison encountered an unsupported YAML scalar type"
+        )
+
+    @staticmethod
+    def _type_sensitive_semantic_equal(left: object, right: object) -> bool:
+        """Compare bounded YAML semantics without bool/int aliasing or O(n^2) maps."""
+        return (
+            RuntimeSessionBroker._type_sensitive_semantic_key(left)
+            == RuntimeSessionBroker._type_sensitive_semantic_key(right)
+        )
+
+    @staticmethod
+    def _evidence_candidate(content: str) -> tuple[dict, str]:
+        _preflight_candidate_yaml(content)
+        try:
+            data = yaml.safe_load(content)
+        except yaml.YAMLError as exc:
+            raise GuardRejected(
+                f"Evidence YAML is malformed: {exc.__class__.__name__}"
+            ) from None
+        if not isinstance(data, dict):
+            raise GuardRejected("Evidence candidate must be a mapping")
+        if data.get("document_type") != "evidence":
+            raise GuardRejected("Evidence create requires document_type evidence")
+        evidence_id = data.get("id")
+        if not isinstance(evidence_id, str) or not evidence_id.strip():
+            raise GuardRejected("Evidence create requires a non-empty id")
+        path = _relative_path(
+            f"evidence/{evidence_id}.yaml", "Evidence canonical path"
+        )
+        if instance_expected_types(path) != ("evidence",):
+            raise GuardRejected(
+                "Evidence id does not map to one canonical Evidence path"
+            )
+        return data, path
+
+    def create_evidence(
+        self,
+        session: LearningRuntimeSession,
+        *,
+        content: str,
+        message: str,
+    ) -> InstanceWriteAck:
+        """Create one immutable Evidence record under exact deployment/head CAS."""
+        candidate, path = self._evidence_candidate(content)
+        with self._session_operation(session) as state:
+            if not state.policy.may_write(path):
+                raise GuardRejected(
+                    "Evidence create is outside the session capability policy"
+                )
+            if self.write_admission is None:
+                raise GuardRejected(
+                    "writable learning session requires shared deployment write admission"
+                )
+            with self.write_admission.write_lease():
+                deployment = self.guard.snapshot(state.deployment)
+                authority = self._pin_instance_authority(state)
+                core = None
+                release_attempted = False
+                try:
+                    existing_path = _candidate_output_path(
+                        authority.snapshot.root, path
+                    )
+                    existing_matches = False
+                    if existing_path.exists():
+                        try:
+                            existing_text, _ = self.provider.read_materialized_text(
+                                authority.snapshot, path
+                            )
+                            _preflight_candidate_yaml(existing_text)
+                            existing = yaml.safe_load(existing_text)
+                        except (ResolutionError, yaml.YAMLError) as exc:
+                            raise GuardRejected(
+                                "existing Evidence record is unreadable"
+                            ) from exc
+                        if not self._type_sensitive_semantic_equal(
+                            existing, candidate
+                        ):
+                            raise GuardRejected(
+                                "Evidence id already exists with different content"
+                            )
+                        existing_matches = True
+
+                    core = self.provider.materialize(
+                        state.deployment.core_repository_id,
+                        state.deployment.core_commit,
+                    )
+                    if (
+                        core.repository_id
+                        != state.deployment.core_repository_id
+                        or core.commit_sha
+                        != state.deployment.core_commit
+                    ):
+                        raise GuardRejected(
+                            "deployed Core provenance changed during Evidence create"
+                        )
+                    self._assert_deployed_write_policy_compatible(
+                        state, core_snapshot=core
+                    )
+                    self._validate_candidate(
+                        state,
+                        authority_head=authority.head,
+                        path=path,
+                        content=content,
+                        contract=deployment.contract,
+                        instance_snapshot=authority.snapshot,
+                        core_snapshot=core,
+                    )
+                    self._assert_pinned_instance_current(state, authority)
+                    self.guard.assert_snapshot_current(
+                        state.deployment, deployment
+                    )
+                    release_attempted = True
+                    self._release_materializations(
+                        [core, authority.snapshot]
+                    )
+                    if existing_matches:
+                        return InstanceWriteAck(applied=False)
+                    try:
+                        self.provider.create_text(
+                            state.deployment.instance_repository_id,
+                            state.binding.instance_ref,
+                            path,
+                            content,
+                            message,
+                            expected_ref_sha=authority.head,
+                        )
+                    except CasConflict:
+                        raise
+                    except Exception as exc:
+                        raise CasConflict(
+                            f"Instance create-only compare-and-swap failed: {exc}"
+                        ) from None
+                finally:
+                    if not release_attempted:
+                        pending = [
+                            snapshot
+                            for snapshot in (core, authority.snapshot)
+                            if snapshot is not None
+                        ]
+                        if pending:
+                            self._release_materializations(pending)
+            return InstanceWriteAck()
 
     def guarded_update(
         self,
