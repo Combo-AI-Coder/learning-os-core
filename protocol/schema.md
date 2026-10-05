@@ -130,7 +130,7 @@ The split Instance registry does **not** authorize `project_config`, `lineage_co
 
 Repository operational metadata is outside this canonical YAML state registry. `.github/workflows/*.yml` and `.github/workflows/*.yaml` are operational metadata and do not need to match a split canonical state family; split Instance canonical-document collection SHOULD continue to exclude `.github/**`. `README.md`, `.gitignore`, and `LICENSE` are likewise not canonical YAML state families.
 
-Current `InstanceValidator` path dispatch does not yet conform to this complete registry. That implementation debt is intentional at this specification-only settlement boundary and requires a separate implementation package; the normative registry above MUST NOT be weakened merely to match current code.
+Current `InstanceValidator` implements substantial split-registry path dispatch for ordinary collected `.yaml` mappings, including unregistered/ambiguous-path rejection, registered `document_type` matching, and several path/document identity checks. Full conformance is not yet established. Known gaps include: collection currently scans `.yaml` but not `.yml`; malformed/non-string `document_type` values are not uniformly converted into fail-closed findings; `subtopic_definition` does not yet bind its Topic identity to the canonical path; and the learning-handoff filename matcher accepts a broader `C…-to-C….yaml` shape than the canonical decimal conversation-sequence form. This list records reproduced gaps rather than claiming exhaustive coverage. The normative registry above MUST NOT be weakened merely to match current code.
 
 ## 3. Core ontology
 
