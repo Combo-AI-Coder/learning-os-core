@@ -1963,7 +1963,10 @@ class RuntimeSessionBroker:
         if isinstance(value, int):
             return ("int", str(value))
         if isinstance(value, float):
-            return ("float", value)
+            # Python float equality treats signed zero as equal. Normalize
+            # it before this key is also used for order-independent mapping
+            # sorting, otherwise 0.0 / -0.0 keys can reorder equal maps.
+            return ("float", 0.0 if value == 0.0 else value)
         if isinstance(value, str):
             return ("str", value)
         if isinstance(value, bytes):

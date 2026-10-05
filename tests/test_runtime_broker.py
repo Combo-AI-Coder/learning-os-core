@@ -715,6 +715,29 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         )
         self.assertFalse(result.applied)
 
+    def test_create_evidence_idempotency_normalizes_equal_float_mapping_keys(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("evidence", "learner"),
+            writable_roots=("evidence",),
+        )
+        session = self.open()
+        first = yaml.safe_load(EVIDENCE_V1)
+        first["context"] = {0.0: "zero", -1.0: "negative"}
+        first_text = yaml.safe_dump(first, sort_keys=False)
+        self.broker.create_evidence(
+            session,
+            content=first_text,
+            message="test: create float-key Evidence",
+        )
+        second = yaml.safe_load(first_text)
+        second["context"] = {-0.0: "zero", -1.0: "negative"}
+        result = self.broker.create_evidence(
+            session,
+            content=yaml.safe_dump(second, sort_keys=False),
+            message="test: retry equal float-key Evidence",
+        )
+        self.assertFalse(result.applied)
+
     def test_create_evidence_idempotency_is_type_sensitive(self):
         self.policy = RuntimeCapabilityPolicy(
             readable_roots=("evidence", "learner"),
