@@ -2025,7 +2025,93 @@ class RuntimeSessionBroker:
                             self._release_materializations(pending)
 
     @staticmethod
+    def _preflight_learning_checkpoint_object(value: object) -> None:
+        """Bound caller-owned checkpoint objects before YAML serialization."""
+        stack: list[tuple[object, int]] = [(value, 1)]
+        nodes = 0
+        scalar_bytes = 0
+
+        while stack:
+            item, depth = stack.pop()
+            nodes += 1
+            if nodes > CANDIDATE_YAML_MAX_NODES:
+                raise ResolutionError(
+                    "learning checkpoint exceeds the node limit"
+                )
+            if depth > CANDIDATE_YAML_MAX_DEPTH:
+                raise ResolutionError(
+                    "learning checkpoint exceeds the nesting-depth limit"
+                )
+
+            if item is None:
+                scalar_bytes += 4
+            elif isinstance(item, bool):
+                scalar_bytes += 5
+            elif isinstance(item, str):
+                remaining_bytes = CANDIDATE_YAML_MAX_BYTES - scalar_bytes
+                if len(item) > remaining_bytes:
+                    raise ResolutionError(
+                        "learning checkpoint exceeds the scalar byte limit"
+                    )
+                try:
+                    scalar_bytes += len(item.encode("utf-8"))
+                except UnicodeEncodeError:
+                    raise ResolutionError(
+                        "learning checkpoint contains invalid UTF-8 text"
+                    ) from None
+            elif isinstance(item, int):
+                bits = item.bit_length()
+                scalar_bytes += max(1, (bits * 30103) // 100000 + 1)
+                if item < 0:
+                    scalar_bytes += 1
+            elif isinstance(item, float):
+                scalar_bytes += 32
+            elif isinstance(item, dict):
+                if nodes + (2 * len(item)) > CANDIDATE_YAML_MAX_NODES:
+                    raise ResolutionError(
+                        "learning checkpoint exceeds the node limit"
+                    )
+                for key, child in item.items():
+                    if not isinstance(key, str) or not key:
+                        raise ResolutionError(
+                            "learning checkpoint mapping keys must be non-empty strings"
+                        )
+                    nodes += 1
+                    if nodes > CANDIDATE_YAML_MAX_NODES:
+                        raise ResolutionError(
+                            "learning checkpoint exceeds the node limit"
+                        )
+                    remaining_bytes = CANDIDATE_YAML_MAX_BYTES - scalar_bytes
+                    if len(key) > remaining_bytes:
+                        raise ResolutionError(
+                            "learning checkpoint exceeds the scalar byte limit"
+                        )
+                    try:
+                        scalar_bytes += len(key.encode("utf-8"))
+                    except UnicodeEncodeError:
+                        raise ResolutionError(
+                            "learning checkpoint contains invalid UTF-8 text"
+                        ) from None
+                    stack.append((child, depth + 1))
+            elif isinstance(item, list):
+                if nodes + len(item) > CANDIDATE_YAML_MAX_NODES:
+                    raise ResolutionError(
+                        "learning checkpoint exceeds the node limit"
+                    )
+                stack.extend((child, depth + 1) for child in item)
+            else:
+                raise ResolutionError(
+                    "learning checkpoint contains an unsupported value type"
+                )
+
+            if scalar_bytes > CANDIDATE_YAML_MAX_BYTES:
+                raise ResolutionError(
+                    "learning checkpoint exceeds the scalar byte limit"
+                )
+
+    @staticmethod
     def _normalize_learning_checkpoint(checkpoint: object) -> dict[str, object]:
+        RuntimeSessionBroker._preflight_learning_checkpoint_object(checkpoint)
         if not isinstance(checkpoint, dict):
             raise ResolutionError("learning checkpoint must be a mapping")
         if any(not isinstance(key, str) for key in checkpoint):

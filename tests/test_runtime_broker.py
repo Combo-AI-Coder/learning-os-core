@@ -2430,6 +2430,79 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 message="unauthorized no-op checkpoint",
             )
 
+    def test_save_learning_checkpoint_rejects_deep_return_point_before_serialization(self):
+        self.provider.docs[CHECKPOINT_PATH] = checkpoint_progress()
+        self.provider.blobs[CHECKPOINT_PATH] = CHECKPOINT_BLOB
+        self.provider.snapshot_extra_paths.add(CHECKPOINT_PATH)
+        self.provider.set_branch_registry(role="main", subtopic="unit")
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(CHECKPOINT_PATH,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        return_point = {}
+        cursor = return_point
+        for _ in range(CANDIDATE_YAML_MAX_DEPTH + 1):
+            child = {}
+            cursor["next"] = child
+            cursor = child
+
+        with mock.patch.object(
+            runtime_broker.yaml,
+            "safe_dump",
+            side_effect=AssertionError("serialization must not run"),
+        ):
+            with self.assertRaisesRegex(ResolutionError, "nesting-depth"):
+                self.broker.save_learning_checkpoint(
+                    session,
+                    checkpoint={
+                        "milestone": ["foundation"],
+                        "return_point": return_point,
+                        "ready_next": [],
+                    },
+                    expected_blob_sha=CHECKPOINT_BLOB,
+                    message="reject deep checkpoint",
+                )
+
+    def test_save_learning_checkpoint_rejects_large_scalar_before_serialization(self):
+        self.provider.docs[CHECKPOINT_PATH] = checkpoint_progress()
+        self.provider.blobs[CHECKPOINT_PATH] = CHECKPOINT_BLOB
+        self.provider.snapshot_extra_paths.add(CHECKPOINT_PATH)
+        self.provider.set_branch_registry(role="main", subtopic="unit")
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(CHECKPOINT_PATH,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+
+        with mock.patch.object(
+            runtime_broker.yaml,
+            "safe_dump",
+            side_effect=AssertionError("serialization must not run"),
+        ):
+            with self.assertRaisesRegex(ResolutionError, "scalar byte limit"):
+                self.broker.save_learning_checkpoint(
+                    session,
+                    checkpoint={
+                        "milestone": ["foundation"],
+                        "return_point": {
+                            "kind": "teaching_thread",
+                            "focus": "x" * (CANDIDATE_YAML_MAX_BYTES + 1),
+                        },
+                        "ready_next": [],
+                    },
+                    expected_blob_sha=CHECKPOINT_BLOB,
+                    message="reject oversized checkpoint",
+                )
+
     def test_save_learning_checkpoint_rejects_unknown_current_milestone(self):
         self.provider.docs[CHECKPOINT_PATH] = checkpoint_progress()
         self.provider.blobs[CHECKPOINT_PATH] = CHECKPOINT_BLOB
