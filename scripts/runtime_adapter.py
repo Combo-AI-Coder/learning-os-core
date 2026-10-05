@@ -194,6 +194,15 @@ class RepositoryProvider(Protocol):
         message: str,
         expected_ref_sha: str | None = None,
     ) -> str: ...
+    def create_text(
+        self,
+        repository_id: int,
+        branch: str,
+        path: str,
+        content: str,
+        message: str,
+        expected_ref_sha: str | None = None,
+    ) -> str: ...
     def release_materialization(
         self, snapshot: MaterializedRepository
     ) -> None: ...
@@ -2221,6 +2230,116 @@ class GitCliProvider:
             self._cleanup_checkout_tempdir(td)
 
 
+    def create_text(
+        self,
+        repository_id: int,
+        branch: str,
+        path: str,
+        content: str,
+        message: str,
+        expected_ref_sha: str | None = None,
+    ) -> str:
+        """Create exactly one new UTF-8 file under branch-head CAS."""
+        binding = self._binding(repository_id)
+        if binding.writable is not True:
+            raise CasConflict("repository is read-only in this Runtime binding")
+        if expected_ref_sha is not None and not EXACT_COMMIT.fullmatch(
+            str(expected_ref_sha)
+        ):
+            raise CasConflict("expected branch head SHA must be exact")
+        pure = self._safe_path(path)
+        (
+            td, repo, commit, branch_ref, snapshot_total, blob_cap
+        ) = self._checkout_branch(binding, branch)
+        try:
+            if expected_ref_sha is not None and commit != expected_ref_sha:
+                raise CasConflict("branch head compare-and-swap mismatch")
+            try:
+                entry = self._regular_blob(repo, commit, pure, cas=True)
+            except CasConflict:
+                raise CasConflict(
+                    "target path is unsafe or raced during create"
+                ) from None
+            if entry is not None:
+                raise CasConflict("create-only target already exists")
+
+            content_bytes = content.encode("utf-8")
+            if len(content_bytes) > MAX_TEXT_BLOB_BYTES:
+                raise CasConflict(
+                    "created text exceeds Runtime write limit"
+                )
+            if snapshot_total + len(content_bytes) > MAX_SNAPSHOT_TOTAL_BLOB_BYTES:
+                raise CasConflict(
+                    "created snapshot exceeds Runtime total-size budget"
+                )
+            if blob_cap is not None and len(content_bytes) > blob_cap:
+                raise CasConflict(
+                    "created text exceeds conservative bounded-fetch budget"
+                )
+
+            new_blob = self._git_bytes(
+                "hash-object", "-w", "--stdin",
+                cwd=repo, cas=True, input_bytes=content_bytes,
+            ).decode("ascii").strip()
+            if not EXACT_COMMIT.fullmatch(new_blob):
+                raise CasConflict("Git did not return an exact staged blob")
+
+            index_record = (
+                f"100644 {new_blob}\t".encode("ascii")
+                + pure.as_posix().encode("utf-8")
+                + b"\x00"
+            )
+            self._git_bytes(
+                "update-index", "-z", "--index-info",
+                cwd=repo, cas=True, input_bytes=index_record,
+            )
+            staged = self._git_bytes(
+                "diff", "--cached", "--name-only", "-z",
+                cwd=repo, cas=True,
+            )
+            staged_paths = [item for item in staged.split(b"\x00") if item]
+            expected_path = pure.as_posix().encode("utf-8")
+            if staged_paths != [expected_path]:
+                raise CasConflict(
+                    "target create did not produce exactly one staged path"
+                )
+            staged_blob = self._git(
+                "rev-parse", "--verify", f":{pure.as_posix()}",
+                cwd=repo, cas=True,
+            )
+            if staged_blob != new_blob:
+                raise CasConflict("staged blob does not match requested content")
+            if self._git_bytes(
+                "cat-file", "blob", staged_blob, cwd=repo
+            ) != content_bytes:
+                raise CasConflict(
+                    "staged blob bytes do not match requested UTF-8"
+                )
+
+            self._git(
+                "-c", "user.name=Learning OS Runtime",
+                "-c", "user.email=runtime@learning-os.invalid",
+                "commit", "-q", "-m", message,
+                cwd=repo, cas=True,
+            )
+            new_commit = self._git(
+                "rev-parse", "--verify", "HEAD^{commit}",
+                cwd=repo, cas=True,
+            )
+            if not EXACT_COMMIT.fullmatch(new_commit):
+                raise CasConflict("Git create returned no exact commit")
+
+            self._git(
+                "push", "-q",
+                f"--force-with-lease={branch_ref}:{commit}",
+                "origin", f"HEAD:{branch_ref}",
+                cwd=repo, cas=True, binding=binding,
+            )
+            return new_commit
+        finally:
+            self._cleanup_checkout_tempdir(td)
+
+
 class GitHubApiProvider:
     """Bounded REST materializer; legacy blob-CAS writes require host opt-in.
 
@@ -2567,4 +2686,44 @@ class GitHubApiProvider:
         sha = commit.get("sha") if isinstance(commit, dict) else None
         if not isinstance(sha, str) or not EXACT_COMMIT.fullmatch(sha):
             raise CasConflict("GitHub update returned no exact commit")
+        return sha
+
+
+    def create_text(
+        self,
+        repository_id: int,
+        branch: str,
+        path: str,
+        content: str,
+        message: str,
+        expected_ref_sha: str | None = None,
+    ) -> str:
+        if expected_ref_sha is not None:
+            raise CasConflict(
+                "exact branch-head CAS is unsupported by GitHub REST provider"
+            )
+        _positive_id(repository_id, "repository_id")
+        if repository_id not in self.writable_repository_ids:
+            raise GuardRejected("GitHub repository binding is read-only")
+        GitCliProvider._safe_path(path)
+        if len(content.encode("utf-8")) > MAX_TEXT_BLOB_BYTES:
+            raise GuardRejected("GitHub write exceeds the text byte limit")
+        repo = self._repo(repository_id)
+        full_name = _nonempty(repo.get("full_name"), "repository.full_name")
+        quoted_path = urllib.parse.quote(path, safe="/")
+        data = self._request(
+            "PUT",
+            f"/repos/{full_name}/contents/{quoted_path}",
+            {
+                "message": message,
+                "content": base64.b64encode(
+                    content.encode("utf-8")
+                ).decode("ascii"),
+                "branch": branch,
+            },
+        )
+        commit = data.get("commit") if isinstance(data, dict) else None
+        sha = commit.get("sha") if isinstance(commit, dict) else None
+        if not isinstance(sha, str) or not EXACT_COMMIT.fullmatch(sha):
+            raise CasConflict("GitHub create returned no exact commit")
         return sha

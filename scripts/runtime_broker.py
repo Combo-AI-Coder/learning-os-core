@@ -64,6 +64,7 @@ CANDIDATE_YAML_MAX_BYTES = BOUNDED_YAML_MAX_BYTES
 CANDIDATE_YAML_MAX_NODES = BOUNDED_YAML_MAX_NODES
 CANDIDATE_YAML_MAX_DEPTH = BOUNDED_YAML_MAX_DEPTH
 CANDIDATE_VALIDATION_TIMEOUT_SECONDS = 10
+LEARNING_CONTEXT_MAX_DOCUMENTS = 32
 FINGERPRINT_STDOUT_MAX_BYTES = 128
 FINGERPRINT_POLL_SECONDS = 0.01
 BRANCH_RUNTIME_REQUIRED_FIELDS = frozenset({
@@ -349,6 +350,12 @@ class InstanceText:
 @dataclass(frozen=True)
 class InstanceWriteAck:
     applied: bool = True
+
+
+@dataclass(frozen=True)
+class LearningContextBundle:
+    documents: tuple[tuple[str, InstanceText], ...]
+    missing_optional: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1816,6 +1823,239 @@ class RuntimeSessionBroker:
                         self._release_materializations(
                             [authority.snapshot]
                         )
+
+    @staticmethod
+    def _normalize_learning_context_paths(
+        required_paths: tuple[str, ...] | list[str],
+        optional_paths: tuple[str, ...] | list[str],
+    ) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        if not isinstance(required_paths, (tuple, list)):
+            raise ResolutionError("required_paths must be a list or tuple")
+        if not isinstance(optional_paths, (tuple, list)):
+            raise ResolutionError("optional_paths must be a list or tuple")
+        required = tuple(
+            _relative_path(path, "required learning context path")
+            for path in required_paths
+        )
+        optional = tuple(
+            _relative_path(path, "optional learning context path")
+            for path in optional_paths
+        )
+        combined = required + optional
+        if not combined:
+            raise ResolutionError("learning context requires at least one path")
+        if len(combined) > LEARNING_CONTEXT_MAX_DOCUMENTS:
+            raise ResolutionError(
+                "learning context path count exceeds the bounded limit"
+            )
+        if len(set(combined)) != len(combined):
+            raise ResolutionError(
+                "learning context paths must be unique across required and optional sets"
+            )
+        return required, optional
+
+    def read_learning_context(
+        self,
+        session: LearningRuntimeSession,
+        *,
+        required_paths: tuple[str, ...] | list[str],
+        optional_paths: tuple[str, ...] | list[str] = (),
+    ) -> LearningContextBundle:
+        """Read a bounded set of Instance documents from one exact authority snapshot."""
+        required, optional = self._normalize_learning_context_paths(
+            required_paths, optional_paths
+        )
+        optional_set = frozenset(optional)
+        with self._session_operation(session) as state:
+            for path in required + optional:
+                if not state.policy.may_read(path):
+                    raise GuardRejected(
+                        "learning context read is outside the session capability policy"
+                    )
+            if self.write_admission is None:
+                raise GuardRejected(
+                    "learning session requires shared deployment operation admission"
+                )
+            with self.write_admission.read_lease():
+                deployment = self.guard.snapshot(
+                    state.deployment, require_active=False
+                )
+                authority = self._pin_instance_authority(state)
+                authority_release_attempted = False
+                try:
+                    documents: list[tuple[str, InstanceText]] = []
+                    missing_optional: list[str] = []
+                    for path in required + optional:
+                        snapshot_path = _candidate_output_path(
+                            authority.snapshot.root, path
+                        )
+                        if not snapshot_path.exists():
+                            if path in optional_set:
+                                missing_optional.append(path)
+                                continue
+                            raise GuardRejected(
+                                f"required learning context path is missing: {path}"
+                            )
+                        try:
+                            content, blob_sha = self.provider.read_materialized_text(
+                                authority.snapshot, path
+                            )
+                        except ResolutionError as exc:
+                            raise GuardRejected(
+                                f"learning context read failed closed for {path}: {exc}"
+                            ) from None
+                        documents.append(
+                            (path, InstanceText(content=content, version_token=blob_sha))
+                        )
+                    authority_release_attempted = True
+                    self._release_materializations([authority.snapshot])
+                    self._assert_pinned_instance_current(state, authority)
+                    self.guard.assert_snapshot_current(
+                        state.deployment,
+                        deployment,
+                        require_active=False,
+                    )
+                    return LearningContextBundle(
+                        documents=tuple(documents),
+                        missing_optional=tuple(missing_optional),
+                    )
+                finally:
+                    if not authority_release_attempted:
+                        self._release_materializations([authority.snapshot])
+
+    @staticmethod
+    def _evidence_candidate(content: str) -> tuple[dict, str]:
+        _preflight_candidate_yaml(content)
+        try:
+            data = yaml.safe_load(content)
+        except yaml.YAMLError as exc:
+            raise GuardRejected(
+                f"Evidence YAML is malformed: {exc.__class__.__name__}"
+            ) from None
+        if not isinstance(data, dict):
+            raise GuardRejected("Evidence candidate must be a mapping")
+        if data.get("document_type") != "evidence":
+            raise GuardRejected("Evidence create requires document_type evidence")
+        evidence_id = data.get("id")
+        if not isinstance(evidence_id, str) or not evidence_id.strip():
+            raise GuardRejected("Evidence create requires a non-empty id")
+        path = _relative_path(
+            f"evidence/{evidence_id}.yaml", "Evidence canonical path"
+        )
+        if instance_expected_types(path) != ("evidence",):
+            raise GuardRejected(
+                "Evidence id does not map to one canonical Evidence path"
+            )
+        return data, path
+
+    def create_evidence(
+        self,
+        session: LearningRuntimeSession,
+        *,
+        content: str,
+        message: str,
+    ) -> InstanceWriteAck:
+        """Create one immutable Evidence record under exact deployment/head CAS."""
+        candidate, path = self._evidence_candidate(content)
+        with self._session_operation(session) as state:
+            if not state.policy.may_write(path):
+                raise GuardRejected(
+                    "Evidence create is outside the session capability policy"
+                )
+            if self.write_admission is None:
+                raise GuardRejected(
+                    "writable learning session requires shared deployment write admission"
+                )
+            with self.write_admission.write_lease():
+                deployment = self.guard.snapshot(state.deployment)
+                authority = self._pin_instance_authority(state)
+                core = None
+                release_attempted = False
+                try:
+                    existing_path = _candidate_output_path(
+                        authority.snapshot.root, path
+                    )
+                    if existing_path.exists():
+                        try:
+                            existing_text, _ = self.provider.read_materialized_text(
+                                authority.snapshot, path
+                            )
+                            _preflight_candidate_yaml(existing_text)
+                            existing = yaml.safe_load(existing_text)
+                        except (ResolutionError, yaml.YAMLError) as exc:
+                            raise GuardRejected(
+                                "existing Evidence record is unreadable"
+                            ) from exc
+                        if existing != candidate:
+                            raise GuardRejected(
+                                "Evidence id already exists with different content"
+                            )
+                        release_attempted = True
+                        self._release_materializations([authority.snapshot])
+                        self._assert_pinned_instance_current(state, authority)
+                        self.guard.assert_snapshot_current(
+                            state.deployment, deployment
+                        )
+                        return InstanceWriteAck(applied=False)
+
+                    core = self.provider.materialize(
+                        state.deployment.core_repository_id,
+                        state.deployment.core_commit,
+                    )
+                    if (
+                        core.repository_id
+                        != state.deployment.core_repository_id
+                        or core.commit_sha
+                        != state.deployment.core_commit
+                    ):
+                        raise GuardRejected(
+                            "deployed Core provenance changed during Evidence create"
+                        )
+                    self._assert_deployed_write_policy_compatible(
+                        state, core_snapshot=core
+                    )
+                    self._validate_candidate(
+                        state,
+                        authority_head=authority.head,
+                        path=path,
+                        content=content,
+                        contract=deployment.contract,
+                        instance_snapshot=authority.snapshot,
+                        core_snapshot=core,
+                    )
+                    self._assert_pinned_instance_current(state, authority)
+                    self.guard.assert_snapshot_current(
+                        state.deployment, deployment
+                    )
+                    release_attempted = True
+                    self._release_materializations(
+                        [core, authority.snapshot]
+                    )
+                    try:
+                        self.provider.create_text(
+                            state.deployment.instance_repository_id,
+                            state.binding.instance_ref,
+                            path,
+                            content,
+                            message,
+                            expected_ref_sha=authority.head,
+                        )
+                    except CasConflict:
+                        raise
+                    except Exception as exc:
+                        raise CasConflict(
+                            f"Instance create-only compare-and-swap failed: {exc}"
+                        ) from None
+                finally:
+                    if not release_attempted:
+                        pending = [
+                            snapshot
+                            for snapshot in (core, authority.snapshot)
+                            if snapshot is not None
+                        ]
+                        if pending:
+                            self._release_materializations(pending)
+            return InstanceWriteAck()
 
     def guarded_update(
         self,

@@ -66,6 +66,23 @@ WRITE_V2 = yaml.safe_dump({
     "working_style": {},
 }, sort_keys=False)
 
+EVIDENCE_ID = "evi-synthetic-reference-journey-001"
+EVIDENCE_PATH = f"evidence/{EVIDENCE_ID}.yaml"
+EVIDENCE_V1 = yaml.safe_dump({
+    "schema_version": "0.3",
+    "document_type": "evidence",
+    "id": EVIDENCE_ID,
+    "observed_at": "2026-10-05T00:00:00Z",
+    "observation": "synthetic reference-journey observation",
+    "interpretation": {
+        "direction": "support",
+        "diagnosticity": "low",
+        "novelty": "low",
+        "confidence": "low",
+    },
+    "targets": ["modern-language-models.tokens"],
+}, sort_keys=False)
+
 
 def locator():
     return {
@@ -221,6 +238,7 @@ class BrokerProvider:
                 for path, content in self.docs.items()
                 if (
                     path in {READ_PATH, WRITE_PATH, RUNTIME_PATH, REGISTRY_PATH}
+                    or path.startswith("evidence/")
                     or "/handoffs/" in path
                     or path.startswith("curriculum/extensions/")
                     or path.startswith("curriculum/local/")
@@ -338,6 +356,27 @@ class BrokerProvider:
         self.instance_head = "8" * 40
         return self.instance_head
 
+    def create_text(
+        self,
+        repository_id,
+        branch,
+        path,
+        content,
+        message,
+        expected_ref_sha=None,
+    ):
+        self.calls.append((
+            "create", repository_id, branch, path, expected_ref_sha,
+        ))
+        if repository_id != INSTANCE_ID or branch != "main" or path in self.docs:
+            raise CasConflict("unexpected create target")
+        if expected_ref_sha is not None and expected_ref_sha != self.instance_head:
+            raise CasConflict("branch head compare-and-swap mismatch")
+        self.docs[path] = content
+        self.blobs[path] = "b" * 40
+        self.instance_head = "8" * 40
+        return self.instance_head
+
     def set_pending_successor(
         self,
         *,
@@ -439,6 +478,148 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 with self.assertRaises(ResolutionError):
                     self.open(expected_generation=value)
                 self.assertEqual([], self.provider.calls)
+
+    def test_learning_context_reuses_one_authority_snapshot_and_reports_optional_missing(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("learner",),
+        )
+        session = self.open()
+        self.provider.calls.clear()
+        bundle = self.broker.read_learning_context(
+            session,
+            required_paths=(READ_PATH, WRITE_PATH),
+            optional_paths=("learner/execution.yaml",),
+        )
+        self.assertEqual(
+            [READ_PATH, WRITE_PATH],
+            [path for path, _ in bundle.documents],
+        )
+        self.assertEqual(
+            ("learner/execution.yaml",),
+            bundle.missing_optional,
+        )
+        materialized = [
+            call[1]
+            for call in self.provider.calls
+            if call[0] == "materialize"
+        ]
+        self.assertEqual([INSTANCE_ID], materialized)
+        snapshot_heads = {
+            call[2]
+            for call in self.provider.calls
+            if call[0] == "snapshot_read"
+        }
+        self.assertEqual({INSTANCE_COMMIT}, snapshot_heads)
+
+    def test_learning_context_rejects_required_missing_path(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("learner",),
+        )
+        session = self.open()
+        with self.assertRaisesRegex(
+            GuardRejected, "required learning context path is missing"
+        ):
+            self.broker.read_learning_context(
+                session,
+                required_paths=("learner/execution.yaml",),
+            )
+
+    def test_learning_context_rejects_duplicate_and_excess_paths_before_io(self):
+        self.policy = RuntimeCapabilityPolicy(readable_roots=("learner",))
+        session = self.open()
+        self.provider.calls.clear()
+        with self.assertRaises(ResolutionError):
+            self.broker.read_learning_context(
+                session,
+                required_paths=(READ_PATH,),
+                optional_paths=(READ_PATH,),
+            )
+        self.assertEqual([], self.provider.calls)
+        with self.assertRaises(ResolutionError):
+            self.broker.read_learning_context(
+                session,
+                required_paths=tuple(
+                    f"learner/knowledge/synthetic-{index}.yaml"
+                    for index in range(33)
+                ),
+            )
+        self.assertEqual([], self.provider.calls)
+
+    def test_learning_context_detects_deployment_drift_after_batch_read(self):
+        self.policy = RuntimeCapabilityPolicy(readable_roots=("learner",))
+        session = self.open()
+        self.provider.promote_after_target_read = True
+        with self.assertRaises(GuardRejected):
+            self.broker.read_learning_context(
+                session,
+                required_paths=(READ_PATH, WRITE_PATH),
+            )
+
+    def test_create_evidence_is_create_only_and_idempotent_for_same_payload(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("evidence", "learner"),
+            writable_roots=("evidence",),
+        )
+        session = self.open()
+        first = self.broker.create_evidence(
+            session,
+            content=EVIDENCE_V1,
+            message="test: create synthetic evidence",
+        )
+        self.assertTrue(first.applied)
+        self.assertEqual(EVIDENCE_V1, self.provider.docs[EVIDENCE_PATH])
+        create_calls = [
+            call for call in self.provider.calls if call[0] == "create"
+        ]
+        self.assertEqual(1, len(create_calls))
+
+        second = self.broker.create_evidence(
+            session,
+            content=EVIDENCE_V1,
+            message="test: retry same synthetic evidence",
+        )
+        self.assertFalse(second.applied)
+        create_calls = [
+            call for call in self.provider.calls if call[0] == "create"
+        ]
+        self.assertEqual(1, len(create_calls))
+
+    def test_create_evidence_rejects_same_id_with_different_content(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("evidence", "learner"),
+            writable_roots=("evidence",),
+        )
+        session = self.open()
+        self.broker.create_evidence(
+            session,
+            content=EVIDENCE_V1,
+            message="test: create synthetic evidence",
+        )
+        changed = yaml.safe_load(EVIDENCE_V1)
+        changed["observation"] = "different synthetic observation"
+        with self.assertRaisesRegex(
+            GuardRejected, "already exists with different content"
+        ):
+            self.broker.create_evidence(
+                session,
+                content=yaml.safe_dump(changed, sort_keys=False),
+                message="test: conflicting synthetic evidence",
+            )
+
+    def test_create_evidence_requires_evidence_write_capability(self):
+        session = self.open()
+        self.provider.calls.clear()
+        with self.assertRaisesRegex(
+            GuardRejected, "outside the session capability policy"
+        ):
+            self.broker.create_evidence(
+                session,
+                content=EVIDENCE_V1,
+                message="test: denied synthetic evidence",
+            )
+        self.assertFalse(
+            any(call[0] == "create" for call in self.provider.calls)
+        )
 
     def test_read_only_open_may_omit_expected_generation(self):
         session = self.broker.open_session(
