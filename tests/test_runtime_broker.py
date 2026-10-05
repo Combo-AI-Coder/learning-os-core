@@ -538,6 +538,32 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             )
         self.assertEqual([], self.provider.calls)
 
+    def test_learning_context_rejects_oversized_paths_before_session_lookup(self):
+        self.provider.calls.clear()
+        oversized_paths = (
+            "a" * 5000,
+            "learner/" + ("é" * 128),
+        )
+        for path in oversized_paths:
+            with self.subTest(path_kind=len(path)):
+                with self.assertRaisesRegex(ResolutionError, "byte limit"):
+                    self.broker.read_learning_context(
+                        object(),
+                        required_paths=(path,),
+                    )
+        self.assertEqual([], self.provider.calls)
+
+    def test_snapshot_path_inventory_fails_closed_when_metadata_is_unavailable(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            snapshot = MaterializedRepository(
+                Path(tempdir),
+                INSTANCE_ID,
+                INSTANCE_COMMIT,
+                "synthetic/instance",
+            )
+            with self.assertRaisesRegex(GuardRejected, "path inventory"):
+                self.broker._snapshot_path_inventory(snapshot)
+
     def test_learning_context_rejects_duplicate_and_excess_paths_before_io(self):
         self.policy = RuntimeCapabilityPolicy(readable_roots=("learner",))
         session = self.open()
@@ -663,6 +689,29 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             session,
             content=second_text,
             message="test: retry equivalent timestamp Evidence",
+        )
+        self.assertFalse(result.applied)
+
+    def test_create_evidence_idempotency_preserves_equal_float_semantics(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("evidence", "learner"),
+            writable_roots=("evidence",),
+        )
+        session = self.open()
+        first = yaml.safe_load(EVIDENCE_V1)
+        first["context"] = {"synthetic_float": 0.0}
+        first_text = yaml.safe_dump(first, sort_keys=False)
+        self.broker.create_evidence(
+            session,
+            content=first_text,
+            message="test: create float Evidence",
+        )
+        second = yaml.safe_load(first_text)
+        second["context"]["synthetic_float"] = -0.0
+        result = self.broker.create_evidence(
+            session,
+            content=yaml.safe_dump(second, sort_keys=False),
+            message="test: retry equal float Evidence",
         )
         self.assertFalse(result.applied)
 

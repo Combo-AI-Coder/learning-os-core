@@ -155,6 +155,7 @@ class MaterializedRepository:
     commit_sha: str
     full_name: str = ""
     blob_shas: tuple[tuple[str, str], ...] | None = None
+    paths: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -2603,7 +2604,13 @@ class GitHubApiProvider:
                 td.cleanup()
                 raise ResolutionError("repository provider closed during materialization")
             self._tempdirs.append(td)
-        return MaterializedRepository(root, repository_id, commit, full_name)
+        return MaterializedRepository(
+            root,
+            repository_id,
+            commit,
+            full_name,
+            paths=tuple(rel for _, rel in files),
+        )
 
     def read_materialized_text(
         self, snapshot: MaterializedRepository, path: str

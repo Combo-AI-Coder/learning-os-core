@@ -27,6 +27,9 @@ from scripts.runtime_adapter import (
     BOUNDED_YAML_MAX_BYTES,
     BOUNDED_YAML_MAX_DEPTH,
     BOUNDED_YAML_MAX_NODES,
+    MAX_SNAPSHOT_PATH_BYTES,
+    MAX_SNAPSHOT_PATH_COMPONENT_BYTES,
+    MAX_SNAPSHOT_PATH_DEPTH,
     CasConflict,
     DeploymentGuard,
     DeploymentResolver,
@@ -95,6 +98,22 @@ WINDOWS_RESERVED_BASENAMES = frozenset({
 def _relative_path(value: object, where: str) -> str:
     if not isinstance(value, str) or not value:
         raise ResolutionError(f"{where} must be a non-empty repository path")
+    try:
+        encoded = value.encode("utf-8")
+    except UnicodeEncodeError:
+        raise ResolutionError(f"{where} must be valid UTF-8") from None
+    if len(encoded) > MAX_SNAPSHOT_PATH_BYTES:
+        raise ResolutionError(f"{where} exceeds the repository path byte limit")
+    raw_parts = value.split("/")
+    if len(raw_parts) > MAX_SNAPSHOT_PATH_DEPTH:
+        raise ResolutionError(f"{where} exceeds the repository path depth limit")
+    if any(
+        len(part.encode("utf-8")) > MAX_SNAPSHOT_PATH_COMPONENT_BYTES
+        for part in raw_parts
+    ):
+        raise ResolutionError(
+            f"{where} exceeds the repository path component byte limit"
+        )
     pure = PurePosixPath(value)
     if (
         "\\" in value
@@ -1855,6 +1874,16 @@ class RuntimeSessionBroker:
             )
         return required, optional
 
+    @staticmethod
+    def _snapshot_path_inventory(snapshot) -> frozenset[str]:
+        if snapshot.blob_shas is not None:
+            return frozenset(path for path, _ in snapshot.blob_shas)
+        if snapshot.paths is not None:
+            return frozenset(snapshot.paths)
+        raise GuardRejected(
+            "materialized Instance snapshot lacks immutable path inventory"
+        )
+
     def read_learning_context(
         self,
         session: LearningRuntimeSession,
@@ -1884,13 +1913,13 @@ class RuntimeSessionBroker:
                 authority = self._pin_instance_authority(state)
                 authority_release_attempted = False
                 try:
+                    inventory = self._snapshot_path_inventory(
+                        authority.snapshot
+                    )
                     documents: list[tuple[str, InstanceText]] = []
                     missing_optional: list[str] = []
                     for path in required + optional:
-                        snapshot_path = _candidate_output_path(
-                            authority.snapshot.root, path
-                        )
-                        if not snapshot_path.exists():
+                        if path not in inventory:
                             if path in optional_set:
                                 missing_optional.append(path)
                                 continue
@@ -1934,7 +1963,7 @@ class RuntimeSessionBroker:
         if isinstance(value, int):
             return ("int", str(value))
         if isinstance(value, float):
-            return ("float", value.hex())
+            return ("float", value)
         if isinstance(value, str):
             return ("str", value)
         if isinstance(value, bytes):
