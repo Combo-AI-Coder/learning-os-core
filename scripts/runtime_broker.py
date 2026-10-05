@@ -1966,6 +1966,7 @@ class RuntimeSessionBroker:
         *,
         path: str,
         expected_blob_sha: str,
+        validation_content: str,
     ) -> None:
         """Apply the normal write fences even when checkpoint state is unchanged."""
         with self._session_operation(session) as state:
@@ -2005,6 +2006,15 @@ class RuntimeSessionBroker:
                         )
                     self._assert_deployed_write_policy_compatible(
                         state, core_snapshot=core
+                    )
+                    self._validate_candidate(
+                        state,
+                        authority_head=authority.head,
+                        path=path,
+                        content=validation_content,
+                        contract=deployment.contract,
+                        instance_snapshot=authority.snapshot,
+                        core_snapshot=core,
                     )
                     self._assert_pinned_instance_current(state, authority)
                     self.guard.assert_snapshot_current(
@@ -2061,7 +2071,17 @@ class RuntimeSessionBroker:
                     ) from None
             elif isinstance(item, int):
                 bits = item.bit_length()
-                scalar_bytes += max(1, (bits * 30103) // 100000 + 1)
+                decimal_digits = max(1, (bits * 30103) // 100000 + 1)
+                max_digits = (
+                    sys.get_int_max_str_digits()
+                    if hasattr(sys, "get_int_max_str_digits")
+                    else 0
+                )
+                if max_digits and decimal_digits > max_digits:
+                    raise ResolutionError(
+                        "learning checkpoint integer exceeds the serialization digit limit"
+                    )
+                scalar_bytes += decimal_digits
                 if item < 0:
                     scalar_bytes += 1
             elif isinstance(item, float):
@@ -2111,7 +2131,6 @@ class RuntimeSessionBroker:
 
     @staticmethod
     def _normalize_learning_checkpoint(checkpoint: object) -> dict[str, object]:
-        RuntimeSessionBroker._preflight_learning_checkpoint_object(checkpoint)
         if not isinstance(checkpoint, dict):
             raise ResolutionError("learning checkpoint must be a mapping")
         if any(not isinstance(key, str) for key in checkpoint):
@@ -2129,6 +2148,15 @@ class RuntimeSessionBroker:
             raise ResolutionError(
                 "learning checkpoint milestone count exceeds the bounded limit"
             )
+        ready_next = checkpoint["ready_next"]
+        if not isinstance(ready_next, list):
+            raise ResolutionError("learning checkpoint ready_next must be an array")
+        if len(ready_next) > LEARNING_CHECKPOINT_MAX_READY_NEXT:
+            raise ResolutionError(
+                "learning checkpoint ready_next count exceeds the bounded limit"
+            )
+
+        RuntimeSessionBroker._preflight_learning_checkpoint_object(checkpoint)
         if any(not isinstance(item, str) or not item for item in milestones):
             raise ResolutionError(
                 "learning checkpoint milestone entries must be non-empty strings"
@@ -2152,13 +2180,6 @@ class RuntimeSessionBroker:
                     "learning checkpoint return_point keys must be non-empty strings"
                 )
 
-        ready_next = checkpoint["ready_next"]
-        if not isinstance(ready_next, list):
-            raise ResolutionError("learning checkpoint ready_next must be an array")
-        if len(ready_next) > LEARNING_CHECKPOINT_MAX_READY_NEXT:
-            raise ResolutionError(
-                "learning checkpoint ready_next count exceeds the bounded limit"
-            )
         if any(not isinstance(item, str) or not item for item in ready_next):
             raise ResolutionError(
                 "learning checkpoint ready_next entries must be non-empty strings"
@@ -2210,7 +2231,7 @@ class RuntimeSessionBroker:
         _preflight_candidate_yaml(current_text.content)
         try:
             current_document = yaml.safe_load(current_text.content)
-        except yaml.YAMLError as exc:
+        except (yaml.YAMLError, ValueError, OverflowError) as exc:
             raise GuardRejected(
                 f"Subtopic Progress YAML is malformed: {exc.__class__.__name__}"
             ) from None
@@ -2305,6 +2326,7 @@ class RuntimeSessionBroker:
                 session,
                 path=path,
                 expected_blob_sha=expected_blob_sha,
+                validation_content=content,
             )
             return InstanceWriteAck(applied=False)
         return self.guarded_update(

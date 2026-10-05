@@ -222,24 +222,6 @@ class ReferenceLearningHost:
                     }),
                     where="learning checkpoint",
                 )
-                checkpoint = {
-                    "milestone": list(_string_list(
-                        checkpoint["milestone"],
-                        "learning checkpoint milestone",
-                    )),
-                    "return_point": (
-                        None
-                        if checkpoint["return_point"] is None
-                        else _mapping(
-                            checkpoint["return_point"],
-                            "learning checkpoint return_point",
-                        )
-                    ),
-                    "ready_next": list(_string_list(
-                        checkpoint["ready_next"],
-                        "learning checkpoint ready_next",
-                    )),
-                }
                 expected = _string(
                     arguments["expected_version_token"],
                     "expected_version_token",

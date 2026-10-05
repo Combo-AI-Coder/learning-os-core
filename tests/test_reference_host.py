@@ -166,6 +166,41 @@ class ReferenceLearningHostTests(unittest.TestCase):
             saved["watch"],
         )
 
+    def test_reference_host_rejects_oversized_checkpoint_array(self):
+        result = self.invoke(
+            "save_learning_checkpoint",
+            checkpoint={
+                "milestone": ["foundation"] * 17,
+                "return_point": None,
+                "ready_next": [],
+            },
+            expected_version_token=CHECKPOINT_BLOB,
+        )
+        self.assertFalse(result["ok"])
+        self.assertEqual("resolution_failed", result["error"]["code"])
+
+    def test_reference_host_rejects_unserializable_checkpoint_integer(self):
+        import sys
+
+        max_digits = (
+            sys.get_int_max_str_digits()
+            if hasattr(sys, "get_int_max_str_digits")
+            else 0
+        )
+        if max_digits == 0:
+            self.skipTest("interpreter has no integer conversion digit limit")
+        result = self.invoke(
+            "save_learning_checkpoint",
+            checkpoint={
+                "milestone": ["foundation"],
+                "return_point": {"ordinal": 10 ** (max_digits + 100)},
+                "ready_next": [],
+            },
+            expected_version_token=CHECKPOINT_BLOB,
+        )
+        self.assertFalse(result["ok"])
+        self.assertEqual("resolution_failed", result["error"]["code"])
+
     def test_reference_host_rejects_checkpoint_shape_extension(self):
         result = self.invoke(
             "save_learning_checkpoint",

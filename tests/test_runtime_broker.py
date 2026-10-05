@@ -2430,6 +2430,164 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
                 message="unauthorized no-op checkpoint",
             )
 
+    def test_save_learning_checkpoint_rejects_oversized_arrays_before_iteration(self):
+        self.provider.docs[CHECKPOINT_PATH] = checkpoint_progress()
+        self.provider.blobs[CHECKPOINT_PATH] = CHECKPOINT_BLOB
+        self.provider.snapshot_extra_paths.add(CHECKPOINT_PATH)
+        self.provider.set_branch_registry(role="main", subtopic="unit")
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(CHECKPOINT_PATH,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+
+        oversized = ["foundation"] * (
+            runtime_broker.LEARNING_CHECKPOINT_MAX_CURRENT_MILESTONES + 1
+        )
+        with mock.patch.object(
+            RuntimeSessionBroker,
+            "_preflight_learning_checkpoint_object",
+            side_effect=AssertionError("object walk must not run"),
+        ):
+            with self.assertRaisesRegex(ResolutionError, "milestone count"):
+                self.broker.save_learning_checkpoint(
+                    session,
+                    checkpoint={
+                        "milestone": oversized,
+                        "return_point": None,
+                        "ready_next": [],
+                    },
+                    expected_blob_sha=CHECKPOINT_BLOB,
+                    message="reject oversized milestone list",
+                )
+
+    def test_save_learning_checkpoint_rejects_unserializable_integer(self):
+        self.provider.docs[CHECKPOINT_PATH] = checkpoint_progress()
+        self.provider.blobs[CHECKPOINT_PATH] = CHECKPOINT_BLOB
+        self.provider.snapshot_extra_paths.add(CHECKPOINT_PATH)
+        self.provider.set_branch_registry(role="main", subtopic="unit")
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(CHECKPOINT_PATH,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        max_digits = (
+            runtime_broker.sys.get_int_max_str_digits()
+            if hasattr(runtime_broker.sys, "get_int_max_str_digits")
+            else 0
+        )
+        if max_digits == 0:
+            self.skipTest("interpreter has no integer conversion digit limit")
+        huge_integer = 10 ** (max_digits + 100)
+
+        with mock.patch.object(
+            runtime_broker.yaml,
+            "safe_dump",
+            side_effect=AssertionError("serialization must not run"),
+        ):
+            with self.assertRaisesRegex(ResolutionError, "serialization digit limit"):
+                self.broker.save_learning_checkpoint(
+                    session,
+                    checkpoint={
+                        "milestone": ["foundation"],
+                        "return_point": {"ordinal": huge_integer},
+                        "ready_next": [],
+                    },
+                    expected_blob_sha=CHECKPOINT_BLOB,
+                    message="reject huge integer checkpoint",
+                )
+
+    def test_save_learning_checkpoint_noop_revalidates_after_instance_drift(self):
+        existing = checkpoint_progress()
+        self.provider.docs[CHECKPOINT_PATH] = existing
+        self.provider.blobs[CHECKPOINT_PATH] = CHECKPOINT_BLOB
+        self.provider.snapshot_extra_paths.add(CHECKPOINT_PATH)
+        self.provider.set_branch_registry(role="main", subtopic="unit")
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(CHECKPOINT_PATH,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        current = yaml.safe_load(existing)
+
+        drifted = yaml.safe_load(existing)
+        drifted["milestones"]["foundation"]["status"] = "invalid-status"
+        self.provider.docs[CHECKPOINT_PATH] = yaml.safe_dump(
+            drifted, sort_keys=False
+        )
+        self.provider.blobs[CHECKPOINT_PATH] = "3" * 40
+        self.provider.instance_head = "7" * 40
+
+        with self.assertRaisesRegex(
+            GuardRejected, "candidate Instance state failed canonical validation"
+        ):
+            self.broker.save_learning_checkpoint(
+                session,
+                checkpoint={
+                    "milestone": current["current"]["milestone"],
+                    "return_point": current["resume"]["return_point"],
+                    "ready_next": current["resume"]["ready_next"],
+                },
+                expected_blob_sha="3" * 40,
+                message="reject invalid no-op after drift",
+            )
+        self.assertFalse(
+            any(
+                call[0] == "update" and call[3] == CHECKPOINT_PATH
+                for call in self.provider.calls
+            )
+        )
+
+    def test_save_learning_checkpoint_wraps_progress_scalar_construction_failure(self):
+        existing = checkpoint_progress()
+        self.provider.docs[CHECKPOINT_PATH] = existing
+        self.provider.blobs[CHECKPOINT_PATH] = CHECKPOINT_BLOB
+        self.provider.snapshot_extra_paths.add(CHECKPOINT_PATH)
+        self.provider.set_branch_registry(role="main", subtopic="unit")
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(CHECKPOINT_PATH,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+
+        self.provider.docs[CHECKPOINT_PATH] = existing.replace(
+            "updated_at: '2026-10-05T00:00:00Z'",
+            "updated_at: 9999-99-99",
+        ).replace(
+            'updated_at: "2026-10-05T00:00:00Z"',
+            "updated_at: 9999-99-99",
+        )
+        self.provider.blobs[CHECKPOINT_PATH] = "3" * 40
+        self.provider.instance_head = "7" * 40
+
+        with self.assertRaisesRegex(GuardRejected, "Subtopic Progress YAML is malformed"):
+            self.broker.save_learning_checkpoint(
+                session,
+                checkpoint={
+                    "milestone": ["foundation"],
+                    "return_point": None,
+                    "ready_next": [],
+                },
+                expected_blob_sha="3" * 40,
+                message="reject malformed timestamp",
+            )
+
     def test_save_learning_checkpoint_rejects_deep_return_point_before_serialization(self):
         self.provider.docs[CHECKPOINT_PATH] = checkpoint_progress()
         self.provider.blobs[CHECKPOINT_PATH] = CHECKPOINT_BLOB
