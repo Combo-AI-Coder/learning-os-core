@@ -22,9 +22,10 @@ from scripts.runtime_broker import (
     RuntimeSessionBroker,
 )
 
-REFERENCE_HOST_SURFACE_VERSION = "v1"
+REFERENCE_HOST_SURFACE_VERSION = "v2"
 REFERENCE_HOST_OPERATIONS = frozenset({
     "read_learning_context",
+    "save_learning_checkpoint",
     "create_evidence",
     "reconcile_knowledge",
 })
@@ -200,6 +201,58 @@ class ReferenceLearningHost:
                 }
                 return self._success(operation, result)
 
+            if operation == "save_learning_checkpoint":
+                _exact_keys(
+                    arguments,
+                    required=frozenset({
+                        "checkpoint",
+                        "expected_version_token",
+                    }),
+                    where="save_learning_checkpoint arguments",
+                )
+                checkpoint = _mapping(
+                    arguments["checkpoint"], "learning checkpoint"
+                )
+                _exact_keys(
+                    checkpoint,
+                    required=frozenset({
+                        "milestone",
+                        "return_point",
+                        "ready_next",
+                    }),
+                    where="learning checkpoint",
+                )
+                checkpoint = {
+                    "milestone": list(_string_list(
+                        checkpoint["milestone"],
+                        "learning checkpoint milestone",
+                    )),
+                    "return_point": (
+                        None
+                        if checkpoint["return_point"] is None
+                        else _mapping(
+                            checkpoint["return_point"],
+                            "learning checkpoint return_point",
+                        )
+                    ),
+                    "ready_next": list(_string_list(
+                        checkpoint["ready_next"],
+                        "learning checkpoint ready_next",
+                    )),
+                }
+                expected = _string(
+                    arguments["expected_version_token"],
+                    "expected_version_token",
+                )
+                ack = self._broker.save_learning_checkpoint(
+                    self._session,
+                    checkpoint=checkpoint,
+                    expected_blob_sha=expected,
+                    message="reference-host: save learning checkpoint",
+                )
+                return self._success(
+                    operation, {"applied": ack.applied}
+                )
             if operation == "create_evidence":
                 _exact_keys(
                     arguments,

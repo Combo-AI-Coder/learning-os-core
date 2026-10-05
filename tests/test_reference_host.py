@@ -15,9 +15,12 @@ from scripts.runtime_broker import (
 )
 from tests.test_runtime_broker import (
     BrokerProvider,
+    CHECKPOINT_BLOB,
+    CHECKPOINT_PATH,
     KNOWLEDGE_EVIDENCE_ID,
     READ_PATH,
     RUNTIME_PATH,
+    checkpoint_progress,
     knowledge_candidate,
     locator,
     typed_evidence,
@@ -33,16 +36,25 @@ class ReferenceLearningHostTests(unittest.TestCase):
         self.provider = BrokerProvider(
             Path(control.name), Path(instance.name)
         )
+        self.provider.docs[CHECKPOINT_PATH] = checkpoint_progress()
+        self.provider.blobs[CHECKPOINT_PATH] = CHECKPOINT_BLOB
+        self.provider.snapshot_extra_paths.add(CHECKPOINT_PATH)
+        self.provider.set_branch_registry(role="main", subtopic="unit")
         self.host = ReferenceLearningHost.open(
             provider=self.provider,
             locator_source=locator(),
             branch_runtime_path=RUNTIME_PATH,
             policy=RuntimeCapabilityPolicy(
-                readable_roots=("learner", "evidence"),
+                readable_roots=(
+                    "learner",
+                    "evidence",
+                    "topics/synthetic/subtopics/unit",
+                ),
                 writable_roots=(
                     READ_PATH,
                     "learner/knowledge/new-domain.yaml",
                     "evidence",
+                    CHECKPOINT_PATH,
                 ),
             ),
             write_admission=DeploymentWriteGate(),
@@ -60,6 +72,7 @@ class ReferenceLearningHostTests(unittest.TestCase):
         self.assertEqual(
             {
                 "read_learning_context",
+                "save_learning_checkpoint",
                 "create_evidence",
                 "reconcile_knowledge",
             },
@@ -95,7 +108,7 @@ class ReferenceLearningHostTests(unittest.TestCase):
         created = self.invoke("create_evidence", content=evidence)
         self.assertEqual(
             {
-                "surface_version": "v1",
+                "surface_version": "v2",
                 "ok": True,
                 "operation": "create_evidence",
                 "result": {"applied": True},
@@ -115,6 +128,60 @@ class ReferenceLearningHostTests(unittest.TestCase):
         )
         self.assertEqual(candidate, self.provider.docs[READ_PATH])
 
+    def test_reference_host_saves_bound_learning_checkpoint(self):
+        result = self.invoke(
+            "save_learning_checkpoint",
+            checkpoint={
+                "milestone": ["next-step"],
+                "return_point": {
+                    "kind": "teaching_thread",
+                    "focus": "fresh consumer resumes here",
+                },
+                "ready_next": ["continue with a new example"],
+            },
+            expected_version_token=CHECKPOINT_BLOB,
+        )
+        self.assertEqual(
+            {
+                "surface_version": "v2",
+                "ok": True,
+                "operation": "save_learning_checkpoint",
+                "result": {"applied": True},
+            },
+            result,
+        )
+        saved = yaml.safe_load(self.provider.docs[CHECKPOINT_PATH])
+        self.assertEqual(2, saved["revision"])
+        self.assertEqual(["next-step"], saved["current"]["milestone"])
+        self.assertEqual(
+            "fresh consumer resumes here",
+            saved["resume"]["return_point"]["focus"],
+        )
+        self.assertEqual(
+            ["continue with a new example"],
+            saved["resume"]["ready_next"],
+        )
+        self.assertEqual(
+            [{"kind": "node", "reason": "preserve me"}],
+            saved["watch"],
+        )
+
+    def test_reference_host_rejects_checkpoint_shape_extension(self):
+        result = self.invoke(
+            "save_learning_checkpoint",
+            checkpoint={
+                "milestone": ["next-step"],
+                "return_point": None,
+                "ready_next": [],
+                "milestones": {"next-step": {"status": "completed"}},
+            },
+            expected_version_token=CHECKPOINT_BLOB,
+        )
+        self.assertFalse(result["ok"])
+        self.assertEqual("resolution_failed", result["error"]["code"])
+        self.assertEqual(
+            checkpoint_progress(), self.provider.docs[CHECKPOINT_PATH]
+        )
     def test_reference_host_can_first_materialize_knowledge_owner(self):
         evidence_id = "evi-reference-host-new-domain-001"
         evidence = typed_evidence(

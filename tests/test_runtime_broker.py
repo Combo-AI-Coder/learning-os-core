@@ -47,6 +47,8 @@ HANDOFF_23_PATH = (
 )
 READ_PATH = "learner/knowledge/synthetic.yaml"
 WRITE_PATH = "learner/model.yaml"
+CHECKPOINT_PATH = "topics/synthetic/subtopics/unit/progress.yaml"
+CHECKPOINT_BLOB = "2" * 40
 READ_V1 = yaml.safe_dump({
     "schema_version": "0.3",
     "document_type": "learner_knowledge",
@@ -66,6 +68,33 @@ WRITE_V2 = yaml.safe_dump({
     "updated_at": "2026-09-29T00:01:00Z",
     "working_style": {},
 }, sort_keys=False)
+
+def checkpoint_progress(*, revision=1):
+    return yaml.safe_dump({
+        "schema_version": "0.3",
+        "document_type": "subtopic_progress",
+        "revision": revision,
+        "updated_at": "2026-10-05T00:00:00Z",
+        "topic": "synthetic",
+        "subtopic": "unit",
+        "plan_revision": 1,
+        "milestones": {
+            "foundation": {"status": "completed"},
+            "next-step": {"status": "in_progress"},
+        },
+        "current": {"milestone": ["foundation"]},
+        "blockers": [],
+        "resume": {
+            "return_point": {
+                "kind": "teaching_thread",
+                "focus": "old checkpoint",
+            },
+            "ready_next": [],
+        },
+        "watch": [{"kind": "node", "reason": "preserve me"}],
+        "avoid_retesting": ["foundation"],
+    }, sort_keys=False)
+
 
 EVIDENCE_ID = "evi-synthetic-reference-journey-001"
 EVIDENCE_PATH = f"evidence/{EVIDENCE_ID}.yaml"
@@ -222,6 +251,7 @@ class BrokerProvider:
         self._contract = contract()
         self.control_head = RC_COMMIT
         self.calls = []
+        self.snapshot_extra_paths = set()
         self.instance_head = INSTANCE_COMMIT
         self.advance_on_update = False
         self.promote_after_target_read = False
@@ -305,6 +335,7 @@ class BrokerProvider:
                     or path.startswith("curriculum/extensions/")
                     or path.startswith("curriculum/local/")
                     or "/execution/daily/" in path
+                    or path in self.snapshot_extra_paths
                     or (
                         path.startswith("topics/")
                         and path.endswith("/goal.yaml")
@@ -2283,6 +2314,214 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
             )
         self.assertTrue(result.applied)
 
+    def test_save_learning_checkpoint_updates_only_bound_local_checkpoint(self):
+        self.provider.docs[CHECKPOINT_PATH] = checkpoint_progress()
+        self.provider.blobs[CHECKPOINT_PATH] = CHECKPOINT_BLOB
+        self.provider.snapshot_extra_paths.add(CHECKPOINT_PATH)
+        self.provider.set_branch_registry(role="main", subtopic="unit")
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(CHECKPOINT_PATH,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+
+        result = self.broker.save_learning_checkpoint(
+            session,
+            checkpoint={
+                "milestone": ["next-step"],
+                "return_point": {
+                    "kind": "teaching_thread",
+                    "focus": "resume from the new boundary",
+                },
+                "ready_next": ["apply the concept to a fresh input"],
+            },
+            expected_blob_sha=CHECKPOINT_BLOB,
+            message="save synthetic learning checkpoint",
+        )
+
+        self.assertTrue(result.applied)
+        saved = yaml.safe_load(self.provider.docs[CHECKPOINT_PATH])
+        self.assertEqual(2, saved["revision"])
+        self.assertEqual(
+            {"completed", "in_progress"},
+            {record["status"] for record in saved["milestones"].values()},
+        )
+        self.assertEqual([], saved["blockers"])
+        self.assertEqual(
+            [{"kind": "node", "reason": "preserve me"}],
+            saved["watch"],
+        )
+        self.assertEqual(["foundation"], saved["avoid_retesting"])
+        self.assertEqual(["next-step"], saved["current"]["milestone"])
+        self.assertEqual(
+            "resume from the new boundary",
+            saved["resume"]["return_point"]["focus"],
+        )
+        self.assertEqual(
+            ["apply the concept to a fresh input"],
+            saved["resume"]["ready_next"],
+        )
+
+    def test_save_learning_checkpoint_same_local_state_is_idempotent(self):
+        existing = checkpoint_progress()
+        self.provider.docs[CHECKPOINT_PATH] = existing
+        self.provider.blobs[CHECKPOINT_PATH] = CHECKPOINT_BLOB
+        self.provider.snapshot_extra_paths.add(CHECKPOINT_PATH)
+        self.provider.set_branch_registry(role="main", subtopic="unit")
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(CHECKPOINT_PATH,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+        current = yaml.safe_load(existing)
+
+        result = self.broker.save_learning_checkpoint(
+            session,
+            checkpoint={
+                "milestone": current["current"]["milestone"],
+                "return_point": current["resume"]["return_point"],
+                "ready_next": current["resume"]["ready_next"],
+            },
+            expected_blob_sha=CHECKPOINT_BLOB,
+            message="no-op checkpoint",
+        )
+
+        self.assertFalse(result.applied)
+        self.assertEqual(existing, self.provider.docs[CHECKPOINT_PATH])
+        self.assertFalse(
+            any(
+                call[0] == "update" and call[3] == CHECKPOINT_PATH
+                for call in self.provider.calls
+            )
+        )
+
+    def test_save_learning_checkpoint_noop_still_requires_write_capability(self):
+        existing = checkpoint_progress()
+        self.provider.docs[CHECKPOINT_PATH] = existing
+        self.provider.blobs[CHECKPOINT_PATH] = CHECKPOINT_BLOB
+        self.provider.snapshot_extra_paths.add(CHECKPOINT_PATH)
+        self.provider.set_branch_registry(role="main", subtopic="unit")
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=RuntimeCapabilityPolicy(
+                readable_roots=("topics/synthetic",),
+            ),
+            expected_generation=3,
+        )
+        current = yaml.safe_load(existing)
+
+        with self.assertRaisesRegex(GuardRejected, "capability policy"):
+            self.broker.save_learning_checkpoint(
+                session,
+                checkpoint={
+                    "milestone": current["current"]["milestone"],
+                    "return_point": current["resume"]["return_point"],
+                    "ready_next": current["resume"]["ready_next"],
+                },
+                expected_blob_sha=CHECKPOINT_BLOB,
+                message="unauthorized no-op checkpoint",
+            )
+
+    def test_save_learning_checkpoint_rejects_unknown_current_milestone(self):
+        self.provider.docs[CHECKPOINT_PATH] = checkpoint_progress()
+        self.provider.blobs[CHECKPOINT_PATH] = CHECKPOINT_BLOB
+        self.provider.snapshot_extra_paths.add(CHECKPOINT_PATH)
+        self.provider.set_branch_registry(role="main", subtopic="unit")
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(CHECKPOINT_PATH,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+
+        with self.assertRaisesRegex(GuardRejected, "unknown current milestone"):
+            self.broker.save_learning_checkpoint(
+                session,
+                checkpoint={
+                    "milestone": ["missing-milestone"],
+                    "return_point": None,
+                    "ready_next": [],
+                },
+                expected_blob_sha=CHECKPOINT_BLOB,
+                message="invalid checkpoint milestone",
+            )
+        self.assertFalse(
+            any(
+                call[0] == "update" and call[3] == CHECKPOINT_PATH
+                for call in self.provider.calls
+            )
+        )
+
+    def test_save_learning_checkpoint_rejects_stale_version_before_write(self):
+        self.provider.docs[CHECKPOINT_PATH] = checkpoint_progress()
+        self.provider.blobs[CHECKPOINT_PATH] = CHECKPOINT_BLOB
+        self.provider.snapshot_extra_paths.add(CHECKPOINT_PATH)
+        self.provider.set_branch_registry(role="main", subtopic="unit")
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(CHECKPOINT_PATH,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+
+        with self.assertRaisesRegex(CasConflict, "version token"):
+            self.broker.save_learning_checkpoint(
+                session,
+                checkpoint={
+                    "milestone": ["next-step"],
+                    "return_point": None,
+                    "ready_next": [],
+                },
+                expected_blob_sha="0" * 40,
+                message="stale checkpoint",
+            )
+        self.assertFalse(
+            any(
+                call[0] == "update" and call[3] == CHECKPOINT_PATH
+                for call in self.provider.calls
+            )
+        )
+
+    def test_save_learning_checkpoint_requires_main_bound_subtopic(self):
+        self.provider.docs[CHECKPOINT_PATH] = checkpoint_progress()
+        self.provider.blobs[CHECKPOINT_PATH] = CHECKPOINT_BLOB
+        self.provider.snapshot_extra_paths.add(CHECKPOINT_PATH)
+        self.provider.set_branch_registry(role="practice", subtopic="unit")
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=("topics/synthetic",),
+            writable_roots=(CHECKPOINT_PATH,),
+        )
+        session = self.broker.open_session(
+            branch_runtime_path=RUNTIME_PATH,
+            policy=policy,
+            expected_generation=3,
+        )
+
+        with self.assertRaisesRegex(GuardRejected, "Main Branch"):
+            self.broker.save_learning_checkpoint(
+                session,
+                checkpoint={
+                    "milestone": ["next-step"],
+                    "return_point": None,
+                    "ready_next": [],
+                },
+                expected_blob_sha=CHECKPOINT_BLOB,
+                message="wrong branch role",
+            )
     def test_practice_branch_cannot_replace_main_subtopic_progress(self):
         path = "topics/synthetic/subtopics/unit/progress.yaml"
         self.provider.docs[path] = "revision: 1\n"
