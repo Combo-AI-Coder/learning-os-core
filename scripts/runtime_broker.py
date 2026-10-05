@@ -69,6 +69,7 @@ CANDIDATE_YAML_MAX_NODES = BOUNDED_YAML_MAX_NODES
 CANDIDATE_YAML_MAX_DEPTH = BOUNDED_YAML_MAX_DEPTH
 CANDIDATE_VALIDATION_TIMEOUT_SECONDS = 10
 LEARNING_CONTEXT_MAX_DOCUMENTS = 32
+KNOWLEDGE_RECONCILE_MAX_NEW_EVIDENCE_REFS = 32
 FINGERPRINT_STDOUT_MAX_BYTES = 128
 FINGERPRINT_POLL_SECONDS = 0.01
 BRANCH_RUNTIME_REQUIRED_FIELDS = frozenset({
@@ -1674,6 +1675,7 @@ class RuntimeSessionBroker:
         contract: dict,
         instance_snapshot: MaterializedRepository | None = None,
         core_snapshot: MaterializedRepository | None = None,
+        allow_create: bool = False,
     ) -> None:
         _preflight_candidate_yaml(content)
         snapshots: list[MaterializedRepository] = []
@@ -1698,18 +1700,21 @@ class RuntimeSessionBroker:
                 raise GuardRejected(
                     "candidate Instance update path is unclassified or ambiguous"
                 )
-            self._assert_semantic_version_transition(
-                instance.root,
-                path=path,
-                document_type=types[0],
-                content=content,
-            )
-            self._assert_document_transition(
-                instance.root,
-                path=path,
-                document_type=types[0],
-                content=content,
-            )
+            current_path = _candidate_output_path(instance.root, path)
+            creating = allow_create and not current_path.exists()
+            if not creating:
+                self._assert_semantic_version_transition(
+                    instance.root,
+                    path=path,
+                    document_type=types[0],
+                    content=content,
+                )
+                self._assert_document_transition(
+                    instance.root,
+                    path=path,
+                    document_type=types[0],
+                    content=content,
+                )
             core = core_snapshot
             if core is None:
                 core = self.provider.materialize(
@@ -2171,6 +2176,353 @@ class RuntimeSessionBroker:
                             self._release_materializations(pending)
             return InstanceWriteAck()
 
+    @staticmethod
+    def _knowledge_candidate(content: str) -> tuple[dict, str]:
+        _preflight_candidate_yaml(content)
+        try:
+            data = yaml.safe_load(content)
+        except yaml.YAMLError as exc:
+            raise GuardRejected(
+                f"Knowledge YAML is malformed: {exc.__class__.__name__}"
+            ) from None
+        if not isinstance(data, dict):
+            raise GuardRejected("Knowledge candidate must be a mapping")
+        if data.get("document_type") != "learner_knowledge":
+            raise GuardRejected(
+                "Knowledge reconciliation requires document_type learner_knowledge"
+            )
+        domain = data.get("domain")
+        if not isinstance(domain, str) or not domain.strip():
+            raise GuardRejected(
+                "Knowledge reconciliation requires a non-empty domain"
+            )
+        path = _relative_path(
+            f"learner/knowledge/{domain}.yaml",
+            "Knowledge canonical path",
+        )
+        if instance_expected_types(path) != ("learner_knowledge",):
+            raise GuardRejected(
+                "Knowledge domain does not map to one canonical Knowledge path"
+            )
+        return data, path
+
+    @staticmethod
+    def _knowledge_evidence_ref_map(
+        document: dict,
+        *,
+        label: str,
+        allow_legacy_duplicates: bool = False,
+    ) -> dict[tuple[str, str, str, str], tuple[str, ...]]:
+        domain = document.get("domain")
+        if not isinstance(domain, str) or not domain.strip():
+            raise GuardRejected(f"{label} Knowledge domain is invalid")
+        concepts = document.get("concepts")
+        if not isinstance(concepts, dict):
+            raise GuardRejected(f"{label} Knowledge concepts must be a mapping")
+        result: dict[tuple[str, str, str, str], tuple[str, ...]] = {}
+        for concept, concept_record in concepts.items():
+            if not isinstance(concept, str) or not concept.strip():
+                raise GuardRejected(
+                    f"{label} Knowledge concept identity is invalid"
+                )
+            if not isinstance(concept_record, dict):
+                raise GuardRejected(
+                    f"{label} Knowledge concept record must be a mapping"
+                )
+            capabilities = concept_record.get("capabilities", {})
+            if not isinstance(capabilities, dict):
+                raise GuardRejected(
+                    f"{label} Knowledge capabilities must be a mapping"
+                )
+            for capability, capability_record in capabilities.items():
+                if not isinstance(capability, str) or not capability.strip():
+                    raise GuardRejected(
+                        f"{label} Knowledge capability identity is invalid"
+                    )
+                if not isinstance(capability_record, dict):
+                    raise GuardRejected(
+                        f"{label} Knowledge capability record must be a mapping"
+                    )
+                refs = capability_record.get("evidence_refs", {})
+                if refs is None:
+                    refs = {}
+                if not isinstance(refs, dict):
+                    raise GuardRejected(
+                        f"{label} Knowledge evidence_refs must be a mapping"
+                    )
+                for side in ("support", "challenge"):
+                    values = refs.get(side, [])
+                    if values is None:
+                        values = []
+                    if (
+                        not isinstance(values, list)
+                        or any(
+                            not isinstance(item, str) or not item.strip()
+                            for item in values
+                        )
+                    ):
+                        raise GuardRejected(
+                            f"{label} Knowledge {side} evidence refs must be non-empty strings"
+                        )
+                    if len(set(values)) != len(values):
+                        if not allow_legacy_duplicates:
+                            raise GuardRejected(
+                                f"{label} Knowledge {side} evidence refs are duplicated"
+                            )
+                        values = list(dict.fromkeys(values))
+                    result[(domain, concept, capability, side)] = tuple(values)
+        return result
+
+    def _assert_new_knowledge_evidence_relevant(
+        self,
+        *,
+        state: _LearningRuntimeSessionState,
+        snapshot: MaterializedRepository,
+        current: dict,
+        candidate: dict,
+    ) -> None:
+        current_refs = self._knowledge_evidence_ref_map(
+            current,
+            label="current",
+            allow_legacy_duplicates=True,
+        )
+        candidate_refs = self._knowledge_evidence_ref_map(
+            candidate, label="candidate"
+        )
+        pending: list[tuple[tuple[str, str, str, str], str]] = []
+        for key, refs in candidate_refs.items():
+            previous = frozenset(current_refs.get(key, ()))
+            for evidence_id in refs:
+                if evidence_id not in previous:
+                    pending.append((key, evidence_id))
+        if len(pending) > KNOWLEDGE_RECONCILE_MAX_NEW_EVIDENCE_REFS:
+            raise GuardRejected(
+                "Knowledge reconciliation adds too many new Evidence references"
+            )
+
+        evidence_cache: dict[str, dict] = {}
+        for key, evidence_id in pending:
+            domain, concept, capability, side = key
+            evidence_path = _relative_path(
+                f"evidence/{evidence_id}.yaml",
+                "Knowledge Evidence reference",
+            )
+            if instance_expected_types(evidence_path) != ("evidence",):
+                raise GuardRejected(
+                    "Knowledge Evidence reference is not a canonical Evidence path"
+                )
+            if not state.policy.may_read(evidence_path):
+                raise GuardRejected(
+                    "Knowledge Evidence reference is outside the session read capability policy"
+                )
+            evidence = evidence_cache.get(evidence_id)
+            if evidence is None:
+                try:
+                    evidence_text, _ = self.provider.read_materialized_text(
+                        snapshot, evidence_path
+                    )
+                    _preflight_candidate_yaml(evidence_text)
+                    evidence = yaml.safe_load(evidence_text)
+                except (ResolutionError, yaml.YAMLError) as exc:
+                    raise GuardRejected(
+                        f"Knowledge Evidence reference {evidence_id!r} is unreadable"
+                    ) from exc
+                if not isinstance(evidence, dict):
+                    raise GuardRejected(
+                        f"Knowledge Evidence reference {evidence_id!r} has invalid identity"
+                    )
+                evidence_cache[evidence_id] = evidence
+            if (
+                evidence.get("document_type") != "evidence"
+                or evidence.get("id") != evidence_id
+            ):
+                raise GuardRejected(
+                    f"Knowledge Evidence reference {evidence_id!r} has invalid identity"
+                )
+            expected_target = {
+                "type": "capability",
+                "domain": domain,
+                "concept": concept,
+                "capability": capability,
+            }
+            targets = evidence.get("targets")
+            if not isinstance(targets, list) or not any(
+                isinstance(target, dict)
+                and all(
+                    target.get(field) == value
+                    for field, value in expected_target.items()
+                )
+                for target in targets
+            ):
+                raise GuardRejected(
+                    f"Knowledge Evidence reference {evidence_id!r} does not exactly target "
+                    f"{domain}/{concept}/{capability}"
+                )
+            interpretation = evidence.get("interpretation")
+            direction = (
+                interpretation.get("direction")
+                if isinstance(interpretation, dict)
+                else None
+            )
+            expected_direction = (
+                "support" if side == "support" else "challenge"
+            )
+            if direction != expected_direction:
+                raise GuardRejected(
+                    f"Knowledge Evidence reference {evidence_id!r} direction "
+                    f"{direction!r} cannot populate {side}"
+                )
+
+    def reconcile_knowledge(
+        self,
+        session: LearningRuntimeSession,
+        *,
+        content: str,
+        expected_blob_sha: str | None,
+        message: str,
+    ) -> InstanceWriteAck:
+        """Create/update one Knowledge owner after validating newly cited Evidence."""
+        candidate, path = self._knowledge_candidate(content)
+        with self._session_operation(session) as state:
+            if not state.policy.may_write(path):
+                raise GuardRejected(
+                    "Knowledge reconciliation is outside the session capability policy"
+                )
+            if self.write_admission is None:
+                raise GuardRejected(
+                    "writable learning session requires shared deployment write admission"
+                )
+            with self.write_admission.write_lease():
+                deployment = self.guard.snapshot(state.deployment)
+                authority = self._pin_instance_authority(state)
+                core = None
+                release_attempted = False
+                try:
+                    current_path = _candidate_output_path(
+                        authority.snapshot.root, path
+                    )
+                    creating = not current_path.exists()
+                    if creating:
+                        if expected_blob_sha is not None:
+                            raise CasConflict(
+                                "first Knowledge materialization requires no expected blob"
+                            )
+                        revision = candidate.get("revision")
+                        if (
+                            not isinstance(revision, int)
+                            or isinstance(revision, bool)
+                            or revision != 1
+                        ):
+                            raise GuardRejected(
+                                "first Knowledge materialization must use revision 1"
+                            )
+                        current = {
+                            "domain": candidate.get("domain"),
+                            "concepts": {},
+                        }
+                    else:
+                        if expected_blob_sha is None:
+                            raise CasConflict(
+                                "existing Knowledge reconciliation requires expected blob SHA"
+                            )
+                        try:
+                            current_text, current_blob_sha = (
+                                self.provider.read_materialized_text(
+                                    authority.snapshot, path
+                                )
+                            )
+                            _preflight_candidate_yaml(current_text)
+                            current = yaml.safe_load(current_text)
+                        except (ResolutionError, yaml.YAMLError) as exc:
+                            raise GuardRejected(
+                                "current Knowledge owner is unreadable"
+                            ) from exc
+                        if not isinstance(current, dict):
+                            raise GuardRejected(
+                                "current Knowledge owner must be a mapping"
+                            )
+                        if current_blob_sha != expected_blob_sha:
+                            raise CasConflict(
+                                "Knowledge target blob compare-and-swap mismatch"
+                            )
+
+                    self._assert_new_knowledge_evidence_relevant(
+                        state=state,
+                        snapshot=authority.snapshot,
+                        current=current,
+                        candidate=candidate,
+                    )
+                    core = self.provider.materialize(
+                        state.deployment.core_repository_id,
+                        state.deployment.core_commit,
+                    )
+                    if (
+                        core.repository_id
+                        != state.deployment.core_repository_id
+                        or core.commit_sha
+                        != state.deployment.core_commit
+                    ):
+                        raise GuardRejected(
+                            "deployed Core provenance changed during Knowledge reconciliation"
+                        )
+                    self._assert_deployed_write_policy_compatible(
+                        state, core_snapshot=core
+                    )
+                    self._validate_candidate(
+                        state,
+                        authority_head=authority.head,
+                        path=path,
+                        content=content,
+                        contract=deployment.contract,
+                        instance_snapshot=authority.snapshot,
+                        core_snapshot=core,
+                        allow_create=creating,
+                    )
+                    self._assert_pinned_instance_current(state, authority)
+                    self.guard.assert_snapshot_current(
+                        state.deployment, deployment
+                    )
+                    release_attempted = True
+                    self._release_materializations(
+                        [core, authority.snapshot]
+                    )
+                    try:
+                        if creating:
+                            self.provider.create_text(
+                                state.deployment.instance_repository_id,
+                                state.binding.instance_ref,
+                                path,
+                                content,
+                                message,
+                                expected_ref_sha=authority.head,
+                            )
+                        else:
+                            self.provider.update_text(
+                                state.deployment.instance_repository_id,
+                                state.binding.instance_ref,
+                                path,
+                                content,
+                                expected_blob_sha,
+                                message,
+                                expected_ref_sha=authority.head,
+                            )
+                    except CasConflict:
+                        raise
+                    except Exception as exc:
+                        raise CasConflict(
+                            f"Knowledge compare-and-swap failed: {exc}"
+                        ) from None
+                finally:
+                    if not release_attempted:
+                        pending = [
+                            snapshot
+                            for snapshot in (core, authority.snapshot)
+                            if snapshot is not None
+                        ]
+                        if pending:
+                            self._release_materializations(pending)
+            return InstanceWriteAck()
+
     def guarded_update(
         self,
         session: LearningRuntimeSession,
@@ -2212,6 +2564,11 @@ class RuntimeSessionBroker:
                     raise GuardRejected(
                         "ordinary learning session cannot overwrite immutable/create-only "
                         f"{document_type} records"
+                    )
+                if write_mode == "knowledge_transition":
+                    raise GuardRejected(
+                        "ordinary learning session must use the dedicated Knowledge "
+                        "reconciliation operation"
                     )
                 if write_mode == "protocol_transition":
                     raise GuardRejected(

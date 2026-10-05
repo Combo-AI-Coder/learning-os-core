@@ -586,6 +586,7 @@ INSTANCE_ALL_TYPES=frozenset(t for _,t in INSTANCE_CANONICAL_PATH_RULES)
 INSTANCE_GENERIC_WRITE_MODE_OVERRIDES={
     "branch_runtime":"branch_authority",
     "hub_runtime":"hub_authority",
+    "learner_knowledge":"knowledge_transition",
     "evidence":"immutable_create_only",
     "execution_session":"immutable_create_only",
     "coordination_event":"immutable_create_only",
@@ -616,6 +617,7 @@ INSTANCE_GENERIC_WRITE_TRANSITION_RULES={
 }
 INSTANCE_DEDICATED_RUNTIME_OPERATIONS={
     "create_evidence":"v1",
+    "reconcile_knowledge":"v2",
 }
 
 def instance_expected_types(p,rules=None):
