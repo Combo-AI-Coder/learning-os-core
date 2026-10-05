@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import os
+import datetime as datetime_module
 import secrets
 import shutil
 import subprocess
@@ -1938,6 +1939,16 @@ class RuntimeSessionBroker:
             return ("str", value)
         if isinstance(value, bytes):
             return ("bytes", value.hex())
+        if isinstance(value, datetime_module.datetime):
+            offset = value.utcoffset() if value.tzinfo is not None else None
+            if offset is None:
+                return ("datetime-naive", value.isoformat())
+            normalized = value.astimezone(
+                datetime_module.timezone.utc
+            ).replace(tzinfo=None)
+            return ("datetime-aware", normalized.isoformat())
+        if isinstance(value, datetime_module.date):
+            return ("date", value.isoformat())
         if isinstance(value, dict):
             entries = [
                 (

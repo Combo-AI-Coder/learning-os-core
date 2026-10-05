@@ -634,6 +634,38 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         )
         self.assertFalse(result.applied)
 
+    def test_create_evidence_idempotency_normalizes_equivalent_aware_timestamps(self):
+        self.policy = RuntimeCapabilityPolicy(
+            readable_roots=("evidence", "learner"),
+            writable_roots=("evidence",),
+        )
+        session = self.open()
+        first = yaml.safe_load(EVIDENCE_V1)
+        first["observed_at"] = "2026-10-05T00:00:00Z"
+        first_text = yaml.safe_dump(first, sort_keys=False)
+        first_text = first_text.replace(
+            "'2026-10-05T00:00:00Z'", "2026-10-05T00:00:00Z"
+        )
+        self.broker.create_evidence(
+            session,
+            content=first_text,
+            message="test: create timestamped Evidence",
+        )
+
+        second = yaml.safe_load(first_text)
+        second["observed_at"] = "2026-10-04T20:00:00-04:00"
+        second_text = yaml.safe_dump(second, sort_keys=False)
+        second_text = second_text.replace(
+            "'2026-10-04T20:00:00-04:00'",
+            "2026-10-04T20:00:00-04:00",
+        )
+        result = self.broker.create_evidence(
+            session,
+            content=second_text,
+            message="test: retry equivalent timestamp Evidence",
+        )
+        self.assertFalse(result.applied)
+
     def test_create_evidence_idempotency_is_type_sensitive(self):
         self.policy = RuntimeCapabilityPolicy(
             readable_roots=("evidence", "learner"),
