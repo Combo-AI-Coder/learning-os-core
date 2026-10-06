@@ -1,0 +1,170 @@
+[
+  {
+    "run_id": "p01",
+    "case": "supported",
+    "arm": "structured",
+    "packet_sha256": "e41082c95d4f654d143032b8eefa3856304f718149d872e3ad9b4e567938f5c9",
+    "output_contract_version": 1,
+    "iteration": "pilot_v1"
+  },
+  {
+    "run_id": "p02",
+    "case": "unsupported",
+    "arm": "structured",
+    "packet_sha256": "82891a5bb01302771920de5bb8d9468867b99c72eabf686272aab304d936aa15",
+    "output_contract_version": 1,
+    "iteration": "pilot_v1"
+  },
+  {
+    "run_id": "p03",
+    "case": "assisted",
+    "arm": "structured",
+    "packet_sha256": "a2ab38d23028afc435324ca525851a45daf4de744d79e9a4ef95d5dd6f631692",
+    "output_contract_version": 1,
+    "iteration": "pilot_v1"
+  },
+  {
+    "run_id": "p04",
+    "case": "scope_limited",
+    "arm": "structured",
+    "packet_sha256": "155d0c93088b9e97694b56132f48ea1e3b8af477f8739848bcfa4d8b82737d37",
+    "output_contract_version": 2,
+    "iteration": "pilot_v1"
+  },
+  {
+    "run_id": "p05",
+    "case": "style_noise",
+    "arm": "structured",
+    "packet_sha256": "f0418f2105a1e0a87b78102c7a021ef65e0d2583bdb6f990faf9302bedad36be",
+    "output_contract_version": 2,
+    "iteration": "pilot_v1"
+  },
+  {
+    "run_id": "p06",
+    "case": "affect_noise",
+    "arm": "structured",
+    "packet_sha256": "ee8154560128b16beae9f5f56cebd5b5d1632db378612936994d9a51689c5ef2",
+    "output_contract_version": 2,
+    "iteration": "pilot_v1"
+  },
+  {
+    "run_id": "p07",
+    "case": "unrelated_stale",
+    "arm": "structured",
+    "packet_sha256": "e5954165cc81158ee0a143242eff6496e09831e10b4a8bbada5dc0491ae2cd47",
+    "output_contract_version": 2,
+    "iteration": "pilot_v1"
+  },
+  {
+    "run_id": "p08",
+    "case": "nonblocking_unknown",
+    "arm": "structured",
+    "packet_sha256": "48c58b0b95118f48796f6b50411362b577540a63c87a5706d1f066c7bdf1a3a2",
+    "output_contract_version": 2,
+    "iteration": "pilot_v1"
+  },
+  {
+    "run_id": "p09",
+    "case": "necessary_conflict",
+    "arm": "structured",
+    "packet_sha256": "25249fd7f860bc7bccc76ec437b2d7fd4d2a1c175126359c6e003dcb164de3ad",
+    "output_contract_version": 2,
+    "iteration": "pilot_v1"
+  },
+  {
+    "run_id": "p10",
+    "case": "supported",
+    "arm": "summary",
+    "packet_sha256": "156005744e98c177d722b732c0ad0d4efc0cd41fe5c597147ad80723661399be",
+    "output_contract_version": 2,
+    "iteration": "pilot_v1"
+  },
+  {
+    "run_id": "p11",
+    "case": "unsupported",
+    "arm": "summary",
+    "packet_sha256": "b063bf91ba8b7b4c36c1fff81b0a2ce8560abe946523512d8fc2e59f1d3bf07c",
+    "output_contract_version": 2,
+    "iteration": "pilot_v1"
+  },
+  {
+    "run_id": "p12",
+    "case": "supported",
+    "arm": "ablated",
+    "packet_sha256": "f9d6c00900d61bb0914b62d19d16fb34adc17dbb7f9b054ee62bb2e89d5da954",
+    "output_contract_version": 2,
+    "iteration": "pilot_v1"
+  },
+  {
+    "run_id": "a01",
+    "case": "supported",
+    "arm": "structured",
+    "output_contract_version": 2,
+    "iteration": "application_v2",
+    "packet_sha256": "4db55c3acd144f8597f50cd8500605a3b2442f15de8a1ee66050a1b53f9e8e58"
+  },
+  {
+    "run_id": "a02",
+    "case": "unsupported",
+    "arm": "structured",
+    "output_contract_version": 2,
+    "iteration": "application_v2",
+    "packet_sha256": "34bd3d254c79a1002a7a501ee09ab38568b8974f404211c991d5323c28551505"
+  },
+  {
+    "run_id": "a03",
+    "case": "assisted",
+    "arm": "structured",
+    "output_contract_version": 2,
+    "iteration": "application_v2",
+    "packet_sha256": "0591e2427578a31f692d414f5eaa2313299a135b62a2ba7f96c1ccb7869831b7"
+  },
+  {
+    "run_id": "a04",
+    "case": "scope_limited",
+    "arm": "structured",
+    "output_contract_version": 2,
+    "iteration": "application_v2",
+    "packet_sha256": "f94d3025107bb13d0a6380099c94f430ff1f9c08e716af80a94ad6b711e48534"
+  },
+  {
+    "run_id": "a05",
+    "case": "combined_noise",
+    "arm": "structured",
+    "output_contract_version": 2,
+    "iteration": "application_v2",
+    "packet_sha256": "fe3b798b9a647901a70bc2637163d1ab85342ed464f7a6bf10bcdd15dfaba39a"
+  },
+  {
+    "run_id": "a06",
+    "case": "supported",
+    "arm": "summary",
+    "output_contract_version": 2,
+    "iteration": "application_v2",
+    "packet_sha256": "4e379f4e5ff695692985685c55c9ba74c42882b58299488c382a54bb944d4d33"
+  },
+  {
+    "run_id": "a07",
+    "case": "unsupported",
+    "arm": "summary",
+    "output_contract_version": 2,
+    "iteration": "application_v2",
+    "packet_sha256": "86c11368768b4f54278aab66881fa6964060fdf4976aa097e4bdae60888cdfef"
+  },
+  {
+    "run_id": "a08",
+    "case": "supported",
+    "arm": "ablated",
+    "output_contract_version": 2,
+    "iteration": "application_v2",
+    "packet_sha256": "fbdc102d06c8794e8fe5342056b2cc6a24d99bb98621ff0464b6776e49dc5f72"
+  },
+  {
+    "run_id": "a09",
+    "case": "necessary_conflict",
+    "arm": "structured",
+    "output_contract_version": 2,
+    "iteration": "application_v2",
+    "packet_sha256": "d56f846c6302a4da25049f3e2468b46505cf5d10a5d1bf647cecb8c1204a4c33"
+  }
+]

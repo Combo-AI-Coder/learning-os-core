@@ -1,0 +1,121 @@
+{
+  "case_id": "hd05",
+  "synthetic": true,
+  "title": "Totals from a chart",
+  "current_task": {
+    "goal": "Connect category counts in a bar chart to the total number of objects represented.",
+    "current_material": "The chart has three categories: red objects, blue objects, and green objects. Their bar heights are labeled 2, 5, and 3. The vertical axis begins at zero, has equally spaced integer ticks, and is labeled Number of objects. Categories are disjoint, and together they include all objects being counted.",
+    "session_context": "This is the next step of the chart lesson. The available Knowledge records are below; no other graph capabilities have recorded judgments."
+  },
+  "knowledge": {
+    "schema_version": "0.3",
+    "document_type": "learner_knowledge",
+    "revision": 1,
+    "updated_at": "2026-10-06T10:40:00Z",
+    "domain": "synthetic",
+    "concepts": {
+      "bar_charts": {
+        "capabilities": {
+          "read_integer_counts_on_uniform_axis": {
+            "state": "supported",
+            "confidence": "high",
+            "updated_at": "2026-10-06T10:40:00Z",
+            "evidence_refs": {
+              "support": [
+                "evi_20261006_hd05_01"
+              ],
+              "challenge": []
+            },
+            "basis_summary": "Read counts and labels on ordinary zero-based, uniformly spaced integer count axes across examples."
+          },
+          "combine_category_counts": {
+            "state": "supported",
+            "confidence": "high",
+            "updated_at": "2026-10-06T10:40:00Z",
+            "evidence_refs": {
+              "support": [
+                "evi_20261006_hd05_02"
+              ],
+              "challenge": []
+            },
+            "basis_summary": "Added mutually exclusive category counts into a total in multiple examples."
+          }
+        }
+      }
+    }
+  },
+  "evidence": [
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd05_01",
+      "observed_at": "2026-10-05T09:01:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "On two bar charts whose vertical axes began at zero with equally spaced integer ticks, the learner correctly read the category counts from the bar heights and identified the category labels."
+      },
+      "interpretation": {
+        "direction": "support",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "bar_charts",
+          "capability": "read_integer_counts_on_uniform_axis"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd05",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    },
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd05_02",
+      "observed_at": "2026-10-05T09:02:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "The learner added counts 2, 4, and 3 as 9 and explained that each category contributes to the total once. In a separate count example, they combined 1, 5, and 2 as 8."
+      },
+      "interpretation": {
+        "direction": "support",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "bar_charts",
+          "capability": "combine_category_counts"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd05",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    }
+  ]
+}

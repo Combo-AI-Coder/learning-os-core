@@ -1,0 +1,560 @@
+{
+  "schema_version": 1,
+  "model_alias": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "temperature_seed_and_exact_build": "not exposed",
+  "full_provider_prompt_reproducible": false,
+  "clean_conditional_runs": [
+    "q10",
+    "q01",
+    "q02",
+    "q03"
+  ],
+  "ordinary_selection_controls": [
+    "h04",
+    "h05",
+    "h06"
+  ],
+  "supplemental_invariance_runs": [
+    "r02",
+    "r03"
+  ],
+  "old_failures_preserved": [
+    "a09",
+    "r01"
+  ],
+  "selective_unchanged_prompt_reruns": 0,
+  "runs": [
+    {
+      "run_id": "q00",
+      "response": {
+        "action": "minimal_probe",
+        "next_step": "Assume the final 'bank' has the same token ID in 'The customer asked the bank' and 'The canoe scraped the bank'. Suggest one plausible next word for each. Does the shared ID force the model's representation of 'bank' after processing each prefix to be identical? Explain what information the model could use and why. Treat its internal machinery as a black box.",
+        "diagnostic_gate": true,
+        "scaffold": "none",
+        "target": "token-identity",
+        "basis": "The saved observations contain both an independent distinction and a conflicting claim that a fixed token ID forces identical contextual representations. This short contrast directly checks that disputed relationship and determines whether to continue the application or clarify the distinction.",
+        "sources": [
+          "policy",
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml",
+          "evidence/evi-state-eval-001.yaml",
+          "evidence/evi-state-eval-002.yaml"
+        ],
+        "claim": "no_new_claim",
+        "diagnostic_design": {
+          "target_claim": "Can the learner independently explain why sharing a vocabulary token ID does not force identical representations after context is processed, identifying preceding tokens as information that can distinguish the contexts?",
+          "rival_answer": "The next words could be 'manager' and 'gently'. Bank's representation must be identical because its token ID is identical; predictions differ only because the model also reads the other words.",
+          "distinguishing_response_feature": "The response explicitly distinguishes fixed token identity from the representation after context processing and explains how preceding tokens can affect that representation. Different next-word suggestions alone do not distinguish the alternatives.",
+          "contingent_next_actions": {
+            "target_demonstrated": "Continue the planned conceptual application, treating this response as bounded current support rather than unqualified mastery.",
+            "alternative_or_unresolved": "If the fixed-ID conflation appears, briefly explain the identity/processed-representation distinction using this pair. If the explanation is ambiguous, retain uncertainty and clarify only the ambiguous statement."
+          }
+        }
+      },
+      "packet_sha256": "8345328a894d8dab8484a4585da35b6a94058bf1027800537f9e501ae257b55c",
+      "response_sha256": "78b57ea5f4450ef6e7792a8c30e82ffc53633c4136f8b051ac10d4345cba60b1",
+      "legacy_declared_code_errors": [],
+      "task_scoped_declared_code_errors": [],
+      "semantic_review": {
+        "run_id": "q00",
+        "packet_sha256": "8345328a894d8dab8484a4585da35b6a94058bf1027800537f9e501ae257b55c",
+        "response_sha256": "78b57ea5f4450ef6e7792a8c30e82ffc53633c4136f8b051ac10d4345cba60b1",
+        "reviewer": "separate fresh-context adversarial reviewer; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": true,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": true,
+        "rationale": "The learner must suggest completions for two prefixes, explicitly decide whether the shared token ID forces identical post-processing representations of bank, and explain what information the model can use. The representation question, rather than the completion task, supplies the discriminating demand.",
+        "question_requires_target": true,
+        "rival_cannot_earn_full_credit": true,
+        "answer_not_supplied": true,
+        "design_matches_actual_question": true
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "bounded_pass",
+        "semantic_review": {
+          "run_id": "q00",
+          "packet_sha256": "8345328a894d8dab8484a4585da35b6a94058bf1027800537f9e501ae257b55c",
+          "response_sha256": "78b57ea5f4450ef6e7792a8c30e82ffc53633c4136f8b051ac10d4345cba60b1",
+          "reviewer": "separate fresh-context adversarial reviewer; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": true,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": true,
+          "rationale": "The learner must suggest completions for two prefixes, explicitly decide whether the shared token ID forces identical post-processing representations of bank, and explain what information the model can use. The representation question, rather than the completion task, supplies the discriminating demand.",
+          "question_requires_target": true,
+          "rival_cannot_earn_full_credit": true,
+          "answer_not_supplied": true,
+          "design_matches_actual_question": true
+        },
+        "learner_benefit": "not_measured"
+      },
+      "included_in_clean_result": false,
+      "input_limitation": "Historical intervention/value cue was accidentally present in q00 Knowledge basis. Preserve its question-quality finding, but exclude it from the clean controlled set. q10 is separately reviewed on corrected factual context."
+    },
+    {
+      "run_id": "q01",
+      "response": {
+        "action": "minimal_probe",
+        "target": "rectangle_measurement",
+        "next_step": "A rectangle has both side lengths tripled. How many times as many unit squares will it cover? Explain how the number of rows and the number of squares in each row account for your answer.",
+        "diagnostic_gate": true,
+        "scaffold": "none",
+        "basis": "You explained why doubling both sides made four times the area, but on a separate tripling example you said three times. One short explanation can distinguish these relationships without restarting rectangle measurement.",
+        "sources": [
+          "learner/knowledge/synthetic.yaml",
+          "evidence/evi_20261006_hd01_01.yaml",
+          "evidence/evi_20261006_hd01_02.yaml",
+          "evidence/evi_20261006_hd01_03.yaml",
+          "evidence/evi_20261006_hd01_04.yaml",
+          "policy"
+        ],
+        "claim": "no_new_claim",
+        "diagnostic_design": {
+          "target_claim": "Whether the learner connects equal enlargement of both dimensions to the combined change in covered unit squares, rather than using the length enlargement factor as the area factor.",
+          "rival_answer": "Three times as many unit squares, because the rectangle is enlarged three times.",
+          "distinguishing_response_feature": "The response accounts for three times as many rows and three times as many squares in each row, explaining why the total is nine times as large. Stating only the side-length factor or an unexplained nine does not establish that relationship.",
+          "contingent_next_actions": {
+            "target_demonstrated": "Proceed to expressing this area comparison as an area ratio, using the learner's explanation as bounded support for this example.",
+            "alternative_or_unresolved": "Use a small unit-square enlargement to connect changes in rows and squares per row. Treat an unexplained correct number as unresolved rather than mastery; resume teaching with natural observation."
+          }
+        }
+      },
+      "packet_sha256": "df7093a3c6df09c74192b01be124b544ad2627761b7b73c85a983831f37ab939",
+      "response_sha256": "5f0eceb1b70e054cccb2e5eea866203a68336f3ec20c2406a0345840d97320fa",
+      "legacy_declared_code_errors": [],
+      "task_scoped_declared_code_errors": [],
+      "semantic_review": {
+        "run_id": "q01",
+        "packet_sha256": "df7093a3c6df09c74192b01be124b544ad2627761b7b73c85a983831f37ab939",
+        "response_sha256": "5f0eceb1b70e054cccb2e5eea866203a68336f3ec20c2406a0345840d97320fa",
+        "reviewer": "separate fresh-context adversarial reviewer; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": true,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": true,
+        "rationale": "The question changes both rectangle dimensions and asks for the resulting count of covered unit squares, explained through both row count and squares per row. It cannot be completed merely by reporting the length scale factor.",
+        "question_requires_target": true,
+        "rival_cannot_earn_full_credit": true,
+        "answer_not_supplied": true,
+        "design_matches_actual_question": true
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "bounded_pass",
+        "semantic_review": {
+          "run_id": "q01",
+          "packet_sha256": "df7093a3c6df09c74192b01be124b544ad2627761b7b73c85a983831f37ab939",
+          "response_sha256": "5f0eceb1b70e054cccb2e5eea866203a68336f3ec20c2406a0345840d97320fa",
+          "reviewer": "separate fresh-context adversarial reviewer; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": true,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": true,
+          "rationale": "The question changes both rectangle dimensions and asks for the resulting count of covered unit squares, explained through both row count and squares per row. It cannot be completed merely by reporting the length scale factor.",
+          "question_requires_target": true,
+          "rival_cannot_earn_full_credit": true,
+          "answer_not_supplied": true,
+          "design_matches_actual_question": true
+        },
+        "learner_benefit": "not_measured"
+      },
+      "included_in_clean_result": true
+    },
+    {
+      "run_id": "q02",
+      "response": {
+        "action": "minimal_probe",
+        "target": "repeated_coin_tosses",
+        "next_step": "After four heads in a row with this fair coin and the stated unchanged procedure, what is the probability of tails on the next toss? Explain whether the run of heads changes that probability and why.",
+        "diagnostic_gate": false,
+        "scaffold": "none",
+        "basis": "You used separate-toss reasoning after heads, tails, heads, but balancing reasoning after four heads. One prediction with an explanation can distinguish those approaches without retesting your understanding of an isolated fair toss.",
+        "sources": [
+          "learner/knowledge/synthetic.yaml",
+          "evidence/evi_20261006_hd02_01.yaml",
+          "evidence/evi_20261006_hd02_02.yaml",
+          "evidence/evi_20261006_hd02_03.yaml",
+          "policy"
+        ],
+        "claim": "no_new_claim",
+        "diagnostic_design": {
+          "target_claim": "Whether the learner applies the stated independence of tosses after a run of heads, retaining the fair next-toss probability rather than treating tails as more likely to restore balance.",
+          "rival_answer": "Tails has probability greater than one half because four heads have accumulated and the results need to balance.",
+          "distinguishing_response_feature": "The required prediction and explanation give one half for tails and connect its unchanged chance to earlier outcomes not influencing the next toss; they reject a compensating effect from the run. A bare numerical answer leaves the reasoning unresolved.",
+          "contingent_next_actions": {
+            "target_demonstrated": "Continue next-single-toss applications, treating this as bounded evidence that independence is applied after a streak.",
+            "alternative_or_unresolved": "If balancing reasoning appears, explain why the unchanged procedure creates no compensating push toward tails. If the explanation is ambiguous, retain uncertainty and use a brief contrast during teaching."
+          }
+        }
+      },
+      "packet_sha256": "7bf8da93292a30c51f1cdf6f634f9de1f49e17341c25290d5ba11447e30e3180",
+      "response_sha256": "0238dcae21ae4a14a55c93984af2ff41c5a81fdef4b7b6fe020ed809f0a102f3",
+      "legacy_declared_code_errors": [
+        "inconsistent_diagnostic_gate"
+      ],
+      "task_scoped_declared_code_errors": [],
+      "semantic_review": {
+        "run_id": "q02",
+        "packet_sha256": "7bf8da93292a30c51f1cdf6f634f9de1f49e17341c25290d5ba11447e30e3180",
+        "response_sha256": "0238dcae21ae4a14a55c93984af2ff41c5a81fdef4b7b6fe020ed809f0a102f3",
+        "reviewer": "separate fresh-context adversarial reviewer; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": true,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": true,
+        "rationale": "The question asks for next-toss tails probability after the specific four-head streak and explicitly asks whether that history changes the probability and why. It does not stop at an isolated fair-toss question.",
+        "question_requires_target": true,
+        "rival_cannot_earn_full_credit": true,
+        "answer_not_supplied": true,
+        "design_matches_actual_question": true
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "bounded_pass",
+        "semantic_review": {
+          "run_id": "q02",
+          "packet_sha256": "7bf8da93292a30c51f1cdf6f634f9de1f49e17341c25290d5ba11447e30e3180",
+          "response_sha256": "0238dcae21ae4a14a55c93984af2ff41c5a81fdef4b7b6fe020ed809f0a102f3",
+          "reviewer": "separate fresh-context adversarial reviewer; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": true,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": true,
+          "rationale": "The question asks for next-toss tails probability after the specific four-head streak and explicitly asks whether that history changes the probability and why. It does not stop at an isolated fair-toss question.",
+          "question_requires_target": true,
+          "rival_cannot_earn_full_credit": true,
+          "answer_not_supplied": true,
+          "design_matches_actual_question": true
+        },
+        "learner_benefit": "not_measured"
+      },
+      "included_in_clean_result": true
+    },
+    {
+      "run_id": "q03",
+      "response": {
+        "action": "minimal_probe",
+        "target": "category_statements",
+        "next_step": "A tray is described only by “Every triangular piece in this tray is green.” Could a selected green piece from this tray be square? Explain whether that would break the description.",
+        "diagnostic_gate": false,
+        "scaffold": "none",
+        "basis": "You correctly used the sentence when starting with the first property, but your answers differed when starting with the second. This short question helps choose between more application and a brief clarification.",
+        "sources": [
+          "learner/knowledge/synthetic.yaml",
+          "evidence/evi_20261006_hd03_01.yaml",
+          "evidence/evi_20261006_hd03_02.yaml",
+          "evidence/evi_20261006_hd03_03.yaml",
+          "policy"
+        ],
+        "claim": "no_new_claim",
+        "diagnostic_design": {
+          "target_claim": "Whether the learner recognizes that requiring every triangular piece to be green does not require every green piece to be triangular.",
+          "rival_answer": "No. A green piece must be triangular because the sentence connects green and triangular pieces.",
+          "distinguishing_response_feature": "Allows the green square and explains that it does not violate the requirement about triangular pieces. A bare yes without the requested explanation leaves the understanding unresolved.",
+          "contingent_next_actions": {
+            "target_demonstrated": "Continue applying the stated relationship in ordinary examples, treating this response as bounded support rather than mastery.",
+            "alternative_or_unresolved": "Briefly contrast a green square with a non-green triangle and explain which breaks the sentence. Resume application without inferring a stable misconception from an unclear response."
+          }
+        }
+      },
+      "packet_sha256": "ed0633d42ae4a96df4e0597608871bcb479d2e4f16582d6c720966dfdb87829c",
+      "response_sha256": "6b34a18668ccf55ba5c60efe1234d7faa6345952398bad4e7496ca4a3d054cb1",
+      "legacy_declared_code_errors": [
+        "inconsistent_diagnostic_gate"
+      ],
+      "task_scoped_declared_code_errors": [],
+      "semantic_review": {
+        "run_id": "q03",
+        "packet_sha256": "ed0633d42ae4a96df4e0597608871bcb479d2e4f16582d6c720966dfdb87829c",
+        "response_sha256": "6b34a18668ccf55ba5c60efe1234d7faa6345952398bad4e7496ca4a3d054cb1",
+        "reviewer": "separate fresh-context adversarial reviewer; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": true,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": true,
+        "rationale": "Starting from every triangular piece being green, the question proposes a green square and asks whether it is permitted by that description. This is a second-group member outside the first, rather than another forward inference.",
+        "question_requires_target": true,
+        "rival_cannot_earn_full_credit": true,
+        "answer_not_supplied": true,
+        "design_matches_actual_question": true
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "bounded_pass",
+        "semantic_review": {
+          "run_id": "q03",
+          "packet_sha256": "ed0633d42ae4a96df4e0597608871bcb479d2e4f16582d6c720966dfdb87829c",
+          "response_sha256": "6b34a18668ccf55ba5c60efe1234d7faa6345952398bad4e7496ca4a3d054cb1",
+          "reviewer": "separate fresh-context adversarial reviewer; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": true,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": true,
+          "rationale": "Starting from every triangular piece being green, the question proposes a green square and asks whether it is permitted by that description. This is a second-group member outside the first, rather than another forward inference.",
+          "question_requires_target": true,
+          "rival_cannot_earn_full_credit": true,
+          "answer_not_supplied": true,
+          "design_matches_actual_question": true
+        },
+        "learner_benefit": "not_measured"
+      },
+      "included_in_clean_result": true
+    },
+    {
+      "run_id": "h04",
+      "response": {
+        "action": "continue",
+        "target": "fraction_units",
+        "next_step": "Let's connect the two ideas. For 1/3 + 1/6 of the same whole, split each third into two equal pieces: 1/3 = 2/6. The amount stays the same, and now both fractions count sixths. Add the counts: 2/6 + 1/6 = 3/6. Check this on a strip divided into six equal parts: mark two parts for the third, then one more for the sixth.",
+        "diagnostic_gate": false,
+        "scaffold": "brief_bridge",
+        "basis": "You explained why 2/3 = 4/6 and 3/4 = 9/12 by making finer equal pieces without changing the amount. You also added equal-size pieces while keeping their unit. Those ideas support moving directly into this worked example.",
+        "sources": [
+          "learner/knowledge/synthetic.yaml",
+          "evidence/evi_20261006_hd04_01.yaml",
+          "evidence/evi_20261006_hd04_02.yaml",
+          "evidence/evi_20261006_hd04_03.yaml",
+          "policy"
+        ],
+        "claim": "bounded_current_support",
+        "diagnostic_design": null
+      },
+      "packet_sha256": "e928cf852a72cf72a385337a034e32bed3f918eb1f7383b3fad7e5ba70ec79dc",
+      "response_sha256": "3b3c9fa7dfa95b8594a3e7f8eced6662f0c393800aa8927721512490ce574ba0",
+      "legacy_declared_code_errors": [
+        "unnecessary_scaffold_change"
+      ],
+      "task_scoped_declared_code_errors": [],
+      "semantic_review": {
+        "run_id": "h04",
+        "packet_sha256": "e928cf852a72cf72a385337a034e32bed3f918eb1f7383b3fad7e5ba70ec79dc",
+        "response_sha256": "3b3c9fa7dfa95b8594a3e7f8eced6662f0c393800aa8927721512490ce574ba0",
+        "reviewer": "separate fresh-context adversarial reviewer; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": true,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": true,
+        "rationale": "The next step works the planned one-third plus one-sixth example by splitting thirds into sixths, preserving the amount, then adding the sixth counts. The final strip instruction is a concrete follow-through on the example, not a readiness quiz."
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "bounded_pass",
+        "semantic_review": {
+          "run_id": "h04",
+          "packet_sha256": "e928cf852a72cf72a385337a034e32bed3f918eb1f7383b3fad7e5ba70ec79dc",
+          "response_sha256": "3b3c9fa7dfa95b8594a3e7f8eced6662f0c393800aa8927721512490ce574ba0",
+          "reviewer": "separate fresh-context adversarial reviewer; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": true,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": true,
+          "rationale": "The next step works the planned one-third plus one-sixth example by splitting thirds into sixths, preserving the amount, then adding the sixth counts. The final strip instruction is a concrete follow-through on the example, not a readiness quiz."
+        },
+        "learner_benefit": "not_measured"
+      },
+      "included_in_clean_result": true
+    },
+    {
+      "run_id": "h05",
+      "response": {
+        "action": "continue",
+        "target": "bar_charts",
+        "next_step": "Use the red, blue, and green counts of 2, 5, and 3 to write an addition equation for the total number of objects. Explain why adding these three counts includes every object exactly once.",
+        "diagnostic_gate": false,
+        "scaffold": "none",
+        "basis": "You’ve correctly read counts on this kind of axis and combined category counts, explaining that each category contributes once. This chart uses the same axis structure, and its three categories include every object without overlap.",
+        "sources": [
+          "learner/knowledge/synthetic.yaml",
+          "evidence/evi_20261006_hd05_01.yaml",
+          "evidence/evi_20261006_hd05_02.yaml",
+          "policy"
+        ],
+        "claim": "bounded_current_support",
+        "diagnostic_design": null
+      },
+      "packet_sha256": "e9ebf34b065fe554fa3d9eec8a8cef37e1f0392609457be66e928ab3ce27897e",
+      "response_sha256": "90cdef453fcc4387608ed57fd27fdf7dfc16a6d8b27bb8011d112db43fd88079",
+      "legacy_declared_code_errors": [],
+      "task_scoped_declared_code_errors": [],
+      "semantic_review": {
+        "run_id": "h05",
+        "packet_sha256": "e9ebf34b065fe554fa3d9eec8a8cef37e1f0392609457be66e928ab3ce27897e",
+        "response_sha256": "90cdef453fcc4387608ed57fd27fdf7dfc16a6d8b27bb8011d112db43fd88079",
+        "reviewer": "separate fresh-context adversarial reviewer; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": true,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": true,
+        "rationale": "The next step asks the learner to combine the three supplied category counts and explain why each object is counted once. This is the stated category-total lesson activity, not a test of absent advanced chart knowledge."
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "bounded_pass",
+        "semantic_review": {
+          "run_id": "h05",
+          "packet_sha256": "e9ebf34b065fe554fa3d9eec8a8cef37e1f0392609457be66e928ab3ce27897e",
+          "response_sha256": "90cdef453fcc4387608ed57fd27fdf7dfc16a6d8b27bb8011d112db43fd88079",
+          "reviewer": "separate fresh-context adversarial reviewer; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": true,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": true,
+          "rationale": "The next step asks the learner to combine the three supplied category counts and explain why each object is counted once. This is the stated category-total lesson activity, not a test of absent advanced chart knowledge."
+        },
+        "learner_benefit": "not_measured"
+      },
+      "included_in_clean_result": true
+    },
+    {
+      "run_id": "h06",
+      "response": {
+        "action": "continue_with_caution",
+        "target": "inequality_transformations",
+        "next_step": "We still want exactly the same allowed values. Dividing both sides by -2 halves distances on the number line and reflects left and right, so it reverses order. Thus -2x < 6 becomes x > -3, where > means 'is greater than.' Check x = 0 and x = -4 in both inequalities: which is allowed? At x = -3, the original becomes 6 < 6, which is false, so that value stays excluded.",
+        "diagnostic_gate": false,
+        "scaffold": "brief_bridge",
+        "basis": "Your recorded transformations used positive factors, so they do not establish the negative-factor case. Your signed-number comparisons and multiplication provide a basis for this bridge: 0 is allowed by both inequalities, while -4 and -3 are excluded by both.",
+        "sources": [
+          "learner/knowledge/synthetic.yaml",
+          "evidence/evi_20261006_hd06_01.yaml",
+          "evidence/evi_20261006_hd06_02.yaml",
+          "evidence/evi_20261006_hd06_03.yaml",
+          "evidence/evi_20261006_hd06_04.yaml",
+          "policy"
+        ],
+        "claim": "no_new_claim",
+        "diagnostic_design": null
+      },
+      "packet_sha256": "fc233d5ca06e8db79edf2d5264e5b25cd35805ada9422fee43560750089430ec",
+      "response_sha256": "35e702e5b57b37c02965f0fe639e1f8de37f20c9c7dd70a6c85df771eff3f49b",
+      "legacy_declared_code_errors": [],
+      "task_scoped_declared_code_errors": [],
+      "semantic_review": {
+        "run_id": "h06",
+        "packet_sha256": "fc233d5ca06e8db79edf2d5264e5b25cd35805ada9422fee43560750089430ec",
+        "response_sha256": "35e702e5b57b37c02965f0fe639e1f8de37f20c9c7dd70a6c85df771eff3f49b",
+        "reviewer": "separate fresh-context adversarial reviewer; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": true,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": true,
+        "rationale": "The next step directly introduces how division by a negative number reverses order using number-line halving and reflection, obtains x > -3, defines the new greater-than symbol, and checks allowed, excluded, and boundary values. It addresses the new negative condition rather than repeating a positive-factor exercise."
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "bounded_pass",
+        "semantic_review": {
+          "run_id": "h06",
+          "packet_sha256": "fc233d5ca06e8db79edf2d5264e5b25cd35805ada9422fee43560750089430ec",
+          "response_sha256": "35e702e5b57b37c02965f0fe639e1f8de37f20c9c7dd70a6c85df771eff3f49b",
+          "reviewer": "separate fresh-context adversarial reviewer; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": true,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": true,
+          "rationale": "The next step directly introduces how division by a negative number reverses order using number-line halving and reflection, obtains x > -3, defines the new greater-than symbol, and checks allowed, excluded, and boundary values. It addresses the new negative condition rather than repeating a positive-factor exercise."
+        },
+        "learner_benefit": "not_measured"
+      },
+      "included_in_clean_result": true
+    },
+    {
+      "run_id": "q10",
+      "response": {
+        "action": "minimal_probe",
+        "next_step": "Compare “She spread butter on the” and “He sailed across the”; assume the final “the” has the same token ID. Give one plausible next word for each. Must the model’s context-processed representation of “the” (its internal description after reading the prefix) be identical in both cases? Explain what the ID fixes and what information the model could use to distinguish the contexts. Its internal machinery can remain a black box.",
+        "diagnostic_gate": false,
+        "scaffold": "brief_bridge",
+        "target": "token-identity",
+        "basis": "The records contain both an independent distinction and a claim that fixed ID forces identical contextual representations. This question tests that precise disagreement within the planned comparison; different next-word guesses alone would not distinguish the alternatives.",
+        "sources": [
+          "policy",
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml",
+          "evidence/evi-state-eval-001.yaml",
+          "evidence/evi-state-eval-002.yaml"
+        ],
+        "claim": "no_new_claim",
+        "diagnostic_design": {
+          "target_claim": "The learner can explain that a shared vocabulary token ID does not require identical context-processed representations: token identity remains fixed while the representation can depend on the prefix.",
+          "rival_answer": "“Bread” and “ocean” are plausible next words. The final tokens must have identical context-processed representations because their IDs match; the different prefixes affect the predictions somewhere else.",
+          "distinguishing_response_feature": "The learner explicitly rejects identity of the representations as a necessary consequence of matching IDs and explains that processing the preceding words can affect the token’s internal representation. Different word predictions alone are insufficient.",
+          "contingent_next_actions": {
+            "target_demonstrated": "Continue the planned contextual-prediction application, treating this response as bounded current support rather than independent mastery.",
+            "alternative_or_unresolved": "If the fixed-ID claim recurs, briefly explain that identity and context-processed representation play different roles. If the explanation is ambiguous, clarify that specific statement and retain uncertainty."
+          }
+        }
+      },
+      "packet_sha256": "4e1153064445dbe91a2ccffb2e1ca787f7397a73a576e3bd4906f47a5ab5d273",
+      "response_sha256": "23c0854cfb24e29ee114e5a22b07328824ce307796473d25a27e8aaa112dbbdb",
+      "legacy_declared_code_errors": [
+        "inconsistent_diagnostic_gate"
+      ],
+      "task_scoped_declared_code_errors": [],
+      "semantic_review": {
+        "run_id": "q10",
+        "packet_sha256": "4e1153064445dbe91a2ccffb2e1ca787f7397a73a576e3bd4906f47a5ab5d273",
+        "response_sha256": "23c0854cfb24e29ee114e5a22b07328824ce307796473d25a27e8aaa112dbbdb",
+        "reviewer": "separate fresh-context adversarial reviewer; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": true,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": true,
+        "rationale": "The question asks for plausible continuations, then directly asks whether a shared ID requires identical representations after prefix processing. It also asks what token ID fixes and which information can distinguish the contexts. The explicit representation judgment, not the next-word guesses, makes the disputed relationship observable.",
+        "question_requires_target": true,
+        "rival_cannot_earn_full_credit": true,
+        "answer_not_supplied": true,
+        "design_matches_actual_question": true
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "bounded_pass",
+        "semantic_review": {
+          "run_id": "q10",
+          "packet_sha256": "4e1153064445dbe91a2ccffb2e1ca787f7397a73a576e3bd4906f47a5ab5d273",
+          "response_sha256": "23c0854cfb24e29ee114e5a22b07328824ce307796473d25a27e8aaa112dbbdb",
+          "reviewer": "separate fresh-context adversarial reviewer; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": true,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": true,
+          "rationale": "The question asks for plausible continuations, then directly asks whether a shared ID requires identical representations after prefix processing. It also asks what token ID fixes and which information can distinguish the contexts. The explicit representation judgment, not the next-word guesses, makes the disputed relationship observable.",
+          "question_requires_target": true,
+          "rival_cannot_earn_full_credit": true,
+          "answer_not_supplied": true,
+          "design_matches_actual_question": true
+        },
+        "learner_benefit": "not_measured"
+      },
+      "included_in_clean_result": true
+    }
+  ],
+  "learner_benefit": "not_measured"
+}

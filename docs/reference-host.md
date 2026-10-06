@@ -69,3 +69,11 @@ This is mechanical host/broker evidence. It does not decide whether an observati
 Private target-owned acceptance has already established bounded host-owned writable binding, operation-scoped admission, bounded host-mediated model-to-broker calls, and same-surface readback. The public reference surface intentionally retains only the reusable semantics needed for a synthetic journey.
 
 It does not copy private locators, credential wiring, host paths, production process topology or provider-account configuration. A future public reference release may add a reproducible transport/demo around this surface only after the skeleton is stable; that release work is separate from this W5 extraction.
+
+## Bounded decision-evaluation companion
+
+The offline [Core #34 sensitivity/invariance evaluation](evaluations/core34-state-sensitivity-results.md)
+composes this host with synthetic fixtures, fresh read-only recovery, blind consumer
+packets, acceptable-action sets, strong-summary/ablation controls and explicit
+semantic review. It preserves inconclusive/failed runs and does not turn a
+mechanical or declared-action pass into teaching-effect acceptance.

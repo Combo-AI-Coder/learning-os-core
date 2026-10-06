@@ -1,0 +1,206 @@
+{
+  "case_id": "hd06",
+  "synthetic": true,
+  "title": "Inequalities with signed factors",
+  "current_task": {
+    "goal": "Understand transformations of an inequality that keep exactly the same allowed values.",
+    "current_material": "The expression now on the page is -2x < 6. The symbol < means is less than, and x stands for an unknown number. This is the first recorded lesson step with a negative coefficient on x.",
+    "session_context": "The earlier transformation examples used positive multipliers or divisors. There is no recorded response to a negative-factor inequality transformation."
+  },
+  "knowledge": {
+    "schema_version": "0.3",
+    "document_type": "learner_knowledge",
+    "revision": 1,
+    "updated_at": "2026-10-06T10:40:00Z",
+    "domain": "synthetic",
+    "concepts": {
+      "inequality_transformations": {
+        "capabilities": {
+          "order_signed_numbers": {
+            "state": "supported",
+            "confidence": "high",
+            "updated_at": "2026-10-06T10:40:00Z",
+            "evidence_refs": {
+              "support": [
+                "evi_20261006_hd06_01"
+              ],
+              "challenge": []
+            },
+            "basis_summary": "Compared signed numbers using their established number-line order."
+          },
+          "multiply_signed_numbers": {
+            "state": "supported",
+            "confidence": "high",
+            "updated_at": "2026-10-06T10:40:00Z",
+            "evidence_refs": {
+              "support": [
+                "evi_20261006_hd06_02"
+              ],
+              "challenge": []
+            },
+            "basis_summary": "Correctly handled the signed products needed for small-number checks."
+          },
+          "preserve_solution_values_when_scaling_an_inequality": {
+            "state": "supported",
+            "confidence": "high",
+            "updated_at": "2026-10-06T10:40:00Z",
+            "evidence_refs": {
+              "support": [
+                "evi_20261006_hd06_03",
+                "evi_20261006_hd06_04"
+              ],
+              "challenge": []
+            },
+            "basis_summary": "Support is limited to multiplying or dividing both sides by a positive number; the evidence does not cover a negative multiplier or divisor."
+          }
+        }
+      }
+    }
+  },
+  "evidence": [
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd06_01",
+      "observed_at": "2026-10-05T09:01:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "The learner correctly compared -4 with -1 and -2 with 3, explaining their left-to-right positions on a number line."
+      },
+      "interpretation": {
+        "direction": "support",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "inequality_transformations",
+          "capability": "order_signed_numbers"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd06",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    },
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd06_02",
+      "observed_at": "2026-10-05T09:02:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "The learner correctly evaluated -2 times 3 as -6, -2 times -3 as 6, and 2 times -3 as -6, with no multiplication errors in the recorded set."
+      },
+      "interpretation": {
+        "direction": "support",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "inequality_transformations",
+          "capability": "multiply_signed_numbers"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd06",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    },
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd06_03",
+      "observed_at": "2026-10-05T09:03:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "For x < 3, the learner multiplied both sides by 2 to obtain 2x < 6 and checked values x = 1 and x = 4. The learner explained that the same values remain allowed. The factor was positive."
+      },
+      "interpretation": {
+        "direction": "support",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "inequality_transformations",
+          "capability": "preserve_solution_values_when_scaling_an_inequality"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd06",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    },
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd06_04",
+      "observed_at": "2026-10-05T09:04:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "For 3x < 12, the learner divided both sides by positive 3 to obtain x < 4 and checked one allowed and one excluded value. All recorded transformations used positive factors."
+      },
+      "interpretation": {
+        "direction": "support",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "inequality_transformations",
+          "capability": "preserve_solution_values_when_scaling_an_inequality"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd06",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    }
+  ]
+}

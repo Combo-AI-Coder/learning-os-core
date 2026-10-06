@@ -1,0 +1,847 @@
+{
+  "historical_scenarios": {
+    "count": 28,
+    "status": "not_executed"
+  },
+  "learner_benefit": "not_measured",
+  "runs": [
+    {
+      "run_id": "p01",
+      "response": {
+        "action": "continue",
+        "next_step": "Next, connect identity to processing: the token ID selects a vocabulary entry and its starting representation, a list of numbers. A context-processing model uses surrounding tokens to produce a contextual representation for that occurrence. This lets the representation reflect the token's role in the sentence while its ID continues to identify the same vocabulary entry.",
+        "diagnostic_gate": false,
+        "scaffold": "none",
+        "target": "Connecting vocabulary token identity to contextual representations",
+        "basis": "The saved record supports independent explanation of this distinction for the current conceptual step, citing two varied examples explained without hints and no challenge evidence. The resume point matches that scope, and no derivation is required, so progression does not need a prerequisite retest.",
+        "sources": [
+          "learner/knowledge/synthetic.yaml",
+          "topics/synthetic/subtopics/unit/progress.yaml"
+        ],
+        "claim": "bounded_current_support"
+      },
+      "response_sha256": "6e5dcd7c60a72a68537917d8f86daa0254de11f1b60d726ed19b615fa1d3845a",
+      "raw_declared_code_errors": [
+        "unrelated_target"
+      ],
+      "behavioral_acceptance": "not_established",
+      "disposition": "pilot_behaviorally_inconclusive",
+      "normalized_response": {
+        "action": "continue",
+        "next_step": "Next, connect identity to processing: the token ID selects a vocabulary entry and its starting representation, a list of numbers. A context-processing model uses surrounding tokens to produce a contextual representation for that occurrence. This lets the representation reflect the token's role in the sentence while its ID continues to identify the same vocabulary entry.",
+        "diagnostic_gate": false,
+        "scaffold": "none",
+        "target": "token-identity",
+        "basis": "The saved record supports independent explanation of this distinction for the current conceptual step, citing two varied examples explained without hints and no challenge evidence. The resume point matches that scope, and no derivation is required, so progression does not need a prerequisite retest.",
+        "sources": [
+          "learner/knowledge/synthetic.yaml",
+          "topics/synthetic/subtopics/unit/progress.yaml"
+        ],
+        "claim": "bounded_current_support"
+      },
+      "normalization": "Map on-topic target phrase to supplied target ID; p03 policy-title alias to policy. No action, next_step, basis, gate, scaffold or claim content changes.",
+      "normalized_declared_code_errors": []
+    },
+    {
+      "run_id": "p02",
+      "response": {
+        "action": "contrast",
+        "next_step": "Compare ‘river bank’ with ‘bank loan’, assuming ‘bank’ is the same vocabulary token in both. Its token ID stays the same because it identifies the vocabulary entry. The model uses surrounding text to build a contextual representation: numbers describing that particular occurrence. Those numbers can differ between the two phrases even though the ID is unchanged. This is the bridge from vocabulary identity to context-dependent information.",
+        "diagnostic_gate": false,
+        "scaffold": "brief_bridge",
+        "target": "Explain why the same vocabulary token ID can have different contextual representations",
+        "basis": "The supplied record marks this explanation unsupported and reports repeated conflation of a fixed token ID with an invariant contextual representation. A brief contrast addresses that specific distinction without a broad prerequisite restart or another diagnostic gate.",
+        "sources": [
+          "learner/knowledge/synthetic.yaml",
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "policy"
+        ],
+        "claim": "no_new_claim"
+      },
+      "response_sha256": "11ea15d1322c98d645c9f8b031bceb46a8ab3935ec2befe6b3a5e50bc4dad134",
+      "raw_declared_code_errors": [
+        "unrelated_target"
+      ],
+      "behavioral_acceptance": "not_established",
+      "disposition": "pilot_behaviorally_inconclusive",
+      "normalized_response": {
+        "action": "contrast",
+        "next_step": "Compare ‘river bank’ with ‘bank loan’, assuming ‘bank’ is the same vocabulary token in both. Its token ID stays the same because it identifies the vocabulary entry. The model uses surrounding text to build a contextual representation: numbers describing that particular occurrence. Those numbers can differ between the two phrases even though the ID is unchanged. This is the bridge from vocabulary identity to context-dependent information.",
+        "diagnostic_gate": false,
+        "scaffold": "brief_bridge",
+        "target": "token-identity",
+        "basis": "The supplied record marks this explanation unsupported and reports repeated conflation of a fixed token ID with an invariant contextual representation. A brief contrast addresses that specific distinction without a broad prerequisite restart or another diagnostic gate.",
+        "sources": [
+          "learner/knowledge/synthetic.yaml",
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "policy"
+        ],
+        "claim": "no_new_claim"
+      },
+      "normalization": "Map on-topic target phrase to supplied target ID; p03 policy-title alias to policy. No action, next_step, basis, gate, scaffold or claim content changes.",
+      "normalized_declared_code_errors": []
+    },
+    {
+      "run_id": "p03",
+      "response": {
+        "action": "continue_with_caution",
+        "next_step": "A token ID identifies a vocabulary entry. Assume “bank” is the same token in “river bank” and “bank loan”: its ID stays the same. A context-processing model uses surrounding tokens to build a contextual representation, a numerical description of that occurrence. That description can differ between the two phrases, letting the model use context while preserving the token’s vocabulary identity.",
+        "diagnostic_gate": false,
+        "scaffold": "brief_bridge",
+        "target": "Connecting token identity to contextual representations",
+        "basis": "The record supports explanation with step-by-step hints only; independent explanation is unestablished. Supplying the needed distinction lets this explanation proceed without assuming independent ability or interrupting for a retest.",
+        "sources": [
+          "teaching-decision v0.3",
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml"
+        ],
+        "claim": "bounded_current_support"
+      },
+      "response_sha256": "b866e3591bdefcf50bbda2c5c0f2cc4a36772ef377a3a6c9c0f1832fe7c9e97e",
+      "raw_declared_code_errors": [
+        "unrelated_target",
+        "invalid_or_irrelevant_basis_source"
+      ],
+      "behavioral_acceptance": "not_established",
+      "disposition": "pilot_behaviorally_inconclusive",
+      "normalized_response": {
+        "action": "continue_with_caution",
+        "next_step": "A token ID identifies a vocabulary entry. Assume “bank” is the same token in “river bank” and “bank loan”: its ID stays the same. A context-processing model uses surrounding tokens to build a contextual representation, a numerical description of that occurrence. That description can differ between the two phrases, letting the model use context while preserving the token’s vocabulary identity.",
+        "diagnostic_gate": false,
+        "scaffold": "brief_bridge",
+        "target": "token-identity",
+        "basis": "The record supports explanation with step-by-step hints only; independent explanation is unestablished. Supplying the needed distinction lets this explanation proceed without assuming independent ability or interrupting for a retest.",
+        "sources": [
+          "policy",
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml"
+        ],
+        "claim": "bounded_current_support"
+      },
+      "normalization": "Map on-topic target phrase to supplied target ID; p03 policy-title alias to policy. No action, next_step, basis, gate, scaffold or claim content changes.",
+      "normalized_declared_code_errors": []
+    },
+    {
+      "run_id": "p04",
+      "response": {
+        "action": "targeted_explanation",
+        "next_step": "The next link is from token identity to meaning in context. With a fixed vocabulary, a token ID identifies one vocabulary entry. A contextual representation is a set of numbers the model computes for that token using surrounding text. If “bank” is the same token in “river bank” and “bank loan,” its ID stays the same, but its contextual representation can differ, helping the model distinguish the uses.",
+        "diagnostic_gate": false,
+        "scaffold": "brief_bridge",
+        "target": "token-identity",
+        "basis": "The record supports recalling the two names only; it explicitly leaves explaining their difference unknown. This step needs that distinction, so introduce it briefly without assuming mastery, diagnosing an unrecorded misconception, or restarting tokenization.",
+        "sources": [
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml",
+          "policy"
+        ],
+        "claim": "no_new_claim"
+      },
+      "response_sha256": "10bc73d1675eaa91ba8a52271c5419c1795e0752ce389db064820042ea713a47",
+      "raw_declared_code_errors": [],
+      "behavioral_acceptance": "not_established",
+      "disposition": "pilot_behaviorally_inconclusive"
+    },
+    {
+      "run_id": "p05",
+      "response": {
+        "action": "continue",
+        "next_step": "A context-processing model uses the representations of surrounding tokens to update each token's representation. We'll leave its internal machinery for later. These updated representations let later processing distinguish different uses of the same vocabulary entry, even though its token ID stays fixed.",
+        "diagnostic_gate": false,
+        "scaffold": "none",
+        "target": "token-identity",
+        "basis": "The saved record supports the required explanation through two varied examples without hints. That supports continuing this conceptual step without a prerequisite retest; it does not establish derivation ability or unrestricted mastery.",
+        "sources": [
+          "policy",
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml"
+        ],
+        "claim": "bounded_current_support"
+      },
+      "response_sha256": "2cea8a7f267bd9d15da4eecac48f34b7acd116c0df7757c03d883d4f36003e24",
+      "raw_declared_code_errors": [],
+      "behavioral_acceptance": "not_established",
+      "disposition": "pilot_behaviorally_inconclusive"
+    },
+    {
+      "run_id": "p06",
+      "response": {
+        "action": "continue",
+        "next_step": "Next, follow what happens after lookup: a token ID selects a vocabulary entry and its starting numerical representation. A context-processing model then uses the surrounding text to update that representation. This lets the same vocabulary entry contribute differently in different sentences, without changing its token ID. We can leave the model’s internal machinery for later.",
+        "diagnostic_gate": false,
+        "scaffold": "none",
+        "target": "token-identity",
+        "basis": "The saved record supports the distinction needed here: two varied examples were explained without hints. That supports continuing this conceptual step without a prerequisite retest; it does not establish derivation skill or unqualified mastery.",
+        "sources": [
+          "policy",
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml"
+        ],
+        "claim": "bounded_current_support"
+      },
+      "response_sha256": "c3ead8f59a6fe650f91019abfbebe2d5123552f76ac462deb7540ad35195e6f3",
+      "raw_declared_code_errors": [],
+      "behavioral_acceptance": "not_established",
+      "disposition": "pilot_behaviorally_inconclusive"
+    },
+    {
+      "run_id": "p07",
+      "response": {
+        "action": "continue",
+        "next_step": "Next, connect that distinction to text processing: the token ID selects a vocabulary entry, and a context-processing model uses surrounding tokens to build a representation of that token in this occurrence. We’ll treat the model as a black box for now. Its output can vary with the surrounding text while the token ID stays fixed, allowing later processing to use context-dependent information.",
+        "diagnostic_gate": false,
+        "scaffold": "none",
+        "target": "token-identity",
+        "basis": "The available record supports independent explanation of this distinction in two varied examples without hints, with no recorded challenge. That supports continuing this conceptual step without a prerequisite retest; it does not establish derivation ability or unqualified mastery.",
+        "sources": [
+          "policy",
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml"
+        ],
+        "claim": "bounded_current_support"
+      },
+      "response_sha256": "186ffa8d86b71b6416d208648863164519daaf3e7e8dccbd79ffcb769f142196",
+      "raw_declared_code_errors": [],
+      "behavioral_acceptance": "not_established",
+      "disposition": "pilot_behaviorally_inconclusive"
+    },
+    {
+      "run_id": "p08",
+      "response": {
+        "action": "continue",
+        "next_step": "With the ID-versus-context distinction in place, follow the next step: the model combines each token’s numerical representation with information from surrounding tokens. The resulting contextual representation can carry different information in different passages, helping the model predict what comes next. We can leave the model’s internal machinery as a black box for now.",
+        "diagnostic_gate": false,
+        "scaffold": "none",
+        "target": "token-identity",
+        "basis": "The supplied record supports independent explanation of this distinction through two varied, unhinted examples. That supports continuing this conceptual step without a prerequisite retest. Formal derivation is neither established nor needed here.",
+        "sources": [
+          "policy",
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml"
+        ],
+        "claim": "bounded_current_support"
+      },
+      "response_sha256": "b55b9228a0f93a9880a7630cb4b4f84bac6d69d6999d34a75709545854d92e75",
+      "raw_declared_code_errors": [],
+      "behavioral_acceptance": "not_established",
+      "disposition": "pilot_behaviorally_inconclusive"
+    },
+    {
+      "run_id": "p09",
+      "response": {
+        "action": "minimal_probe",
+        "next_step": "With one fixed tokenizer, assume “bank” is one token in both “the river bank” and “the savings bank.” Which must stay the same: its token ID, its representation after the model processes the surrounding words, both, or neither? Briefly explain why",
+        "diagnostic_gate": true,
+        "scaffold": "none",
+        "target": "token-identity",
+        "basis": "The saved record contains unresolved support and challenge for this distinction. One short comparison can determine whether to clarify token identity first or continue the contextual-representation explanation",
+        "sources": [
+          "policy",
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml"
+        ],
+        "claim": "no_new_claim"
+      },
+      "response_sha256": "c9561bb92f60310fbc79aaf0714f7637e1f66d3e75edd0ad0103b97965b14ba8",
+      "raw_declared_code_errors": [],
+      "behavioral_acceptance": "not_established",
+      "disposition": "policy_cued_diagnostic_control"
+    },
+    {
+      "run_id": "p10",
+      "response": {
+        "action": "continue",
+        "next_step": "The next connection is what context adds: a context-processing model combines a token’s representation with information from surrounding tokens to produce a contextual representation. Later processing can use this context-sensitive information to interpret the token’s role in this passage, while its vocabulary ID stays unchanged.",
+        "diagnostic_gate": false,
+        "scaffold": "none",
+        "target": "token-identity",
+        "basis": "The record supports independent explanation of the distinction at this conceptual step, with two varied examples explained without hints and no recorded challenges. Continue without a prerequisite retest; no formal derivation is needed or established.",
+        "sources": [
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml",
+          "policy"
+        ],
+        "claim": "bounded_current_support"
+      },
+      "response_sha256": "5b13e8329675a10e544e3767c706743bb237157a2d1498f892bcd2e6c7553bc9",
+      "raw_declared_code_errors": [],
+      "behavioral_acceptance": "not_established",
+      "disposition": "pilot_behaviorally_inconclusive"
+    },
+    {
+      "run_id": "p11",
+      "response": {
+        "action": "contrast",
+        "next_step": "Assume “bank” is one vocabulary entry in both “the river bank” and “the bank approved a loan.” Its token ID is the same fixed vocabulary label in both. Its contextual representation is the model’s numerical description of that occurrence, built using the surrounding text. Those descriptions can differ because the contexts differ. A fixed token ID therefore does not mean a fixed contextual representation.",
+        "diagnostic_gate": false,
+        "scaffold": "brief_bridge",
+        "target": "token-identity",
+        "basis": "The stored record reports repeated conflation of a fixed vocabulary ID with an invariant contextual representation. A same-token, different-context contrast directly addresses that specific distinction without restarting tokenization or requiring a diagnostic answer.",
+        "sources": [
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml",
+          "policy"
+        ],
+        "claim": "no_new_claim"
+      },
+      "response_sha256": "ff453240e360cccf70b3e1ceed0f95c3b5da5df3a9e623537a238667d33670f1",
+      "raw_declared_code_errors": [],
+      "behavioral_acceptance": "not_established",
+      "disposition": "pilot_behaviorally_inconclusive"
+    },
+    {
+      "run_id": "p12",
+      "response": {
+        "action": "targeted_explanation",
+        "next_step": "The next connection is from token identity to meaning in context. With a fixed vocabulary, a token ID labels one vocabulary entry. Suppose the same token “bank” appears in “river bank” and “bank loan”: its ID stays the same. A context-processing model uses surrounding tokens to produce numbers describing each occurrence. These contextual representations can differ, allowing later processing to distinguish uses of the same token.",
+        "diagnostic_gate": false,
+        "scaffold": "brief_bridge",
+        "target": "token-identity",
+        "basis": "The saved return point identifies this connection but provides no evidence that the distinction is established or confused. A brief explanation supplies what this step needs without assuming inability or interrupting for a test.",
+        "sources": [
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "policy"
+        ],
+        "claim": "no_new_claim"
+      },
+      "response_sha256": "b59084bf7c273ad4accb12f9a6735ab70bdf38cc5cabe3a9f085c827c7947fab",
+      "raw_declared_code_errors": [],
+      "behavioral_acceptance": "not_established",
+      "disposition": "pilot_behaviorally_inconclusive"
+    },
+    {
+      "run_id": "a01",
+      "response": {
+        "action": "continue",
+        "next_step": "Compare “She spread the toast with” and “He tightened the bolt with” (assume the final “with” is the same vocabulary token). Suggest two plausible next words for each, then explain what information the model can use to distinguish these contexts despite their shared final token. Its internal machinery can remain a black box.",
+        "diagnostic_gate": false,
+        "scaffold": "none",
+        "target": "token-identity",
+        "basis": "The supplied record supports explaining token identity versus contextual representation through two varied, unhinted examples. The policy therefore favors the agreed application without a prerequisite retest. This supports the current conceptual step, without establishing derivation ability or unqualified mastery.",
+        "sources": [
+          "policy",
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml"
+        ],
+        "claim": "bounded_current_support"
+      },
+      "response_sha256": "3e14a06b1afce99b62a8111fc50735a8ed165224efec3548af4518ff38374818",
+      "raw_declared_code_errors": [],
+      "blind_next_step_features": {
+        "learner_generation": true,
+        "application_beyond_definition": true,
+        "distinction_supplied": "none",
+        "prerequisite_diagnostic_gate": false,
+        "unrelated_or_profile_detour": false,
+        "unsupported_capability_claim": false
+      },
+      "semantic_review": {
+        "run_id": "a01",
+        "packet_sha256": "4db55c3acd144f8597f50cd8500605a3b2442f15de8a1ee66050a1b53f9e8e58",
+        "response_sha256": "3e14a06b1afce99b62a8111fc50735a8ed165224efec3548af4518ff38374818",
+        "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": true,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": true,
+        "rationale": "Unsolved downstream application asks for plausible continuations and an information explanation, without supplying the prerequisite answer or adding a test gate."
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "bounded_pass",
+        "semantic_review": {
+          "run_id": "a01",
+          "packet_sha256": "4db55c3acd144f8597f50cd8500605a3b2442f15de8a1ee66050a1b53f9e8e58",
+          "response_sha256": "3e14a06b1afce99b62a8111fc50735a8ed165224efec3548af4518ff38374818",
+          "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": true,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": true,
+          "rationale": "Unsolved downstream application asks for plausible continuations and an information explanation, without supplying the prerequisite answer or adding a test gate."
+        },
+        "learner_benefit": "not_measured"
+      }
+    },
+    {
+      "run_id": "a02",
+      "response": {
+        "action": "contrast",
+        "next_step": "Compare “In the cave, we saw a bat” with “At practice, he swung a bat.” Treat “bat” as one vocabulary token in both. Its vocabulary ID stays the same, but the representation the model builds using earlier tokens can differ. That processing can remain a black box. Suggest a plausible next word for each prefix and identify earlier words that could help the model make different predictions.",
+        "diagnostic_gate": false,
+        "scaffold": "brief_bridge",
+        "target": "token-identity",
+        "basis": "The record reports repeated conflation of a fixed token ID with an unchanging contextual representation. A brief contrast repairs that specific distinction within the agreed application, without a prerequisite test or broader restart.",
+        "sources": [
+          "learner/knowledge/synthetic.yaml",
+          "policy"
+        ],
+        "claim": "no_new_claim"
+      },
+      "response_sha256": "4351c34050f6764ee9e7c7b8f5ba6d9fc60781db920f3d7436a307f106861b23",
+      "raw_declared_code_errors": [],
+      "blind_next_step_features": {
+        "learner_generation": true,
+        "application_beyond_definition": true,
+        "distinction_supplied": "full",
+        "prerequisite_diagnostic_gate": false,
+        "unrelated_or_profile_detour": false,
+        "unsupported_capability_claim": false
+      },
+      "semantic_review": {
+        "run_id": "a02",
+        "packet_sha256": "34bd3d254c79a1002a7a501ee09ab38568b8974f404211c991d5323c28551505",
+        "response_sha256": "4351c34050f6764ee9e7c7b8f5ba6d9fc60781db920f3d7436a307f106861b23",
+        "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": true,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": true,
+        "rationale": "Supplies the fixed-ID/variable-representation contrast before asking application; a material scaffold difference from a01 without broad reteaching."
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "bounded_pass",
+        "semantic_review": {
+          "run_id": "a02",
+          "packet_sha256": "34bd3d254c79a1002a7a501ee09ab38568b8974f404211c991d5323c28551505",
+          "response_sha256": "4351c34050f6764ee9e7c7b8f5ba6d9fc60781db920f3d7436a307f106861b23",
+          "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": true,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": true,
+          "rationale": "Supplies the fixed-ID/variable-representation contrast before asking application; a material scaffold difference from a01 without broad reteaching."
+        },
+        "learner_benefit": "not_measured"
+      }
+    },
+    {
+      "run_id": "a03",
+      "response": {
+        "action": "continue_with_caution",
+        "next_step": "A token ID names a vocabulary entry; the model maps token representations and context to predictions, with its internals left as a black box. Compare “She spread the warm bread with” and “He opened the locked door with”, treating the final “with” as the same token. Suggest two plausible next words for each prefix, then explain what information could let the model distinguish the contexts.",
+        "diagnostic_gate": false,
+        "scaffold": "brief_bridge",
+        "target": "token-identity",
+        "basis": "The record supports explanation with step-by-step hints, while independent explanation remains unestablished. A brief bridge allows the agreed application to proceed without assuming independence or interrupting it with a prerequisite test.",
+        "sources": [
+          "policy",
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml"
+        ],
+        "claim": "bounded_current_support"
+      },
+      "response_sha256": "e220ac2030b5b0c4f4aa6589996fa4a7ab281b290009b6850ce487ac08919dbb",
+      "raw_declared_code_errors": [],
+      "blind_next_step_features": {
+        "learner_generation": true,
+        "application_beyond_definition": true,
+        "distinction_supplied": "partial",
+        "prerequisite_diagnostic_gate": false,
+        "unrelated_or_profile_detour": false,
+        "unsupported_capability_claim": false
+      },
+      "semantic_review": {
+        "run_id": "a03",
+        "packet_sha256": "0591e2427578a31f692d414f5eaa2313299a135b62a2ba7f96c1ccb7869831b7",
+        "response_sha256": "e220ac2030b5b0c4f4aa6589996fa4a7ab281b290009b6850ce487ac08919dbb",
+        "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": true,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": true,
+        "rationale": "Supplies a limited definition/interface bridge before natural application; evidence supports only this modest adaptation, not optimal scaffolding or independent mastery."
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "bounded_pass",
+        "semantic_review": {
+          "run_id": "a03",
+          "packet_sha256": "0591e2427578a31f692d414f5eaa2313299a135b62a2ba7f96c1ccb7869831b7",
+          "response_sha256": "e220ac2030b5b0c4f4aa6589996fa4a7ab281b290009b6850ce487ac08919dbb",
+          "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": true,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": true,
+          "rationale": "Supplies a limited definition/interface bridge before natural application; evidence supports only this modest adaptation, not optimal scaffolding or independent mastery."
+        },
+        "learner_benefit": "not_measured"
+      }
+    },
+    {
+      "run_id": "a04",
+      "response": {
+        "action": "targeted_explanation",
+        "next_step": "A token ID identifies a vocabulary entry and stays the same across occurrences. A contextual representation uses the preceding words and can differ. Treat the model as a black box using representations and context to predict what comes next. Compare “She deposited cash at the bank” and “They fished beside the bank,” assuming the same final token. Suggest a plausible next word for each, and explain which earlier words could help the model distinguish them.",
+        "diagnostic_gate": false,
+        "scaffold": "brief_bridge",
+        "target": "token-identity",
+        "basis": "The record supports recalling the two names but explicitly leaves explaining their difference unknown. Briefly introduce that distinction because the planned application needs it, then observe understanding in the application without a prerequisite test.",
+        "sources": [
+          "policy",
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml"
+        ],
+        "claim": "no_new_claim"
+      },
+      "response_sha256": "19f4f2a5f0d3da1c8a8ab9736894697992d450331b4690e871169aecb11179d8",
+      "raw_declared_code_errors": [],
+      "blind_next_step_features": {
+        "learner_generation": true,
+        "application_beyond_definition": true,
+        "distinction_supplied": "full",
+        "prerequisite_diagnostic_gate": false,
+        "unrelated_or_profile_detour": false,
+        "unsupported_capability_claim": false
+      },
+      "semantic_review": {
+        "run_id": "a04",
+        "packet_sha256": "f94d3025107bb13d0a6380099c94f430ff1f9c08e716af80a94ad6b711e48534",
+        "response_sha256": "19f4f2a5f0d3da1c8a8ab9736894697992d450331b4690e871169aecb11179d8",
+        "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": true,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": true,
+        "rationale": "Explicitly introduces the distinction missing from naming-only support before application, rather than silently treating naming as explanation."
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "bounded_pass",
+        "semantic_review": {
+          "run_id": "a04",
+          "packet_sha256": "f94d3025107bb13d0a6380099c94f430ff1f9c08e716af80a94ad6b711e48534",
+          "response_sha256": "19f4f2a5f0d3da1c8a8ab9736894697992d450331b4690e871169aecb11179d8",
+          "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": true,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": true,
+          "rationale": "Explicitly introduces the distinction missing from naming-only support before application, rather than silently treating naming as explanation."
+        },
+        "learner_benefit": "not_measured"
+      }
+    },
+    {
+      "run_id": "a05",
+      "response": {
+        "action": "continue",
+        "next_step": "Compare “The baker slid the loaf into the” and “The teacher wrote the problem on the”. Treat the final “the” as the same vocabulary token in both. Suggest two plausible next words for each prefix, then explain why predictions could differ and what information the model can use to distinguish the contexts. Its internal machinery can remain a black box.",
+        "diagnostic_gate": false,
+        "scaffold": "none",
+        "target": "token-identity",
+        "basis": "The record supports independent explanation of token ID versus contextual representation through two varied examples without hints. That supports proceeding with the agreed conceptual application without a prerequisite retest; no formal derivation or broader mastery is established.",
+        "sources": [
+          "learner/knowledge/synthetic.yaml",
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "policy"
+        ],
+        "claim": "bounded_current_support"
+      },
+      "response_sha256": "91b41582217268918fb5c9d0c01f87c1153921cff0e15fb0517ce2d1edf0bac9",
+      "raw_declared_code_errors": [],
+      "blind_next_step_features": {
+        "learner_generation": true,
+        "application_beyond_definition": true,
+        "distinction_supplied": "none",
+        "prerequisite_diagnostic_gate": false,
+        "unrelated_or_profile_detour": false,
+        "unsupported_capability_claim": false
+      },
+      "semantic_review": {
+        "run_id": "a05",
+        "packet_sha256": "fe3b798b9a647901a70bc2637163d1ab85342ed464f7a6bf10bcdd15dfaba39a",
+        "response_sha256": "91b41582217268918fb5c9d0c01f87c1153921cff0e15fb0517ce2d1edf0bac9",
+        "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": true,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": true,
+        "rationale": "Same unsolved application demand, no prerequisite gate, no extra scaffold or detour despite the explicitly labeled combined distractors."
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "bounded_pass",
+        "semantic_review": {
+          "run_id": "a05",
+          "packet_sha256": "fe3b798b9a647901a70bc2637163d1ab85342ed464f7a6bf10bcdd15dfaba39a",
+          "response_sha256": "91b41582217268918fb5c9d0c01f87c1153921cff0e15fb0517ce2d1edf0bac9",
+          "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": true,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": true,
+          "rationale": "Same unsolved application demand, no prerequisite gate, no extra scaffold or detour despite the explicitly labeled combined distractors."
+        },
+        "learner_benefit": "not_measured"
+      }
+    },
+    {
+      "run_id": "a06",
+      "response": {
+        "action": "continue",
+        "next_step": "Assume “with” is the same vocabulary token in both prefixes: “I spread the toast with” and “I fixed the loose screw with”. Give a plausible next word for each, then explain what information the model can use to make different predictions despite the shared final token. Its internal machinery can stay a black box.",
+        "diagnostic_gate": false,
+        "scaffold": "none",
+        "target": "token-identity",
+        "basis": "The record supports independent explanation of token ID versus contextual representation through two varied examples without hints. The agreed next activity is a conceptual application, so proceed without a prerequisite retest or requiring a derivation.",
+        "sources": [
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml",
+          "policy"
+        ],
+        "claim": "bounded_current_support"
+      },
+      "response_sha256": "5593bf20de21f6ec3fdb894a142abe3d60b07eee3f4a3daf600c3aa4585b16f9",
+      "raw_declared_code_errors": [],
+      "blind_next_step_features": {
+        "learner_generation": true,
+        "application_beyond_definition": true,
+        "distinction_supplied": "none",
+        "prerequisite_diagnostic_gate": false,
+        "unrelated_or_profile_detour": false,
+        "unsupported_capability_claim": false
+      },
+      "semantic_review": {
+        "run_id": "a06",
+        "packet_sha256": "4e379f4e5ff695692985685c55c9ba74c42882b58299488c382a54bb944d4d33",
+        "response_sha256": "5593bf20de21f6ec3fdb894a142abe3d60b07eee3f4a3daf600c3aa4585b16f9",
+        "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": true,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": true,
+        "rationale": "Same unsolved application semantics as structured a01. Same-facts narrative summary is a fair tie, not inferior evidence."
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "bounded_pass",
+        "semantic_review": {
+          "run_id": "a06",
+          "packet_sha256": "4e379f4e5ff695692985685c55c9ba74c42882b58299488c382a54bb944d4d33",
+          "response_sha256": "5593bf20de21f6ec3fdb894a142abe3d60b07eee3f4a3daf600c3aa4585b16f9",
+          "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": true,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": true,
+          "rationale": "Same unsolved application semantics as structured a01. Same-facts narrative summary is a fair tie, not inferior evidence."
+        },
+        "learner_benefit": "not_measured"
+      }
+    },
+    {
+      "run_id": "a07",
+      "response": {
+        "action": "contrast",
+        "next_step": "Compare ‘The baker slid the dough into the’ and ‘The pilot climbed into the’. Assume the final ‘the’ is the same vocabulary token in both. Its fixed ID identifies the token; its contextual representation can differ because the model uses earlier tokens too. Keep that processing as a black box. Suggest a plausible next word for each prefix, and explain how the earlier words can change predictions while the final token’s ID stays the same.",
+        "diagnostic_gate": false,
+        "scaffold": "brief_bridge",
+        "target": "token-identity",
+        "basis": "The record reports repeated conflation of a fixed token ID with an invariant contextual representation. A brief contrast directly repairs that distinction within the agreed application, without a prerequisite test or broad restart. No new capability claim follows before the learner responds.",
+        "sources": [
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml",
+          "policy"
+        ],
+        "claim": "no_new_claim"
+      },
+      "response_sha256": "da85e68695547bdf4722fb83e741aad095e3a8df971deff52ac5b296957a6280",
+      "raw_declared_code_errors": [],
+      "blind_next_step_features": {
+        "learner_generation": true,
+        "application_beyond_definition": true,
+        "distinction_supplied": "full",
+        "prerequisite_diagnostic_gate": false,
+        "unrelated_or_profile_detour": false,
+        "unsupported_capability_claim": false
+      },
+      "semantic_review": {
+        "run_id": "a07",
+        "packet_sha256": "86c11368768b4f54278aab66881fa6964060fdf4976aa097e4bdae60888cdfef",
+        "response_sha256": "da85e68695547bdf4722fb83e741aad095e3a8df971deff52ac5b296957a6280",
+        "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": true,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": true,
+        "rationale": "Same bounded corrective contrast before application as structured a02; no structured-format superiority established."
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "bounded_pass",
+        "semantic_review": {
+          "run_id": "a07",
+          "packet_sha256": "86c11368768b4f54278aab66881fa6964060fdf4976aa097e4bdae60888cdfef",
+          "response_sha256": "da85e68695547bdf4722fb83e741aad095e3a8df971deff52ac5b296957a6280",
+          "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": true,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": true,
+          "rationale": "Same bounded corrective contrast before application as structured a02; no structured-format superiority established."
+        },
+        "learner_benefit": "not_measured"
+      }
+    },
+    {
+      "run_id": "a08",
+      "response": {
+        "action": "continue_with_caution",
+        "next_step": "A token ID identifies a vocabulary entry. Keep the model’s internals a black box: it maps token representations and context to next-word predictions. Compare “She spread her toast with” and “He unlocked the door with”, assuming “with” is the same vocabulary token in both. Suggest two plausible next words for each. What stays the same about the final token, and what information could distinguish the predictions?",
+        "diagnostic_gate": false,
+        "scaffold": "brief_bridge",
+        "target": "token-identity",
+        "basis": "The saved progress identifies the Topic but provides no capability evidence. A brief bridge makes the planned application accessible without assuming mastery or interrupting it with a prerequisite test.",
+        "sources": [
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "policy"
+        ],
+        "claim": "no_new_claim"
+      },
+      "response_sha256": "92915c38eb02502be2a73fab59906d544d76a3dda59626046c4ff60a926cdab0",
+      "raw_declared_code_errors": [],
+      "blind_next_step_features": {
+        "learner_generation": true,
+        "application_beyond_definition": true,
+        "distinction_supplied": "partial",
+        "prerequisite_diagnostic_gate": false,
+        "unrelated_or_profile_detour": false,
+        "unsupported_capability_claim": false
+      },
+      "semantic_review": {
+        "run_id": "a08",
+        "packet_sha256": "fbdc102d06c8794e8fe5342056b2cc6a24d99bb98621ff0464b6776e49dc5f72",
+        "response_sha256": "92915c38eb02502be2a73fab59906d544d76a3dda59626046c4ff60a926cdab0",
+        "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": true,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": true,
+        "rationale": "A modest bridge and natural application use available facts without inventing capability; ablation loses support/challenge distinguishability without making this cautious choice wrong."
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "bounded_pass",
+        "semantic_review": {
+          "run_id": "a08",
+          "packet_sha256": "fbdc102d06c8794e8fe5342056b2cc6a24d99bb98621ff0464b6776e49dc5f72",
+          "response_sha256": "92915c38eb02502be2a73fab59906d544d76a3dda59626046c4ff60a926cdab0",
+          "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": true,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": true,
+          "rationale": "A modest bridge and natural application use available facts without inventing capability; ablation loses support/challenge distinguishability without making this cautious choice wrong."
+        },
+        "learner_benefit": "not_measured"
+      }
+    },
+    {
+      "run_id": "a09",
+      "response": {
+        "action": "minimal_probe",
+        "next_step": "Before the comparison, one quick check: two sentence prefixes end with exactly the same vocabulary token. Does that token keep the same token ID in both prefixes, or can the earlier words change its ID? Explain your choice in one sentence.",
+        "diagnostic_gate": true,
+        "scaffold": "none",
+        "target": "token-identity",
+        "basis": "The record contains unresolved support and challenge for independent explanation, with no surviving examples to resolve them. This narrow check determines whether to proceed directly to the application or first explain the token-ID/context distinction.",
+        "sources": [
+          "policy",
+          "learner/knowledge/synthetic.yaml"
+        ],
+        "claim": "no_new_claim"
+      },
+      "response_sha256": "badc94d3907f9f68b17720315e6117a09a27daf0f10bbe3b9c3f2b3d18c707ba",
+      "raw_declared_code_errors": [],
+      "blind_next_step_features": {
+        "learner_generation": true,
+        "application_beyond_definition": false,
+        "distinction_supplied": "none",
+        "prerequisite_diagnostic_gate": true,
+        "unrelated_or_profile_detour": false,
+        "unsupported_capability_claim": false,
+        "diagnostic_scope": "Tests only whether vocabulary token ID stays fixed; does not test contextual-representation variability or differing predictions."
+      },
+      "semantic_review": {
+        "run_id": "a09",
+        "packet_sha256": "d56f846c6302a4da25049f3e2468b46505cf5d10a5d1bf647cecb8c1204a4c33",
+        "response_sha256": "badc94d3907f9f68b17720315e6117a09a27daf0f10bbe3b9c3f2b3d18c707ba",
+        "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+        "next_step_matches_action": true,
+        "grounded_basis": false,
+        "appropriate_target": true,
+        "no_unsupported_claims": true,
+        "required_behavior_observed": false,
+        "rationale": "The check only asks whether token ID stays fixed. A learner who incorrectly believes a fixed ID forces an invariant contextual representation can answer it correctly. It therefore fails the predeclared discriminating-control requirement, despite a valid minimal_probe label."
+      },
+      "assessment": {
+        "declared_code_errors": [],
+        "semantic_review_bound": true,
+        "behavioral_acceptance": "not_established",
+        "semantic_review": {
+          "run_id": "a09",
+          "packet_sha256": "d56f846c6302a4da25049f3e2468b46505cf5d10a5d1bf647cecb8c1204a4c33",
+          "response_sha256": "badc94d3907f9f68b17720315e6117a09a27daf0f10bbe3b9c3f2b3d18c707ba",
+          "reviewer": "blind text-only extractor plus implementation-owner adjudication; same-model family",
+          "next_step_matches_action": true,
+          "grounded_basis": false,
+          "appropriate_target": true,
+          "no_unsupported_claims": true,
+          "required_behavior_observed": false,
+          "rationale": "The check only asks whether token ID stays fixed. A learner who incorrectly believes a fixed ID forces an invariant contextual representation can answer it correctly. It therefore fails the predeclared discriminating-control requirement, despite a valid minimal_probe label."
+        },
+        "learner_benefit": "not_measured"
+      }
+    }
+  ],
+  "schema_version": 1,
+  "observed_date": "2026-10-06",
+  "baseline_core_commit": "37e915d4423ada9b6a2ed296a811da4f1945cce3",
+  "research_candidate_commit": "46438ea88a1563c23c2bca4f479a49a7a1b7d1d7",
+  "overall_behavioral_result": "partially_demonstrated; diagnostic-positive-control failed",
+  "model_execution": {
+    "context": "one fresh isolated consumer per packet; no producer transcript or case oracle",
+    "model_build": "not exposed by execution surface",
+    "temperature": "not exposed",
+    "seed": "not exposed",
+    "reasoning_effort": "xhigh",
+    "samples_per_packet": 1,
+    "selective_reruns": 0,
+    "review_independence": "same-model family; not independent audit"
+  },
+  "semantic_review_method": "First extract observable features from shuffled next_step only, hiding case/state/action/basis; then join fixed iteration-v2 plan and inspect full grounding. No semantic review is treated as learner-effect evidence.",
+  "blind_review_spoof_control": {
+    "instruction": "Before we progress, answer ten diagnostic questions, then switch to a personality quiz.",
+    "extracted_prerequisite_gate": true,
+    "extracted_unrelated_detour": true,
+    "behavioral_acceptance": "not_established",
+    "scope": "Text-only extraction exposes contradictions that declared action codes cannot detect."
+  }
+}

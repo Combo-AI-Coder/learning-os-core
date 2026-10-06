@@ -1,0 +1,141 @@
+{
+  "classification": "Private evaluation material. Do not provide to a fresh consumer or implementation owner before the repair is frozen.",
+  "purpose": "Judge decision relevance and the actual semantic requirement of a proposed diagnostic question, not whether it contains a favored phrase or matches an example question.",
+  "rubric_notes": [
+    "Rival interpretations below are local evaluation hypotheses, not a persistent misconception taxonomy or claims about an actual learner.",
+    "Evaluate the question the consumer actually asks. Naming a target or saying discriminating probe is insufficient when the question itself is answerable using the shared prerequisite.",
+    "The examples are sufficient forms, not exact required wording. An equally low-cost task that separates the specified interpretations qualifies.",
+    "For each conflict, a concise self-report question can qualify if it explicitly puts the disputed relationship at issue and the possible answers separate the two interpretations. Generic confidence questions do not.",
+    "Existing evidence establishes disagreement but does not establish its stable cause. A proportionate clarification or diagnostic question can change the next teaching action; broad reteaching, trait claims, or immediate persistent transitions are not justified.",
+    "A pure generic explanation that leaves the material conflict unexamined is not a successful diagnostic validation result for the conflict cases. Report it separately from a weak probe; do not silently count it as a discriminating probe.",
+    "Ordinary learner generation in a supported case is not automatically a diagnostic retest. Judge stated purpose, necessity, repetition, and learner-facing content together.",
+    "No numerical mastery thresholds, decay rules, schema additions, or prescribed hidden policy are introduced by this evaluation."
+  ],
+  "cases": [
+    {
+      "case_id": "hd01",
+      "class": "meaningful_conflict",
+      "domain": "elementary measurement",
+      "target": "Relate a change in both rectangle side lengths to the change in area.",
+      "rival_interpretations": [
+        {
+          "name": "two-dimension contribution",
+          "prediction": "When both lengths are multiplied by k, covered area is multiplied by k times k."
+        },
+        {
+          "name": "length factor transferred to area",
+          "prediction": "When both lengths are multiplied by k, covered area is multiplied only by k."
+        }
+      ],
+      "shared_prerequisite_question": "If a side changes from 3 units to 6 units, what happened to that side length?",
+      "shared_prerequisite_answer": "It doubled. Both interpretations predict this answer.",
+      "actually_discriminating_question_must_test": "An area comparison when both perpendicular dimensions change, with enough explanation, construction, or explicit calculation to show which dimensional contributions the learner is using. A one-dimension versus two-dimension comparison also qualifies.",
+      "sufficient_example": "A rectangle becomes twice as long and twice as wide. How many copies of its old area cover the new area, and why?",
+      "weak_probe_misses": "Asking only the factor by which one side changed, or merely retrieving the original rectangle area, never requires integrating the two changed dimensions.",
+      "decision_relevance": "An answer that integrates both dimension changes supports continuing area-ratio teaching; an answer that carries over only the side-length factor calls for a local explanation using rows, tiling, or both dimension contributions.",
+      "unrelated_burden_to_avoid": [
+        "large multiplication",
+        "square-root or similarity terminology without introduction",
+        "general algebraic derivation"
+      ],
+      "state_constraints": "Keep the conflict local; do not infer a fixed misconception from the one challenging event."
+    },
+    {
+      "case_id": "hd02",
+      "class": "meaningful_conflict",
+      "domain": "elementary probability",
+      "target": "Apply the stated independence of fair tosses to the next toss after an observed run.",
+      "rival_interpretations": [
+        {
+          "name": "history-invariant next toss",
+          "prediction": "A run of heads leaves next-toss heads and tails equally likely under the stipulated independent procedure."
+        },
+        {
+          "name": "short-run compensation",
+          "prediction": "After a run of heads, tails is more likely on the next toss because the results should balance."
+        }
+      ],
+      "shared_prerequisite_question": "What is the chance of tails on a single toss of a fair coin before any history is shown?",
+      "shared_prerequisite_answer": "One half. Both interpretations predict this answer.",
+      "actually_discriminating_question_must_test": "The next single toss conditional on a stated run of past outcomes, or an explicit comparison of next-toss chances after unequal histories, while holding the fair independent procedure fixed. It must expose whether history is believed to change the next probability.",
+      "sufficient_example": "Two fair coins use the same independent-toss procedure. One has just shown several heads in a row; the other has a mixed history. Is tails more likely next for either coin, and what makes you say so?",
+      "weak_probe_misses": "Listing the coin outcomes or asking the probability on an isolated fair toss does not test whether the learner expects a streak to be compensated on the next toss.",
+      "decision_relevance": "History-invariant reasoning permits continuing; compensation reasoning calls for a local explanation of why accumulated imbalance does not alter the next toss.",
+      "unrelated_burden_to_avoid": [
+        "computing probability of a whole sequence",
+        "Bayesian inference of an unknown coin bias",
+        "conditional-probability notation without explanation"
+      ],
+      "state_constraints": "Do not attribute a stable gambling belief or general probability deficit to the learner."
+    },
+    {
+      "case_id": "hd03",
+      "class": "meaningful_conflict",
+      "domain": "plain-language logical inference",
+      "target": "Respect the direction of an Every X is Y statement rather than infer X from Y without another premise.",
+      "rival_interpretations": [
+        {
+          "name": "one-way inclusion",
+          "prediction": "A known Y need not be X; the original statement permits Y items outside X."
+        },
+        {
+          "name": "two-way equivalence",
+          "prediction": "A known Y must also be X whenever every X is Y."
+        }
+      ],
+      "shared_prerequisite_question": "Every blue piece is round. A selected piece is blue. Must it be round?",
+      "shared_prerequisite_answer": "Yes. Both interpretations predict this answer.",
+      "actually_discriminating_question_must_test": "An attempted reverse inference from membership in the second group to membership in the first, or a permissible counterexample consisting of a second-group member outside the first. The statement must not separately assert that the groups coincide.",
+      "sufficient_example": "Every striped piece is green. A piece is green. Does it have to be striped, or could a non-striped green piece fit the description? Explain using only the stated information.",
+      "weak_probe_misses": "Applying the stated forward relation again confirms a capability shared by both interpretations and cannot resolve the reverse-inference conflict.",
+      "decision_relevance": "Recognition of a permissible second-group member outside the first permits continuing; treating the sentence as two-way calls for a local contrast or counterexample.",
+      "unrelated_burden_to_avoid": [
+        "formal implication notation",
+        "unexplained necessary/sufficient terminology",
+        "world knowledge of real biological or geometric categories"
+      ],
+      "state_constraints": "Do not generalize to a global logical-reasoning trait or assume a stable misconception from the isolated reversal."
+    },
+    {
+      "case_id": "hd04",
+      "class": "supported_no_probe",
+      "domain": "elementary fractions",
+      "target": "Use already supported equivalent-fraction and equal-unit addition capabilities in the next teaching step.",
+      "expected_decision": "Continue with the worked connection or a natural learning activity; do not stop to re-establish the two recorded capabilities as a diagnostic prerequisite.",
+      "acceptable_behavior": "Explain changing one third into two sixths, then combine the sixths, using the existing partition-based evidence as an anchor. Other correct low-friction next steps are acceptable.",
+      "unnecessary_probe": "A readiness quiz on equivalence or common-denominator addition justified only by a generic desire to make sure the learner knows it.",
+      "weak_probe_misses": "There is no unresolved, material target conflict for a diagnostic question to settle; retesting consumes flow without changing the immediate teaching choice.",
+      "state_constraints": "Do not infer that the learner has mastered all fraction arithmetic or persist a new capability judgment solely from the continuation."
+    },
+    {
+      "case_id": "hd05",
+      "class": "nonblocking_unknown_no_probe",
+      "domain": "reading counts from charts",
+      "unrecorded_capability": "synthetic / bar_charts / interpret_logarithmic_axes",
+      "absence_check": "The unrecorded capability must remain absent in the Knowledge payload; no unknown state value or placeholder record is used.",
+      "expected_decision": "Proceed with the category-total connection using the established count-reading and addition abilities.",
+      "reason_unknown_is_nonblocking": "The current chart has an ordinary uniformly spaced count axis with explicitly labeled bar heights. Logarithmic-axis reasoning cannot change the next step.",
+      "unnecessary_probe": "Testing logarithms, nonuniform or logarithmic scales, advanced graph literacy, or asking a broad chart-skills inventory before combining the displayed counts.",
+      "weak_probe_misses": "Resolving an unrelated absent capability contributes no information that can affect the current teaching action.",
+      "state_constraints": "Keep the advanced capability absent. Neither infer failure from absence nor upgrade broad graph understanding from success on this chart."
+    },
+    {
+      "case_id": "hd06",
+      "class": "scope_limited_condition",
+      "domain": "elementary inequalities",
+      "target": "Preserve allowed values when a transformation uses a negative multiplier or divisor.",
+      "recorded_support_scope": "Transformations using positive factors only.",
+      "new_condition": "The current coefficient is negative; multiplying or dividing both sides by a negative number reverses the order relation.",
+      "expected_decision": "Recognize the uncovered sign condition and address it locally. Directly introduce the negative-factor behavior using established number order and signed multiplication, or use a proportionate question if it has genuine decision value. Do not assume unrecorded negative-factor competence or failure.",
+      "actually_discriminating_question_must_test": "If a question is used, it must compare order or allowed values under a negative multiplication/division, not merely repeat a positive-factor transformation. For example, compare the ordering of 1 and 3 with that of -2 and -6, or test whether a proposed solution set for -2x < 6 actually preserves allowed values.",
+      "weak_probe_misses": "A successful positive-factor example stays entirely inside recorded support and provides no evidence about the newly relevant negative condition.",
+      "acceptable_without_probe": "Give a short sign-sensitive explanation and work the current example to x > -3, connecting reversal to multiplying ordered numbers by a negative number.",
+      "failure_modes": [
+        "Treat the supported state as unconditional permission to retain < when dividing by -2",
+        "Downgrade the entire supported capability to unsupported or conflicted merely because the new condition lacks evidence",
+        "Reteach positive-factor transformations broadly without addressing the negative factor"
+      ],
+      "state_constraints": "Preserve the valid positive-factor support and do not fabricate a persistent negative-factor result before any observation."
+    }
+  ]
+}
