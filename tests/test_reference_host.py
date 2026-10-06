@@ -108,6 +108,8 @@ class ReferenceLearningHostTests(unittest.TestCase):
 
     def test_candidate_yaml_scalar_errors_have_stable_public_envelopes(self):
         invalid_scalars = ["9999-99-99", "null\n9999-99-99: invalid key"]
+        for scalar in ('!!timestamp not-a-time', '!!bool not-a-bool', '!!int ""'):
+            invalid_scalars.extend((scalar, "null\n" + scalar + ": invalid key"))
         digit_limit = getattr(sys, "get_int_max_str_digits", lambda: 0)()
         if digit_limit:
             invalid_scalars.append("!!int " + "9" * (digit_limit + 100))
@@ -138,8 +140,12 @@ class ReferenceLearningHostTests(unittest.TestCase):
 
     def test_persisted_yaml_scalar_errors_have_stable_public_envelopes(self):
         evidence_path = f"evidence/{KNOWLEDGE_EVIDENCE_ID}.yaml"
-        for location in ("existing_evidence", "referenced_evidence", "current_knowledge"):
-            with self.subTest(location=location):
+        cases = [(location, scalar)
+                 for location in ("existing_evidence", "referenced_evidence", "current_knowledge")
+                 for scalar in ("9999-99-99", "!!timestamp not-a-time",
+                                "!!bool not-a-bool", '!!int ""')]
+        for location, scalar in cases:
+            with self.subTest(location=location, scalar=scalar):
                 self.provider.docs[evidence_path] = typed_evidence()
                 self.provider.blobs[evidence_path] = "3" * 40
                 self.provider.docs[READ_PATH] = yaml.safe_dump({
@@ -147,7 +153,7 @@ class ReferenceLearningHostTests(unittest.TestCase):
                     "revision": 1, "domain": "synthetic", "concepts": {},
                 })
                 path = READ_PATH if location == "current_knowledge" else evidence_path
-                self.provider.docs[path] += "invalid: 9999-99-99\n"
+                self.provider.docs[path] += "invalid: " + scalar + "\n"
                 before = dict(self.provider.docs)
                 self.provider.calls.clear()
                 if location == "existing_evidence":
@@ -183,6 +189,31 @@ class ReferenceLearningHostTests(unittest.TestCase):
                 self.assert_guard_rejection_without_writes(
                     self.invoke("create_evidence", content=yaml.safe_dump(candidate))
                 )
+
+    def test_new_evidence_rejects_normalized_invalid_timestamp_offsets(self):
+        for offset in ("+01:99", "-00:99", "+00:00:99", "+24:00", "+0199"):
+            for quoted in (False, True):
+                with self.subTest(offset=offset, quoted=quoted):
+                    content = typed_evidence()
+                    timestamp = "2026-10-05T12:00:00" + offset
+                    lines = [line for line in content.splitlines()
+                             if not line.startswith("observed_at:")]
+                    lines.append("observed_at: " + (json.dumps(timestamp) if quoted else timestamp))
+                    self.provider.calls.clear()
+                    result = self.invoke("create_evidence", content="\n".join(lines) + "\n")
+                    self.assert_guard_rejection_without_writes(result)
+
+    def test_new_evidence_accepts_valid_iso_timestamp_profiles(self):
+        for index, timestamp in enumerate(("2026-10-05T12:00:00Z",
+                "2026-10-05T12:00:00+08:00", "2026-10-05T12:00:00-03:30",
+                "2026-10-05T12:00:00.123456+01:30:15", "2026-10-05 12:00:00",
+                "20261005T120000+0800", "2026-W41-1T12:00", "2026-10-05T12")):
+            with self.subTest(timestamp=timestamp):
+                candidate = yaml.safe_load(typed_evidence(evidence_id=f"evi-time-{index}"))
+                candidate["observed_at"] = timestamp
+                result = self.invoke("create_evidence", content=yaml.safe_dump(candidate))
+                self.assertTrue(result["ok"])
+                self.assertTrue(result["result"]["applied"])
 
     def test_new_evidence_accepts_string_and_structured_observations(self):
         for index, observation in enumerate(("observed explanation", {"summary": "observed explanation"})):
@@ -329,6 +360,26 @@ class ReferenceLearningHostTests(unittest.TestCase):
         )
         self.assertFalse(result["ok"])
         self.assertEqual("resolution_failed", result["error"]["code"])
+
+    def test_persisted_large_hex_integer_cannot_escape_checkpoint_envelope(self):
+        digit_limit = getattr(sys, "get_int_max_str_digits", lambda: 0)()
+        if not digit_limit:
+            self.skipTest("interpreter has no integer conversion digit limit")
+        current = yaml.safe_load(checkpoint_progress())
+        self.provider.docs[CHECKPOINT_PATH] += "legacy_counter: 0x" + "f" * (digit_limit + 100) + "\n"
+        for checkpoint in (
+            {"milestone": [], "return_point": None, "ready_next": []},
+            {"milestone": current["current"]["milestone"],
+             "return_point": current["resume"]["return_point"],
+             "ready_next": current["resume"]["ready_next"]},
+        ):
+            with self.subTest(checkpoint=checkpoint):
+                before = dict(self.provider.docs)
+                self.provider.calls.clear()
+                result = self.invoke("save_learning_checkpoint", checkpoint=checkpoint,
+                                     expected_version_token=CHECKPOINT_BLOB)
+                self.assert_guard_rejection_without_writes(result)
+                self.assertEqual(before, self.provider.docs)
 
     def test_reference_host_rejects_unserializable_checkpoint_integer(self):
         import sys
