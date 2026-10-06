@@ -1,0 +1,158 @@
+{
+  "case_id": "hd04",
+  "synthetic": true,
+  "title": "Combining fraction amounts",
+  "current_task": {
+    "goal": "Connect equivalent fractions and the addition of same-size pieces in the first worked example of adding fractions with different denominators.",
+    "current_material": "The next example is 1/3 plus 1/6 of the same whole. The learner has just completed the preceding work on equivalent fractions and on adding same-size fraction units.",
+    "session_context": "No conflicting response or new difficulty has been observed since the recorded examples. The session is a short lesson segment."
+  },
+  "knowledge": {
+    "schema_version": "0.3",
+    "document_type": "learner_knowledge",
+    "revision": 1,
+    "updated_at": "2026-10-06T10:40:00Z",
+    "domain": "synthetic",
+    "concepts": {
+      "fraction_units": {
+        "capabilities": {
+          "construct_equivalent_fractions": {
+            "state": "supported",
+            "confidence": "high",
+            "updated_at": "2026-10-06T10:40:00Z",
+            "evidence_refs": {
+              "support": [
+                "evi_20261006_hd04_01",
+                "evi_20261006_hd04_02"
+              ],
+              "challenge": []
+            },
+            "basis_summary": "Independent explanations across two denominators connected changing numerator and denominator to finer equal partitions of the same whole."
+          },
+          "add_same_size_fraction_units": {
+            "state": "supported",
+            "confidence": "high",
+            "updated_at": "2026-10-06T10:40:00Z",
+            "evidence_refs": {
+              "support": [
+                "evi_20261006_hd04_03"
+              ],
+              "challenge": []
+            },
+            "basis_summary": "Combined counts of equal fraction units and preserved the unit size across examples."
+          }
+        }
+      }
+    }
+  },
+  "evidence": [
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd04_01",
+      "observed_at": "2026-10-05T09:01:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "The learner changed 2/3 into 4/6 by splitting each third into two equal pieces and explained why the amount stayed the same."
+      },
+      "interpretation": {
+        "direction": "support",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "fraction_units",
+          "capability": "construct_equivalent_fractions"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd04",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    },
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd04_02",
+      "observed_at": "2026-10-05T09:02:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "In a separate task, the learner rewrote 3/4 as 9/12, explaining that each fourth becomes three twelfths and that the numerator therefore also triples."
+      },
+      "interpretation": {
+        "direction": "support",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "fraction_units",
+          "capability": "construct_equivalent_fractions"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd04",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    },
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd04_03",
+      "observed_at": "2026-10-05T09:03:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "For 2/7 plus 3/7, the learner answered 5/7 and explained that the counted pieces are still sevenths. In another example they correctly combined 1/6 and 2/6 as three sixths."
+      },
+      "interpretation": {
+        "direction": "support",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "fraction_units",
+          "capability": "add_same_size_fraction_units"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd04",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    }
+  ]
+}

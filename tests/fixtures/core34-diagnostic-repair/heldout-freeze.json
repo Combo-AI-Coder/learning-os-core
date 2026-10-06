@@ -1,0 +1,54 @@
+{
+  "set_id": "core34-heldout-design-v1",
+  "frozen_at_utc": "2026-10-06T10:45:10.207473+00:00",
+  "case_count": 6,
+  "consumer_packet_paths": [
+    "cases/hd01.json",
+    "cases/hd02.json",
+    "cases/hd03.json",
+    "cases/hd04.json",
+    "cases/hd05.json",
+    "cases/hd06.json"
+  ],
+  "private_oracle_path": "private/evaluation_oracles.json",
+  "source_protocol_hashes_at_freeze": {
+    "teaching-decision.md": "af19323bbf55bf215def9a5a7da83a76f463ae028766699f4f4c1a38351d09f5",
+    "evidence-classification.md": "ae0d558d1648aada1c0d1a13c5600c6cfd4ec2df3c8a64058a3c24f8c187f524",
+    "schema.md": "3635416d45b01db117244c97c50286ed8079876cc8b6db8353d82db34db76581"
+  },
+  "isolation": {
+    "implementation_read": false,
+    "token_identity_evaluation_outputs_read": false,
+    "model_runs": 0,
+    "github_mutations": 0,
+    "real_learner_data_used": false,
+    "writes_outside_design_directory": false
+  },
+  "structural_checks": {
+    "case_count": true,
+    "evidence_ids_unique_per_case": true,
+    "knowledge_references_resolve": true,
+    "evidence_directions_match_reference_buckets": true,
+    "evidence_targets_match_claims": true,
+    "unknown_control_capability_absent": true,
+    "scope_case_has_no_fabricated_challenge": true
+  },
+  "coverage": {
+    "meaningful_conflicts": 3,
+    "supported_no_probe": 1,
+    "nonblocking_unknown_no_probe": 1,
+    "scope_limited_condition": 1
+  },
+  "construction_note": "Existing Knowledge and Evidence field shapes only. Case envelope is evaluation packaging, not a product schema addition. No evaluation-model run has been performed.",
+  "content_sha256_before_freeze_record": {
+    "README.md": "f5a3be200d2f6190533e449a5041e47929c76d8c7e9207ecb585be6e47591e8b",
+    "cases/hd01.json": "3aca647625c2ecb89849d2cfc221937ffe0bb417d459530627b357800939ddc1",
+    "cases/hd02.json": "104c9009e59d389e23dbb1acd3d9053c8496353d300ce1ff6cbc74dd0fb1a855",
+    "cases/hd03.json": "4b527b2ea42388415bb458bcd9244b6a5c7427fc4a6fc535d8823ddbfd75a591",
+    "cases/hd04.json": "962b3fda64bcd453ee857fe00b35551e0f3271b3ba4d5908cf82dbe99b4a648e",
+    "cases/hd05.json": "b1f838eb125dcd07f50673bb865410b1c41b211621e991793e2666f3988ac060",
+    "cases/hd06.json": "3678a499a2d5f9888b22d17a2c9adc3af6401c58587f1b6501ffa5d64e697b2a",
+    "private/build_cases.py": "c45bf59a2523c7f7513aeadccda8e03c4b336dfd5ab3b769bd65109dfd3f3b9c",
+    "private/evaluation_oracles.json": "59ec4f4cf99e05da7f6ad783f5fd73a6aff2856f249ec0f743e54fafc2d4c57b"
+  }
+}

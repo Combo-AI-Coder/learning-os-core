@@ -1,0 +1,98 @@
+{
+  "candidate": "diagnostic-repair-v3-2",
+  "policy_sha256": "af19323bbf55bf215def9a5a7da83a76f463ae028766699f4f4c1a38351d09f5",
+  "exporter_sha256": "1805a74d2c45d2c3f319fbb593e37215a5276be0b151b08617c5becb19fc497a",
+  "oracle_scope": "Prospective separate conditional question-quality and policy-conformant state-selection claims; never rehabilitates the old mandatory-probe oracle.",
+  "runs": [
+    {
+      "run_id": "q00",
+      "source_case": "retained_a09_with_referenced_evidence",
+      "mode": "conditional_probe_quality",
+      "packet_sha256": "8345328a894d8dab8484a4585da35b6a94058bf1027800537f9e501ae257b55c",
+      "execution_status": "executed_once"
+    },
+    {
+      "run_id": "h01",
+      "source_case": "hd01.json",
+      "source_sha256": "3aca647625c2ecb89849d2cfc221937ffe0bb417d459530627b357800939ddc1",
+      "mode": "state_driven_selection",
+      "packet_sha256": "4a94f25a67c407731bce96bce6c29b9360b52778b276975a97e011b829c8d0c9",
+      "execution_status": "not_executed_oracle_scope_mismatch"
+    },
+    {
+      "run_id": "q01",
+      "source_case": "hd01.json",
+      "source_sha256": "3aca647625c2ecb89849d2cfc221937ffe0bb417d459530627b357800939ddc1",
+      "mode": "conditional_probe_quality",
+      "packet_sha256": "df7093a3c6df09c74192b01be124b544ad2627761b7b73c85a983831f37ab939",
+      "execution_status": "executed_once"
+    },
+    {
+      "run_id": "h02",
+      "source_case": "hd02.json",
+      "source_sha256": "104c9009e59d389e23dbb1acd3d9053c8496353d300ce1ff6cbc74dd0fb1a855",
+      "mode": "state_driven_selection",
+      "packet_sha256": "d7b1e75a5f1ec386684dd58a5098ea1d90202fc1f24c1247784f05d48cda7d06",
+      "execution_status": "not_executed_oracle_scope_mismatch"
+    },
+    {
+      "run_id": "q02",
+      "source_case": "hd02.json",
+      "source_sha256": "104c9009e59d389e23dbb1acd3d9053c8496353d300ce1ff6cbc74dd0fb1a855",
+      "mode": "conditional_probe_quality",
+      "packet_sha256": "7bf8da93292a30c51f1cdf6f634f9de1f49e17341c25290d5ba11447e30e3180",
+      "execution_status": "executed_once"
+    },
+    {
+      "run_id": "h03",
+      "source_case": "hd03.json",
+      "source_sha256": "4b527b2ea42388415bb458bcd9244b6a5c7427fc4a6fc535d8823ddbfd75a591",
+      "mode": "state_driven_selection",
+      "packet_sha256": "61cdae12491995f13bff32da12605b8b5362b6c8cd52fa1b17afdd44fcaa28d6",
+      "execution_status": "not_executed_oracle_scope_mismatch"
+    },
+    {
+      "run_id": "q03",
+      "source_case": "hd03.json",
+      "source_sha256": "4b527b2ea42388415bb458bcd9244b6a5c7427fc4a6fc535d8823ddbfd75a591",
+      "mode": "conditional_probe_quality",
+      "packet_sha256": "ed0633d42ae4a96df4e0597608871bcb479d2e4f16582d6c720966dfdb87829c",
+      "execution_status": "executed_once"
+    },
+    {
+      "run_id": "h04",
+      "source_case": "hd04.json",
+      "source_sha256": "962b3fda64bcd453ee857fe00b35551e0f3271b3ba4d5908cf82dbe99b4a648e",
+      "mode": "state_driven_selection",
+      "packet_sha256": "e928cf852a72cf72a385337a034e32bed3f918eb1f7383b3fad7e5ba70ec79dc",
+      "execution_status": "executed_once"
+    },
+    {
+      "run_id": "h05",
+      "source_case": "hd05.json",
+      "source_sha256": "b1f838eb125dcd07f50673bb865410b1c41b211621e991793e2666f3988ac060",
+      "mode": "state_driven_selection",
+      "packet_sha256": "e9ebf34b065fe554fa3d9eec8a8cef37e1f0392609457be66e928ab3ce27897e",
+      "execution_status": "executed_once"
+    },
+    {
+      "run_id": "h06",
+      "source_case": "hd06.json",
+      "source_sha256": "3678a499a2d5f9888b22d17a2c9adc3af6401c58587f1b6501ffa5d64e697b2a",
+      "mode": "state_driven_selection",
+      "packet_sha256": "fc233d5ca06e8db79edf2d5264e5b25cd35805ada9422fee43560750089430ec",
+      "execution_status": "executed_once"
+    },
+    {
+      "run_id": "q10",
+      "source_case": "retained_a09_clean_referenced_evidence",
+      "mode": "conditional_probe_quality",
+      "packet_sha256": "4e1153064445dbe91a2ccffb2e1ca787f7397a73a576e3bd4906f47a5ab5d273",
+      "execution_status": "executed_once",
+      "reason": "Referenced-Evidence fixture accidentally reintroduced the historical intervention hint into q00 Knowledge basis. This prospective repair preserves q00 and removes that cue before a new output.",
+      "reproduction_exporter_snapshot": "candidate3-reproduction-exporter.py.txt",
+      "reproduction_exporter_sha256": "8dea61dfc277765def7be2c98f079fe24bcf00ab6b88495f6dfb86d5c0a05256",
+      "snapshot_provenance": "Reproduction snapshot added during review; the exact input packet hash was recorded before the q10 consumer call. This snapshot is not claimed to have been frozen before the run."
+    }
+  ]
+}

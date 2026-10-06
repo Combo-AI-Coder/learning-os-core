@@ -1,6 +1,6 @@
 ---
 protocol: teaching-decision
-version: "0.4"
+version: "0.3"
 schema_compatibility: "0.3"
 ---
 
@@ -32,12 +32,6 @@ When diagnosis is needed, prefer in order:
 5. a larger diagnostic task only if necessary.
 
 Before asking a diagnostic question, identify the smallest target capability internally. The probe SHOULD require that capability while minimizing unrelated prerequisite, terminology, representation, arithmetic, or domain-knowledge burden. If an extra dependency is unavoidable, either establish it first or make the assumption explicit; do not interpret failure on the dependency as failure of the target capability.
-
-### Target-discriminating check
-
-Before issuing a diagnostic probe, check a plausible answer from a learner who lacks the target capability or still holds the concrete alternative supported by the record. If that answer could receive full credit, the probe does not yet require the target: revise it or choose a proportionate teaching/natural-observation action instead. A question about a prerequisite shared by both interpretations cannot resolve the disputed claim merely because it is short or on-topic.
-
-The actual learner-facing question should elicit the distinguishing explanation, prediction, contrast, or counterexample without supplying its answer. Keep the next teaching branches tied to the resulting evidence; an ambiguous answer can leave the claim unresolved. Do not invent a stable misconception or infer a persistent capability change merely to fill a diagnostic template. This check refines the existing target-required and alternative-path rules; it does not override the probe value/cost gate or make uncertainty alone a reason to test.
 
 ## Teaching architecture and orientation
 

@@ -1,0 +1,25 @@
+{
+  "candidate": "diagnostic-repair-v3-1",
+  "policy_sha256": "af19323bbf55bf215def9a5a7da83a76f463ae028766699f4f4c1a38351d09f5",
+  "exporter_sha256": "639bc32176e0a85505f53c0798a00356bfa8e22fdbd5a443c153684d94134b57",
+  "runs": [
+    {
+      "run_id": "r01",
+      "case": "necessary_conflict",
+      "source": "retained_case",
+      "packet_sha256": "61b26152a0af87f9d1125343b0e988c9310f701eee153e961b34ca6d14e95aea"
+    },
+    {
+      "run_id": "r02",
+      "case": "supported",
+      "source": "retained_case",
+      "packet_sha256": "b419a9de26823207d550a89368802b333732c24788396e081b4c7987e361a788"
+    },
+    {
+      "run_id": "r03",
+      "case": "combined_noise",
+      "source": "retained_case",
+      "packet_sha256": "71dfe2e4c104b0548d7e1847010aeeb495a06d729517559db48d6476f989211c"
+    }
+  ]
+}
