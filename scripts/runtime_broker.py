@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import os
+import re
 import datetime as datetime_module
 import secrets
 import shutil
@@ -175,6 +176,21 @@ def _preflight_candidate_yaml(content: str) -> None:
         _preflight_bounded_yaml(content, "candidate YAML")
     except ResolutionError as exc:
         raise GuardRejected(str(exc)) from None
+
+
+def _load_candidate_yaml(content: str, where: str) -> object:
+    """Bound parsing work and normalize safe-loader scalar construction errors."""
+    try:
+        _preflight_candidate_yaml(content)
+        return yaml.safe_load(content)
+    except (yaml.YAMLError, ValueError, OverflowError,
+            AttributeError, KeyError, IndexError) as exc:
+        # PyYAML scalar constructors may raise built-in exceptions for invalid
+        # timestamps/integers or invalid explicit scalar tags. They are
+        # malformed input, not host failures.
+        raise GuardRejected(
+            f"{where} YAML is malformed: {exc.__class__.__name__}"
+        ) from None
 
 
 def _preflight_authority_yaml(content: str, where: str) -> None:
@@ -2228,13 +2244,9 @@ class RuntimeSessionBroker:
         current_text = self.read_instance_text(session, path)
         if current_text.version_token != expected_blob_sha:
             raise CasConflict("learning checkpoint version token is stale")
-        _preflight_candidate_yaml(current_text.content)
-        try:
-            current_document = yaml.safe_load(current_text.content)
-        except (yaml.YAMLError, ValueError, OverflowError) as exc:
-            raise GuardRejected(
-                f"Subtopic Progress YAML is malformed: {exc.__class__.__name__}"
-            ) from None
+        current_document = _load_candidate_yaml(
+            current_text.content, "Subtopic Progress"
+        )
         if not isinstance(current_document, dict):
             raise GuardRejected("Subtopic Progress must be a mapping")
         if current_document.get("document_type") != "subtopic_progress":
@@ -2315,9 +2327,16 @@ class RuntimeSessionBroker:
         )
         candidate["current"] = candidate_current
         candidate["resume"] = candidate_resume
-        content = yaml.safe_dump(
-            candidate, sort_keys=False, allow_unicode=True
-        )
+        try:
+            content = yaml.safe_dump(
+                candidate, sort_keys=False, allow_unicode=True
+            )
+        except (yaml.YAMLError, ValueError, OverflowError) as exc:
+            # Bounded persisted scalars (for example a large hexadecimal int)
+            # can still exceed the interpreter's decimal serialization limit.
+            raise GuardRejected(
+                f"Subtopic Progress cannot be serialized: {exc.__class__.__name__}"
+            ) from None
         _preflight_candidate_yaml(content)
         if self._type_sensitive_semantic_equal(
             existing_checkpoint, normalized
@@ -2424,13 +2443,7 @@ class RuntimeSessionBroker:
 
     @staticmethod
     def _evidence_candidate(content: str) -> tuple[dict, str]:
-        _preflight_candidate_yaml(content)
-        try:
-            data = yaml.safe_load(content)
-        except yaml.YAMLError as exc:
-            raise GuardRejected(
-                f"Evidence YAML is malformed: {exc.__class__.__name__}"
-            ) from None
+        data = _load_candidate_yaml(content, "Evidence")
         if not isinstance(data, dict):
             raise GuardRejected("Evidence candidate must be a mapping")
         if data.get("document_type") != "evidence":
@@ -2446,6 +2459,50 @@ class RuntimeSessionBroker:
                 "Evidence id does not map to one canonical Evidence path"
             )
         return data, path
+
+    @staticmethod
+    def _assert_new_evidence_observation(candidate: dict, content: str) -> None:
+        """Admit meaningful new observations without revalidating legacy history."""
+        observation = candidate.get("observation")
+        summary = observation.get("summary") if isinstance(observation, dict) else observation
+        if not isinstance(summary, str) or not summary.strip():
+            raise GuardRejected(
+                "new Evidence requires non-empty observation text or observation.summary"
+            )
+        if not isinstance(candidate.get("observed_at"), (str, datetime_module.datetime)):
+            raise GuardRejected("new Evidence requires a valid observed_at timestamp")
+
+        # Construction loses invalid offset components: both PyYAML and
+        # fromisoformat normalize +01:99 into +02:39. Inspect the original
+        # scalar for new records only; preflight has already bounded this YAML
+        # and rejected duplicate/non-scalar mapping keys and aliases.
+        root = yaml.compose(content, Loader=yaml.SafeLoader)
+        scalar = next(
+            value for key, value in root.value
+            if key.tag == "tag:yaml.org,2002:str" and key.value == "observed_at"
+        )
+        timestamp = scalar.value
+        match = re.fullmatch(
+            r"(?:[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{8}|[0-9]{4}-?W[0-9]{2}(?:-?[0-9])?)"
+            r"[Tt ](?P<hour>[0-9]{2})(?::?(?P<minute>[0-9]{2}))?"
+            r"(?::?(?P<second>[0-9]{2}))?(?:[.,][0-9]+)?"
+            r"(?:Z|[+-](?P<offset_hour>[0-9]{2})(?::?(?P<offset_minute>[0-9]{2}))?"
+            r"(?::?(?P<offset_second>[0-9]{2}))?(?:[.,][0-9]+)?)?",
+            timestamp,
+        )
+        if match is None or any(
+            match[name] is not None and int(match[name]) >= limit
+            for name, limit in (("hour", 24), ("minute", 60), ("second", 60),
+                                ("offset_hour", 24), ("offset_minute", 60),
+                                ("offset_second", 60))
+        ):
+            raise GuardRejected("new Evidence requires a valid observed_at timestamp")
+        try:
+            datetime_module.datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        except (ValueError, OverflowError):
+            raise GuardRejected(
+                "new Evidence requires a valid observed_at timestamp"
+            ) from None
 
     def create_evidence(
         self,
@@ -2480,8 +2537,9 @@ class RuntimeSessionBroker:
                             existing_text, _ = self.provider.read_materialized_text(
                                 authority.snapshot, path
                             )
-                            _preflight_candidate_yaml(existing_text)
-                            existing = yaml.safe_load(existing_text)
+                            existing = _load_candidate_yaml(
+                                existing_text, "existing Evidence"
+                            )
                         except (ResolutionError, yaml.YAMLError) as exc:
                             raise GuardRejected(
                                 "existing Evidence record is unreadable"
@@ -2493,6 +2551,8 @@ class RuntimeSessionBroker:
                                 "Evidence id already exists with different content"
                             )
                         existing_matches = True
+                    else:
+                        self._assert_new_evidence_observation(candidate, content)
 
                     core = self.provider.materialize(
                         state.deployment.core_repository_id,
@@ -2557,13 +2617,7 @@ class RuntimeSessionBroker:
 
     @staticmethod
     def _knowledge_candidate(content: str) -> tuple[dict, str]:
-        _preflight_candidate_yaml(content)
-        try:
-            data = yaml.safe_load(content)
-        except yaml.YAMLError as exc:
-            raise GuardRejected(
-                f"Knowledge YAML is malformed: {exc.__class__.__name__}"
-            ) from None
+        data = _load_candidate_yaml(content, "Knowledge")
         if not isinstance(data, dict):
             raise GuardRejected("Knowledge candidate must be a mapping")
         if data.get("document_type") != "learner_knowledge":
@@ -2700,8 +2754,9 @@ class RuntimeSessionBroker:
                     evidence_text, _ = self.provider.read_materialized_text(
                         snapshot, evidence_path
                     )
-                    _preflight_candidate_yaml(evidence_text)
-                    evidence = yaml.safe_load(evidence_text)
+                    evidence = _load_candidate_yaml(
+                        evidence_text, "Knowledge Evidence reference"
+                    )
                 except (ResolutionError, yaml.YAMLError) as exc:
                     raise GuardRejected(
                         f"Knowledge Evidence reference {evidence_id!r} is unreadable"
@@ -2810,8 +2865,9 @@ class RuntimeSessionBroker:
                                     authority.snapshot, path
                                 )
                             )
-                            _preflight_candidate_yaml(current_text)
-                            current = yaml.safe_load(current_text)
+                            current = _load_candidate_yaml(
+                                current_text, "current Knowledge owner"
+                            )
                         except (ResolutionError, yaml.YAMLError) as exc:
                             raise GuardRejected(
                                 "current Knowledge owner is unreadable"
