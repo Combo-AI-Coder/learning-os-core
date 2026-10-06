@@ -70,6 +70,13 @@ CANDIDATE_YAML_MAX_NODES = BOUNDED_YAML_MAX_NODES
 CANDIDATE_YAML_MAX_DEPTH = BOUNDED_YAML_MAX_DEPTH
 CANDIDATE_VALIDATION_TIMEOUT_SECONDS = 10
 LEARNING_CONTEXT_MAX_DOCUMENTS = 32
+EVIDENCE_DISCOVERY_MAX_CANDIDATES = 128
+EVIDENCE_DISCOVERY_MAX_RECORDS = 16
+EVIDENCE_DISCOVERY_MAX_KNOWLEDGE_OWNERS = 16
+EVIDENCE_DISCOVERY_MAX_TARGETS_PER_RECORD = 8
+EVIDENCE_DISCOVERY_MAX_TARGETS = 64
+EVIDENCE_DISCOVERY_MAX_DOCUMENT_BYTES = 64 * 1024
+EVIDENCE_DISCOVERY_MAX_TOTAL_BYTES = 256 * 1024
 LEARNING_CHECKPOINT_MAX_CURRENT_MILESTONES = 16
 LEARNING_CHECKPOINT_MAX_READY_NEXT = 32
 KNOWLEDGE_RECONCILE_MAX_NEW_EVIDENCE_REFS = 32
@@ -1974,6 +1981,182 @@ class RuntimeSessionBroker:
                     )
                 finally:
                     if not authority_release_attempted:
+                        self._release_materializations([authority.snapshot])
+
+    def discover_learning_evidence(
+        self, session: LearningRuntimeSession,
+    ) -> dict[str, object]:
+        """Discover context-bound Evidence, never infer processing or claim state.
+
+        Inventory remains host-owned. All selection and reference facts use one
+        pinned snapshot; any admission/freshness failure discards the result.
+        This bounded v1 recipe returns all eligible matches in path order, not a
+        chronology or an unbounded recent-history search.
+        """
+        with self._session_operation(session) as state:
+            if state.binding.role != "main" or not state.binding.subtopic:
+                raise GuardRejected("Evidence discovery requires a bound Main Subtopic")
+            # A narrower allowlist could hide the orphan and falsely imply an
+            # empty result. Require whole-root read authority for this recipe.
+            if not state.policy.may_read("evidence"):
+                raise GuardRejected("Evidence discovery requires Evidence-root read authority")
+            if self.write_admission is None:
+                raise GuardRejected("learning session requires shared deployment operation admission")
+            with self.write_admission.read_lease():
+                deployment = self.guard.snapshot(state.deployment, require_active=False)
+                authority = self._pin_instance_authority(state)
+                release_attempted = False
+                try:
+                    inventory = self._snapshot_path_inventory(authority.snapshot)
+                    candidates = []
+                    for path in inventory:
+                        if not isinstance(path, str):
+                            raise GuardRejected("Evidence discovery inventory is malformed")
+                        if path == "evidence" or path.startswith("evidence/"):
+                            _relative_path(path, "Evidence discovery path")
+                            if instance_expected_types(path) != ("evidence",):
+                                raise GuardRejected("Evidence discovery path is noncanonical")
+                            candidates.append(path)
+                            if len(candidates) > EVIDENCE_DISCOVERY_MAX_CANDIDATES:
+                                raise GuardRejected("Evidence discovery candidate limit exceeded")
+                    # Admit the whole inventory before any Evidence content read.
+                    total_bytes = 0
+
+                    def read_document(path: str, kind: str) -> tuple[dict, InstanceText]:
+                        nonlocal total_bytes
+                        if not state.policy.may_read(path):
+                            raise GuardRejected("Evidence discovery document is outside read authority")
+                        try:
+                            content, token = self.provider.read_materialized_text(authority.snapshot, path)
+                        except ResolutionError:
+                            raise GuardRejected("Evidence discovery document is unreadable") from None
+                        if not isinstance(content, str) or len(content) > EVIDENCE_DISCOVERY_MAX_DOCUMENT_BYTES:
+                            raise GuardRejected("Evidence discovery document byte limit exceeded")
+                        try:
+                            size = len(content.encode("utf-8"))
+                        except UnicodeEncodeError:
+                            raise GuardRejected("Evidence discovery document is not UTF-8") from None
+                        total_bytes += size
+                        if size > EVIDENCE_DISCOVERY_MAX_DOCUMENT_BYTES or total_bytes > EVIDENCE_DISCOVERY_MAX_TOTAL_BYTES:
+                            raise GuardRejected("Evidence discovery byte budget exceeded")
+                        document = _load_candidate_yaml(content, "Evidence discovery document")
+                        if not isinstance(document, dict) or document.get("document_type") != kind:
+                            raise GuardRejected("Evidence discovery document identity is malformed")
+                        if kind == "evidence" and (not isinstance(document.get("id"), str) or not document["id"].strip()):
+                            raise GuardRejected("Evidence discovery requires a string Evidence identity")
+                        if instance_path_identity_mismatches(path, document, kind):
+                            raise GuardRejected("Evidence discovery document identity does not match path")
+                        if validate_instance_document_trust_boundary(path, document, kind):
+                            raise GuardRejected("Evidence discovery document violates the trust boundary")
+                        if not isinstance(token, str) or not token:
+                            raise GuardRejected("Evidence discovery document version is missing")
+                        return document, InstanceText(content, token)
+
+                    records = []
+                    domains: dict[str, str] = {}
+                    total_targets = 0
+                    for path in sorted(candidates):
+                        document, item = read_document(path, "evidence")
+                        context = document.get("context")
+                        if context is None:
+                            continue  # Legacy context-free records remain ordinary-readable.
+                        if not isinstance(context, dict):
+                            raise GuardRejected("Evidence discovery context is malformed")
+                        if any(context.get(key) is not None and
+                               (not isinstance(context[key], str) or not context[key].strip())
+                               for key in ("topic", "subtopic")):
+                            raise GuardRejected("Evidence discovery context identity is malformed")
+                        if context.get("topic") != state.binding.topic or context.get("subtopic") != state.binding.subtopic:
+                            continue
+                        if len(records) >= EVIDENCE_DISCOVERY_MAX_RECORDS:
+                            raise GuardRejected("Evidence discovery matching-record limit exceeded")
+                        # This selector understands the existing typed V0.3 layout.
+                        # It deliberately does not impose new-record observation/
+                        # timestamp admission retroactively on persisted history.
+                        if document.get("schema_version") != "0.3":
+                            raise GuardRejected("Evidence discovery requires typed V0.3 records")
+                        interpretation = document.get("interpretation")
+                        if not isinstance(interpretation, dict) or any(
+                            not isinstance(interpretation.get(key), str) or interpretation[key] not in allowed
+                            for key, allowed in (
+                                ("direction", {"support", "challenge", "neutral", "deferred"}),
+                                ("diagnosticity", {"low", "medium", "high"}),
+                                ("novelty", {"low", "medium", "high"}),
+                                ("confidence", {"low", "medium", "high"}),
+                            )
+                        ):
+                            raise GuardRejected("Evidence discovery interpretation is malformed")
+                        targets = document.get("targets")
+                        if not isinstance(targets, list) or not targets or len(targets) > EVIDENCE_DISCOVERY_MAX_TARGETS_PER_RECORD:
+                            raise GuardRejected("Evidence discovery targets are malformed or over budget")
+                        typed_targets = []
+                        seen = set()
+                        for target in targets:
+                            if not isinstance(target, dict) or not {"type", "domain", "concept", "capability"}.issubset(target) or target.get("type") != "capability":
+                                raise GuardRejected("Evidence discovery requires exact typed capability targets")
+                            if any(not isinstance(target[k], str) or not target[k].strip() for k in ("domain", "concept", "capability")):
+                                raise GuardRejected("Evidence discovery target identity is malformed")
+                            key = (target["domain"], target["concept"], target["capability"])
+                            if key in seen:
+                                continue
+                            seen.add(key)
+                            total_targets += 1
+                            if total_targets > EVIDENCE_DISCOVERY_MAX_TARGETS:
+                                raise GuardRejected("Evidence discovery total-target limit exceeded")
+                            owner = _relative_path(f"learner/knowledge/{key[0]}.yaml", "Evidence discovery Knowledge owner")
+                            if instance_expected_types(owner) != ("learner_knowledge",):
+                                raise GuardRejected("Evidence discovery Knowledge owner is noncanonical")
+                            if not state.policy.may_read(owner):
+                                raise GuardRejected("Evidence discovery Knowledge owner is outside read authority")
+                            domains[key[0]] = owner
+                            if len(domains) > EVIDENCE_DISCOVERY_MAX_KNOWLEDGE_OWNERS:
+                                raise GuardRejected("Evidence discovery Knowledge-owner limit exceeded")
+                            typed_targets.append(key)
+                        records.append((path, document["id"], item, typed_targets))
+
+                    owners = []
+                    ref_maps = {}
+                    for domain, path in sorted(domains.items()):
+                        if path not in inventory:
+                            owners.append({"path": path, "state": "absent", "version_token": None})
+                            ref_maps[domain] = {}
+                            continue
+                        document, item = read_document(path, "learner_knowledge")
+                        revision = document.get("revision")
+                        if document.get("schema_version") != "0.3" or not isinstance(revision, int) or isinstance(revision, bool) or revision < 1:
+                            raise GuardRejected("Evidence discovery Knowledge schema or revision is malformed")
+                        ref_maps[domain] = self._knowledge_evidence_ref_map(document, label="discovery", allow_legacy_duplicates=True)
+                        for concept in document["concepts"].values():
+                            for claim in concept.get("capabilities", {}).values():
+                                if not isinstance(claim.get("state"), str) or claim["state"] not in {"provisional", "supported", "conflicted", "unsupported"}:
+                                    raise GuardRejected("Evidence discovery Knowledge state is malformed")
+                                if not isinstance(claim.get("confidence"), str) or claim["confidence"] not in {"low", "medium", "high"}:
+                                    raise GuardRejected("Evidence discovery Knowledge confidence is malformed")
+                        owners.append({"path": path, "state": "present", "version_token": item.version_token})
+                    evidence = []
+                    for path, evidence_id, item, targets in records:
+                        references = []
+                        for domain, concept, capability in targets:
+                            sides = [side for side in ("support", "challenge")
+                                     if evidence_id in ref_maps[domain].get((domain, concept, capability, side), ())]
+                            references.append({
+                                "target": {"type": "capability", "domain": domain, "concept": concept, "capability": capability},
+                                "knowledge_path": domains[domain],
+                                "reference_status": "referenced" if sides else "not_referenced_by_current_knowledge",
+                                "sides": sides,
+                            })
+                        evidence.append({"path": path, "content": item.content, "version_token": item.version_token,
+                                         "knowledge_references": references})
+                    release_attempted = True
+                    self._release_materializations([authority.snapshot])
+                    self._assert_pinned_instance_current(state, authority)
+                    self.guard.assert_snapshot_current(state.deployment, deployment, require_active=False)
+                    return {"recipe_version": "bound-evidence-discovery-v1",
+                            "scope": {"topic": state.binding.topic, "subtopic": state.binding.subtopic},
+                            "coverage": "all_context_matches_in_bounded_snapshot",
+                            "evidence": evidence, "knowledge_owners": owners}
+                finally:
+                    if not release_attempted:
                         self._release_materializations([authority.snapshot])
 
     def _authorize_learning_checkpoint_noop(
