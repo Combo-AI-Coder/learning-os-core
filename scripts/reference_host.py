@@ -23,9 +23,10 @@ from scripts.runtime_broker import (
     RuntimeSessionBroker,
 )
 
-REFERENCE_HOST_SURFACE_VERSION = "v2"
+REFERENCE_HOST_SURFACE_VERSION = "v3"
 REFERENCE_HOST_OPERATIONS = frozenset({
     "read_learning_context",
+    "discover_learning_evidence",
     "save_learning_checkpoint",
     "create_evidence",
     "reconcile_knowledge",
@@ -206,6 +207,10 @@ class ReferenceLearningHost:
                     "missing_optional": list(bundle.missing_optional),
                 }
                 return self._success(operation, result)
+
+            if operation == "discover_learning_evidence":
+                _exact_keys(arguments, required=frozenset(), where="discover_learning_evidence arguments")
+                return self._success(operation, self._broker.discover_learning_evidence(self._session))
 
             if operation == "save_learning_checkpoint":
                 _exact_keys(
