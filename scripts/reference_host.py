@@ -17,6 +17,7 @@ from scripts.runtime_adapter import (
 )
 from scripts.runtime_broker import (
     DeploymentWriteAdmission,
+    LEARNING_CONTEXT_MAX_DOCUMENTS,
     LearningRuntimeSession,
     RuntimeCapabilityPolicy,
     RuntimeSessionBroker,
@@ -177,12 +178,17 @@ class ReferenceLearningHost:
                     optional=frozenset({"optional_paths"}),
                     where="read_learning_context arguments",
                 )
-                required_paths = _string_list(
-                    arguments["required_paths"], "required_paths"
-                )
-                optional_paths = _string_list(
-                    arguments.get("optional_paths", []), "optional_paths"
-                )
+                required = arguments["required_paths"]
+                optional = arguments.get("optional_paths", [])
+                # Admit both arrays before scanning or copying either one.
+                if not isinstance(required, list) or not isinstance(optional, list):
+                    raise ResolutionError("learning context paths must be arrays")
+                if len(required) + len(optional) > LEARNING_CONTEXT_MAX_DOCUMENTS:
+                    raise ResolutionError(
+                        "learning context path count exceeds the bounded limit"
+                    )
+                required_paths = _string_list(required, "required_paths")
+                optional_paths = _string_list(optional, "optional_paths")
                 bundle = self._broker.read_learning_context(
                     self._session,
                     required_paths=required_paths,

@@ -1,6 +1,8 @@
 import json
+import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 import yaml
@@ -11,6 +13,7 @@ from scripts.reference_host import (
 )
 from scripts.runtime_broker import (
     DeploymentWriteGate,
+    LEARNING_CONTEXT_MAX_DOCUMENTS,
     RuntimeCapabilityPolicy,
 )
 from tests.test_runtime_broker import (
@@ -67,6 +70,93 @@ class ReferenceLearningHostTests(unittest.TestCase):
             "operation": operation,
             "arguments": arguments,
         })
+
+    def assert_guard_rejection_without_writes(self, result):
+        self.assertEqual(
+            {"code": "guard_rejected", "retryable": False}, result["error"]
+        )
+        self.assertFalse(result["ok"])
+        self.assertFalse(any(call[0] in {"create", "update"}
+                             for call in self.provider.calls))
+
+    def test_context_combined_limit_precedes_iteration_and_provider_io(self):
+        class UnscannableList(list):
+            def __iter__(self):
+                raise AssertionError("oversized paths must not be scanned or copied")
+
+        limit = LEARNING_CONTEXT_MAX_DOCUMENTS
+        for required_count, optional_count in ((limit + 1, 0), (0, limit + 1),
+                                                (limit, 1), (1, limit)):
+            with self.subTest(required=required_count, optional=optional_count):
+                self.provider.calls.clear()
+                result = self.invoke(
+                    "read_learning_context",
+                    required_paths=UnscannableList([READ_PATH] * required_count),
+                    optional_paths=UnscannableList([READ_PATH] * optional_count),
+                )
+                self.assertFalse(result["ok"])
+                self.assertEqual("resolution_failed", result["error"]["code"])
+                self.assertEqual([], self.provider.calls)
+
+    def test_context_combined_limit_allows_exact_boundary(self):
+        optional = [f"learner/missing-{i}.yaml"
+                    for i in range(LEARNING_CONTEXT_MAX_DOCUMENTS - 1)]
+        result = self.invoke("read_learning_context", required_paths=[READ_PATH],
+                             optional_paths=optional)
+        self.assertTrue(result["ok"])
+        self.assertEqual(optional, result["result"]["missing_optional"])
+
+    def test_candidate_yaml_scalar_errors_have_stable_public_envelopes(self):
+        invalid_scalars = ["9999-99-99", "null\n9999-99-99: invalid key"]
+        digit_limit = getattr(sys, "get_int_max_str_digits", lambda: 0)()
+        if digit_limit:
+            invalid_scalars.append("!!int " + "9" * (digit_limit + 100))
+        for operation, content in (("create_evidence", typed_evidence()),
+                                   ("reconcile_knowledge", knowledge_candidate())):
+            for invalid_scalar in invalid_scalars:
+                with self.subTest(operation=operation, scalar=invalid_scalar[:20]):
+                    self.provider.calls.clear()
+                    arguments = {"content": content + "invalid: " + invalid_scalar + "\n"}
+                    if operation == "reconcile_knowledge":
+                        arguments["expected_version_token"] = "e" * 40
+                    result = self.invoke(operation, **arguments)
+                    self.assert_guard_rejection_without_writes(result)
+                    self.assertEqual([], self.provider.calls)
+
+    def test_candidate_yaml_overflow_has_stable_public_envelope(self):
+        # Constructor overflow is platform/scalar dependent; simulate only the
+        # load step, leaving bounded preflight and the public operation intact.
+        with mock.patch("scripts.runtime_broker.yaml.safe_load",
+                        side_effect=OverflowError("private scalar details")):
+            for operation in ("create_evidence", "reconcile_knowledge"):
+                arguments = {"content": "document_type: evidence\n"}
+                if operation == "reconcile_knowledge":
+                    arguments["expected_version_token"] = "e" * 40
+                result = self.invoke(operation, **arguments)
+                self.assert_guard_rejection_without_writes(result)
+                self.assertNotIn("private scalar details", json.dumps(result))
+
+    def test_persisted_yaml_scalar_errors_have_stable_public_envelopes(self):
+        evidence_path = f"evidence/{KNOWLEDGE_EVIDENCE_ID}.yaml"
+        for location in ("existing_evidence", "referenced_evidence", "current_knowledge"):
+            with self.subTest(location=location):
+                self.provider.docs[evidence_path] = typed_evidence()
+                self.provider.blobs[evidence_path] = "3" * 40
+                self.provider.docs[READ_PATH] = yaml.safe_dump({
+                    "schema_version": "0.3", "document_type": "learner_knowledge",
+                    "revision": 1, "domain": "synthetic", "concepts": {},
+                })
+                path = READ_PATH if location == "current_knowledge" else evidence_path
+                self.provider.docs[path] += "invalid: 9999-99-99\n"
+                before = dict(self.provider.docs)
+                self.provider.calls.clear()
+                if location == "existing_evidence":
+                    result = self.invoke("create_evidence", content=typed_evidence())
+                else:
+                    result = self.invoke("reconcile_knowledge", content=knowledge_candidate(),
+                                         expected_version_token="e" * 40)
+                self.assert_guard_rejection_without_writes(result)
+                self.assertEqual(before, self.provider.docs)
 
     def test_surface_is_narrow_and_excludes_generic_or_continuity_writes(self):
         self.assertEqual(
