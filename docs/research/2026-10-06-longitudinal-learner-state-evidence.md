@@ -1,0 +1,194 @@
+# Longitudinal learner-state evidence for state-sensitive tutoring
+
+Date: 2026-10-06  
+Status: external research input for Learning OS Core issue #34; not product acceptance, deployment authority, learner-state mutation authority, or schema authorization.
+
+## Research question
+
+For a long-running, cross-session AI tutor, which learner-state signals are worth persisting because they can reasonably change the next teaching action, and what is an evidence-backed minimal sufficient learner model?
+
+The completed Chat Deep Research covered classic ITS / learner modeling / knowledge tracing / learning science and recent LLM-tutoring work. This writeback does **not** rerun external research. It preserves the completed report's durable findings, project implications, and important source-quality limits.
+
+## Executive synthesis
+
+1. **Persist only state with plausible decision value.** The strongest candidate class is concept/skill-level knowledge state tied to concrete actions such as review vs advance, problem selection, difficulty, and diagnostic probing. A learner model that cannot change a teaching decision should not be retained merely because it is inferable.
+2. **Time matters.** Recency/spacing/forgetting should change review decisions; old demonstrations should not remain permanent learner truth. The evidence base for spacing is strong at the learning-science level, though the completed report did not directly verify the primary Cepeda source and instead cited a secondary summary.
+3. **One observation is weak evidence.** A single error, guess, typo, assisted solution, or transient affective signal should not permanently rewrite learner state. Repeated, independent evidence should carry more weight than duplicate or highly assisted observations.
+4. **Assisted success is not equivalent to independent success.** Hint/scaffolding history is useful mainly as a qualifier on interpretation and next-action choice. The report found mixed evidence on whether explicit scaffolding variables improve knowledge-tracing prediction, so persistence of detailed assistance history remains a bounded candidate rather than a settled requirement.
+5. **Misconceptions and error patterns can be decision-relevant when they are stable and domain-grounded.** They are most defensible in domains with validated misconception/bug taxonomies; evidence for a generic cross-domain "misconception state" is much weaker.
+6. **Confidence, goals, motivation, engagement, and affect have weaker causal evidence as longitudinal teaching-policy inputs.** They may be useful for diagnostics, framing, or session-level intervention, but the completed report did not establish that broadly adapting content sequence to these signals improves durable learning.
+7. **Learner preferences are not a general pedagogical control signal.** The completed report supports invariance to claimed learning styles and similarly weakly grounded traits. Preference can still be respected as UX choice, but should not be conflated with evidence that a different pedagogy improves learning.
+8. **Over-personalization is a real failure mode.** Personalized environments can narrow information search or reinforce biased knowledge boundaries. Low-confidence or irrelevant state should therefore leave teaching invariant rather than force a visibly personalized detour.
+9. **For Learning OS, the most important architectural implication is separation of observation, evidence, and interpreted mastery/capability state.** Later correction should reinterpret prior evidence without fabricating a second independent performance or erasing history.
+10. **Evaluation must test learning, not personalization appearance.** State-sensitive paired cases, irrelevant-state invariance cases, structured-state ablations, strong-summary controls, calibration checks, and delayed retention/transfer are higher-value than exact wording comparisons or LLM-only response ratings.
+
+## Learner-state evidence matrix
+
+| State / signal | Reasonable teaching actions | Evidence disposition | Important failure modes / conditions |
+| --- | --- | --- | --- |
+| Skill/concept knowledge or mastery estimate | review vs advance; problem selection; difficulty; diagnostic probe; prerequisite revisit | **Strong candidate** | Requires valid knowledge decomposition and calibrated uncertainty. The completed report overreached when it used a general tutoring meta-analysis as if it isolated mastery adaptation; mechanism-specific primary evidence still needs direct verification. |
+| Recency / spacing / forgetting | review timing; interleaving; revisit old material | **Strong candidate** | Broad learning-science support is strong, but this run used an indirect source for Cepeda et al.; exact decay function and thresholds are not established here. |
+| Recent independent performance plus longer history | challenge level; pause/advance; request more evidence | **Strong candidate** | One recent outcome is noisy; duplicated items and correlated attempts should not be treated as independent evidence. |
+| Hint / assistance usage; assisted vs independent success | scaffold amount; request independent retry; weaken confidence in mastery update | **Conditionally useful** | A cited EDM study reported no predictive gain from adding scaffolding parameters in one BKT setting. This supports caution, not the conclusion that assistance history is useless. |
+| Repeated misconception / error pattern | targeted explanation; contrast case; prerequisite diagnostic | **Conditionally useful** | Strongest only when the domain has a validated misconception taxonomy. Generic inferred "misconceptions" risk overfitting. |
+| Self-reported confidence / uncertainty | metacognitive probe; ask learner to justify; targeted diagnostic | **Conditionally useful / often ephemeral** | Self-report can be miscalibrated; the completed report found little direct ITS evidence that confidence-driven adaptation improves learning outcomes. |
+| Prior knowledge / prerequisite state | initial placement; skip/review prerequisites; diagnostic targeting | **Conditionally useful** | Must be verified rather than assumed. Incorrect placement can skip needed material. |
+| Goals | route/content relevance; framing; longer-horizon content choice | **Conditionally useful** | Useful for route intent, but the completed report did not establish broad causal evidence that declared goals should change moment-to-moment pedagogy. |
+| Motivation / engagement / affect | tone; pacing; encouragement; whether to diagnose disengagement | **Mostly session-level / conditional** | Detection is noisy; recent evidence in the report was largely correlational/SEM rather than causal learner-state adaptation. Avoid content detours based on a single inferred mood. |
+| Learning style / modality preference as pedagogical trait | none for core teaching policy | **Weak / unsupported** | The completed report supports invariance: matching pedagogy to fixed "learning style" lacks evidence. UX preferences should be kept distinct from claims about learning effectiveness. |
+| Irrelevant profile traits or low-confidence LLM-inferred traits | none | **Invariant / do not drive pedagogy** | Risk of spurious personalization, stereotyping, and unstable behavior. |
+
+## Sensitivity vs invariance findings
+
+### State differences that should be candidates to change the next action
+
+For #34 synthetic and later real-learning evaluation, the strongest candidate contrasts are:
+
+- clear difference in skill/concept evidence, not one isolated outcome;
+- independent success vs success only after substantial assistance;
+- recent repeated failure vs a stable longer-term record of independent success;
+- long time since last demonstrated competence vs recent independent competence;
+- repeated, domain-grounded error pattern vs no such pattern;
+- materially different prerequisite evidence.
+
+The expected action difference should be evaluated as an **acceptable action set**, not exact prose. Examples include review/probe vs advance, lower vs higher scaffolding, prerequisite diagnosis vs target-skill practice, or scheduled review vs no review.
+
+### State differences that should usually leave teaching invariant
+
+The tutor should normally remain invariant to:
+
+- claimed learning style or fixed modality type;
+- unrelated demographic/profile details;
+- stale context that no longer bears on the current concept;
+- a single typo/guess/anomalous error;
+- a low-confidence LLM inference of boredom, motivation, or personality;
+- decorative personalization context that cannot plausibly change the pedagogical decision.
+
+When learner state is uncertain, the robust action is usually to **probe uncertainty** or choose a safe middle action rather than committing to a strong personalized path.
+
+## Longitudinal update and correction
+
+The research supports the following semantic constraints without specifying a storage schema:
+
+- **Observation is not mastery.** Keep source behavior separate from its interpretation.
+- **Evidence should preserve provenance and assistance conditions.** A correct answer after hints and a clean independent answer are different observations even when the visible task result is "correct."
+- **Interpretation should remain revisable.** Later correction such as "I used a hint" should narrow/reopen the earlier judgment without deleting the original observation or inventing another independent failure.
+- **Evidence ages.** Long-unrefreshed competence should become less decision-authoritative for readiness without pretending the learner "never knew" it.
+- **Repeated evidence is not automatically independent.** Same-item repetition, copied work, or tightly scaffolded retries should add less confidence than varied independent demonstrations.
+- **One behavior can support multiple claim-specific interpretations.** A single performance may bear on multiple knowledge components; the system should not force deterministic one-event-to-one-skill attribution.
+- **Unknown remains valid.** If the available evidence does not distinguish "forgotten", "never mastered", "misread", "used help", or "conceptually confused", the next action can be a diagnostic rather than a permanent classification.
+
+These constraints align directly with #34's existing recovery/correction requirements and should be treated as research support for those semantics, not as a new implementation mandate.
+
+## Evidence-backed minimal sufficient learner model: recommended disposition
+
+### Strongly justified candidates to persist and allow to affect teaching
+
+- concept/skill-level knowledge or capability estimate **with uncertainty**;
+- recency/time since relevant evidence sufficient to support review/forgetting decisions;
+- recent independent performance in context of longer history;
+- provenance needed to distinguish independent vs assisted performance.
+
+### Conditionally useful candidates
+
+- stable, domain-grounded misconception/error pattern;
+- prerequisite/prior-knowledge evidence;
+- goals when they affect route/content selection rather than moment-to-moment teaching;
+- confidence when explicitly elicited for a diagnostic/metacognitive purpose;
+- engagement/motivation indicators only when reliable and tied to a bounded intervention.
+
+### Ephemeral / session-level by default
+
+- momentary affect;
+- one-off hesitation, typo, or isolated anomaly;
+- low-confidence engagement/motivation inference;
+- transient presentation choices that do not establish learning effectiveness.
+
+### Weak / unsupported as pedagogical state
+
+- fixed "learning style";
+- personality-type style labels;
+- unrelated profile traits;
+- any weakly inferred trait that is not validated against a concrete teaching decision and learning outcome.
+
+## Product impact for Core issue #34
+
+This research does **not** justify a new learner schema. It does sharpen the validation target already declared by #34:
+
+1. Build **state-sensitive paired cases** where only a decision-relevant state changes, especially mastery evidence, assistance provenance, repeated performance, and recency.
+2. Build **irrelevant-state invariance cases** where learning-style labels, unrelated profile fields, stale context, or noisy inferred affect change but the acceptable next-action set should not.
+3. Add a **strong-summary control** containing the same permitted facts in a competent narrative summary so structured state must beat or match a fair baseline rather than a weak control.
+4. Add a **structured-state ablation** removing the state under test; require a meaningful decision-quality difference before treating the state as valuable.
+5. Include **uncertainty cases** where probing is acceptable and forced personalization is not.
+6. For later real-user work, measure **delayed retention/transfer**, not only tutor-task correctness, engagement, human-rated response quality, or automated LLM grading.
+7. Keep correction semantics consistent with #34: reinterpret one source occurrence without rewriting history or double-counting it.
+
+Disposition:
+- **Absorb as test/evaluation constraints:** sensitivity, invariance, uncertainty handling, assisted-vs-independent distinction, observation/evidence/interpretation separation.
+- **Keep as candidates:** exact persisted state classes, mastery thresholds, decay functions, misconception taxonomies, motivation/goal persistence rules.
+- **Do not absorb as product facts:** any claim that more memory is better, that human-like tutoring is more effective, or that a particular LLM-generated personalization style improves learning.
+
+## Important uncertainty, conflicts, and freshness limits
+
+The completed Deep Research produced useful synthesis, but its citation quality was uneven. These limits are material:
+
+- The cited Nickow et al. tutoring meta-analysis supports tutoring outcomes in general; it does **not by itself isolate skill-level mastery adaptation**. Any stronger use would require mechanism-specific primary sources.
+- The spacing conclusion is well established in learning science, but the completed report cited a Wikipedia summary of Cepeda et al. rather than directly verifying the primary paper.
+- The learning-styles conclusion is consistent with a large skeptical literature, but the completed run cited a secondary "Studies Suggest" summary rather than directly verifying Pashler et al. 2008.
+- The assistance/scaffolding result comes from a specific BKT/EDM context and should not be generalized into "hint history has no value."
+- The 2026 gamification evidence is structural-equation/correlational evidence about engagement/motivation mediation, not a randomized test showing that momentary affect state should drive teaching actions.
+- Recent LLM-tutor evidence in the report is sparse, often small-sample or preprint, and does not robustly isolate the causal value of longitudinal learner-state personalization.
+- The reported personalization-bias study is relevant as a warning, but generalization from its task/environment to longitudinal AI tutoring remains uncertain.
+- No evidence in the completed report establishes one universal mastery threshold, one forgetting function, or one optimal "minimal model" across domains.
+
+These gaps mean the recommended model is an **evidence-backed candidate minimum**, not a settled universal learner model.
+
+## Sources preserved from the completed Deep Research
+
+### Reviews / meta-analysis / secondary synthesis
+
+- Nickow, Oreopoulos & Quan, *The Impressive Effects of Tutoring on PreK-12 Learning: A Systematic Review and Meta-Analysis of the Experimental Evidence*  
+  https://edworkingpapers.com/sites/default/files/ai20-267.pdf  
+  Use here only for broad tutoring-outcome context; it does not isolate learner-state adaptation.
+
+- Spacing-effect summary citing Cepeda et al. (secondary source used by the completed run)  
+  https://en.wikipedia.org/wiki/Spacing_effect  
+  Primary-source verification remains a follow-up gap.
+
+- "Learning styles" evidence summary used by the completed run (secondary source)  
+  https://studiessuggest.org/stories/learning-styles-no-evidence-matching-instruction  
+  The report named Pashler et al. 2008, but that primary source was not directly verified in the completed run.
+
+### Primary / empirical or conference evidence used by the completed run
+
+- Sao Pedro et al., EDM 2013 paper on scaffolding and Bayesian Knowledge Tracing  
+  https://learninganalytics.upenn.edu/ryanbaker/SaoPedroetalEDM2013_Final.pdf
+
+- Personalization-bias study PDF cited by the completed run  
+  https://turner-mbcn.com/wp-content/uploads/2025/11/2026-31272-001-1.pdf  
+  Bibliographic metadata was incomplete in the returned report; treat as a warning signal pending source reconciliation.
+
+- Frontiers 2026, *AI-driven gamification and inclusive learning outcomes in higher education institutions: a structural equation modeling approach*  
+  https://www.frontiersin.org/journals/computer-science/articles/10.3389/fcomp.2026.1876544/full  
+  Treat as observational/SEM evidence, not causal proof of affect-state adaptation.
+
+### Recent LLM / learner-model evidence
+
+- Stanford SCALE summary, *Faster, Cheaper, More Accurate: Specialised Knowledge Tracing Models Outperform LLMs*  
+  https://scale.stanford.edu/ai/repository/faster-cheaper-more-accurate-specialised-knowledge-tracing-models-outperform-llms  
+  Relevant to prediction-task model choice; not direct evidence that a specific tutoring action improves learning.
+
+- KG-RAG adaptive tutor paper/preprint summary, controlled experiment with 76 students  
+  https://www.alphaxiv.org/abs/2311.17696  
+  Promising but small and not sufficient to establish the value of each longitudinal learner-state class.
+
+## Remaining highest-value research gaps
+
+1. Direct primary-source evidence isolating **mastery-state-driven action selection** rather than overall tutoring effectiveness.
+2. RCT/field evidence separating the value of **assistance history** from generic performance history.
+3. Controlled evidence for **misconception-state adaptation** and whether the benefit generalizes beyond domains with explicit bug libraries.
+4. Causal evidence for acting on **confidence, motivation, engagement, or affect** rather than merely predicting outcomes from them.
+5. Longitudinal LLM-tutor experiments with state ablations, strong-summary controls, delayed retention/transfer, and calibration.
+6. Evidence for robust update rules under **correlated observations, self-correction, multi-skill ambiguity, and stale state**.
+
+Until those gaps are closed, #34 should use the research primarily to constrain **what must be sensitive, what must remain invariant, and what should be evaluated under uncertainty**, not to freeze a universal learner-model design.
