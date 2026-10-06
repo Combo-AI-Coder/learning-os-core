@@ -1,0 +1,3 @@
+# Frozen evaluation fixtures are byte-identity evidence. Preserve their exact
+# blob bytes instead of applying platform-specific line-ending conversions.
+fixtures/** -text
