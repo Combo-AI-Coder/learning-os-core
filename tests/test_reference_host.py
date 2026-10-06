@@ -203,6 +203,21 @@ class ReferenceLearningHostTests(unittest.TestCase):
                     result = self.invoke("create_evidence", content="\n".join(lines) + "\n")
                     self.assert_guard_rejection_without_writes(result)
 
+    def test_new_evidence_timestamp_ignores_non_string_key_decoys(self):
+        for index, decoy in enumerate(("2026-10-05T12:00:00Z", "{nested: value}", "[item]")):
+            for actual in ("not-a-time", "2026-10-05T12:00:00+01:99", "2026-10-05T12:00:00Z"):
+                with self.subTest(decoy=decoy, actual=actual):
+                    candidate = yaml.safe_load(typed_evidence(evidence_id=f"evi-decoy-{index}"))
+                    candidate["observed_at"] = actual
+                    content = "!!null observed_at: " + decoy + "\n" + yaml.safe_dump(candidate)
+                    self.provider.calls.clear()
+                    result = self.invoke("create_evidence", content=content)
+                    if actual.endswith("Z"):
+                        self.assertTrue(result["ok"])
+                        self.assertTrue(result["result"]["applied"])
+                    else:
+                        self.assert_guard_rejection_without_writes(result)
+
     def test_new_evidence_accepts_valid_iso_timestamp_profiles(self):
         for index, timestamp in enumerate(("2026-10-05T12:00:00Z",
                 "2026-10-05T12:00:00+08:00", "2026-10-05T12:00:00-03:30",

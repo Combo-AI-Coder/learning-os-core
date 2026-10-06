@@ -2477,7 +2477,10 @@ class RuntimeSessionBroker:
         # scalar for new records only; preflight has already bounded this YAML
         # and rejected duplicate/non-scalar mapping keys and aliases.
         root = yaml.compose(content, Loader=yaml.SafeLoader)
-        scalar = next(value for key, value in root.value if key.value == "observed_at")
+        scalar = next(
+            value for key, value in root.value
+            if key.tag == "tag:yaml.org,2002:str" and key.value == "observed_at"
+        )
         timestamp = scalar.value
         match = re.fullmatch(
             r"(?:[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{8}|[0-9]{4}-?W[0-9]{2}(?:-?[0-9])?)"
