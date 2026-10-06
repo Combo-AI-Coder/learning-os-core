@@ -25,7 +25,7 @@ manifest:
   release: "0.4.0"
   # Runtime broker may use host-local mutation semantics only when this exact
   # deployed-Core semantic fingerprint matches; policy drift fails closed.
-  runtime_session_write_policy_fingerprint: "02797115a595443075323a1ad59334308e885fb7dd58a6f862a5a931d86765ea"
+  runtime_session_write_policy_fingerprint: "36c21b2c392722cc9489955f92255e151adaaea8f939aa5096939b674a6fb605"
   # Version-axis glossary (V0.4-B2-B, G8 decisions D1/D3):
   #   schema_version (top level)      = Core config CONTRACT schema (this
   #                                     document; V0.4-only contract -> 0.4).

@@ -158,6 +158,67 @@ class ReferenceLearningHostTests(unittest.TestCase):
                 self.assert_guard_rejection_without_writes(result)
                 self.assertEqual(before, self.provider.docs)
 
+    def test_new_evidence_requires_observation_content_and_valid_time(self):
+        invalid_values = {
+            "observation": (None, "", "  ", {}, {"kind": "synthetic"},
+                            {"summary": None}, {"summary": "  "}, [], 42),
+            "observed_at": (None, "", "  ", "not-a-time", "9999-99-99T00:00:00Z",
+                            "2026-10-05", True, 42, {}),
+        }
+        for field, values in invalid_values.items():
+            for value in values:
+                with self.subTest(field=field, value=value):
+                    candidate = yaml.safe_load(typed_evidence())
+                    candidate[field] = value
+                    self.provider.calls.clear()
+                    before = dict(self.provider.docs)
+                    result = self.invoke("create_evidence", content=yaml.safe_dump(candidate))
+                    self.assert_guard_rejection_without_writes(result)
+                    self.assertEqual(before, self.provider.docs)
+        for field in invalid_values:
+            with self.subTest(missing=field):
+                candidate = yaml.safe_load(typed_evidence())
+                del candidate[field]
+                self.provider.calls.clear()
+                self.assert_guard_rejection_without_writes(
+                    self.invoke("create_evidence", content=yaml.safe_dump(candidate))
+                )
+
+    def test_new_evidence_accepts_string_and_structured_observations(self):
+        for index, observation in enumerate(("observed explanation", {"summary": "observed explanation"})):
+            candidate = yaml.safe_load(typed_evidence(evidence_id=f"evi-valid-{index}"))
+            candidate["observation"] = observation
+            result = self.invoke("create_evidence", content=yaml.safe_dump(candidate))
+            self.assertTrue(result["ok"])
+            self.assertTrue(result["result"]["applied"])
+
+    def test_legacy_null_evidence_read_retry_and_reconciliation_remain_compatible(self):
+        candidate = yaml.safe_load(typed_evidence())
+        candidate["observation"] = None
+        candidate["observed_at"] = None
+        content = yaml.safe_dump(candidate)
+        path = f"evidence/{KNOWLEDGE_EVIDENCE_ID}.yaml"
+        self.provider.docs[path] = content
+        self.provider.blobs[path] = "3" * 40
+        read = self.invoke("read_learning_context", required_paths=[path])
+        self.assertTrue(read["ok"])
+        self.assertEqual(content, read["result"]["documents"][0]["content"])
+        retry = self.invoke("create_evidence", content=content)
+        self.assertTrue(retry["ok"])
+        self.assertFalse(retry["result"]["applied"])
+        reconciled = self.invoke("reconcile_knowledge", content=knowledge_candidate(),
+                                 expected_version_token="e" * 40)
+        self.assertTrue(reconciled["ok"])
+        self.assertEqual(content, self.provider.docs[path])
+
+    def test_legacy_style_id_cannot_bypass_new_evidence_admission(self):
+        candidate = yaml.safe_load(typed_evidence(evidence_id="evt_legacy_style"))
+        candidate["observed_at"] = None
+        self.provider.calls.clear()
+        self.assert_guard_rejection_without_writes(
+            self.invoke("create_evidence", content=yaml.safe_dump(candidate))
+        )
+
     def test_surface_is_narrow_and_excludes_generic_or_continuity_writes(self):
         self.assertEqual(
             {

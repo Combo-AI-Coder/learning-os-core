@@ -33,6 +33,9 @@ The successful read result contains only canonical document paths, document cont
 
 Write operations return only `{"applied": <bool>}`. Commit messages are host-generated rather than model-controlled.
 
+`create_evidence` rejects newly materialized records with empty observation content or an invalid/missing observation date-time. A non-blank string observation or a mapping with non-blank `summary` is accepted. Legacy reads and identical retries of already persisted records remain compatible; the check is not applied as a retroactive whole-Instance validator. This admission change is fenced by the dedicated `create_evidence` operation version `v2`.
+
+
 `save_learning_checkpoint` is deliberately narrower than generic Progress replacement. It derives the canonical Progress path from the host-bound Main Topic/Subtopic and accepts only the local checkpoint fields `milestone`, `return_point`, and `ready_next`, plus the version token obtained from the prior read. The broker preserves unrelated Progress fields, advances the document revision only when the local checkpoint changes, and retains the existing deployment / generation / head / blob fences.
 
 Expected broker failures use stable public codes:

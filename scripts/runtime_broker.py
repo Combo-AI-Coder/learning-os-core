@@ -2450,6 +2450,33 @@ class RuntimeSessionBroker:
             )
         return data, path
 
+    @staticmethod
+    def _assert_new_evidence_observation(candidate: dict) -> None:
+        """Admit meaningful new observations without revalidating legacy history."""
+        observation = candidate.get("observation")
+        summary = observation.get("summary") if isinstance(observation, dict) else observation
+        if not isinstance(summary, str) or not summary.strip():
+            raise GuardRejected(
+                "new Evidence requires non-empty observation text or observation.summary"
+            )
+        observed_at = candidate.get("observed_at")
+        if isinstance(observed_at, str):
+            # ISO 8601 dates alone are not observation timestamps. Accept the
+            # existing string and YAML-native datetime representations without
+            # inventing a timezone or normalizing boundary dates through UTC.
+            if not any(separator in observed_at for separator in ("T", "t", " ")):
+                raise GuardRejected("new Evidence requires a valid observed_at timestamp")
+            try:
+                observed_at = datetime_module.datetime.fromisoformat(
+                    observed_at.replace("Z", "+00:00")
+                )
+            except (ValueError, OverflowError):
+                raise GuardRejected(
+                    "new Evidence requires a valid observed_at timestamp"
+                ) from None
+        if not isinstance(observed_at, datetime_module.datetime):
+            raise GuardRejected("new Evidence requires a valid observed_at timestamp")
+
     def create_evidence(
         self,
         session: LearningRuntimeSession,
@@ -2497,6 +2524,8 @@ class RuntimeSessionBroker:
                                 "Evidence id already exists with different content"
                             )
                         existing_matches = True
+                    else:
+                        self._assert_new_evidence_observation(candidate)
 
                     core = self.provider.materialize(
                         state.deployment.core_repository_id,

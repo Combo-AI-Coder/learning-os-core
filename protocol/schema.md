@@ -653,6 +653,11 @@ Observation, interpretation, capability target, and learning context are distinc
 
 Legacy `evt_*` evidence remains immutable and valid.
 
+The ordinary Runtime `create_evidence` operation admits a previously absent record only when `observation` is a non-blank string or a mapping with a non-blank string `summary`, and `observed_at` is a valid ISO 8601 date-time (string or YAML timestamp). Null, blank, date-only, and malformed times are rejected; the Runtime does not invent a missing time or timezone. This minimum admission rule does not infer diagnosticity or validate the truth of the observation.
+
+This is a new-record write boundary, not a retrospective schema migration. Existing immutable Evidence remains readable and available to existing reconciliation rules, and an identical create retry remains a no-op under the usual validation and CAS fences. Historical records are not rewritten or globally invalidated for missing observation content/time. Newly created records, including those using a legacy-style id, must satisfy the new-record rule.
+
+
 ## 22. Branch registry/runtime/report
 
 Topic coordination lives under `topics/<topic>/coordination/` and is lazy-materialized.

@@ -3793,7 +3793,8 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         with mock.patch.object(
             validate_learning_os,
             "INSTANCE_DEDICATED_RUNTIME_OPERATIONS",
-            {},
+            {**validate_learning_os.INSTANCE_DEDICATED_RUNTIME_OPERATIONS,
+             "create_evidence": "v1"},
         ):
             legacy_fingerprint = (
                 validate_learning_os.instance_write_policy_fingerprint()
