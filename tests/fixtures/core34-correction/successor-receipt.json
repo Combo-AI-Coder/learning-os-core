@@ -1,0 +1,8 @@
+{
+  "id": "c04",
+  "predecessor": "c01",
+  "input_owner": "mechanical-replay.json:c01.fresh_successor_packet_sha256",
+  "response_bytes_sha256": "12fae5fcef62f90b61dcd7b3e6e09be29fdfaf3274fffcdd612f0bcc59f5a61b",
+  "dispatch": "new native consumer context; packet only; no producer transcript or predecessor answer",
+  "boundary": "read-only answer; no request replay because host_requests is empty"
+}

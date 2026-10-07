@@ -1,0 +1,5 @@
+{
+  "next_action": "Compare these prefixes: “Above the marsh, the crane” and “At the building site, the crane”. Treat the final “crane” as the same vocabulary token in both. Suggest a plausible next word for each and explain which details make your choices plausible. If a predictor received only the final token’s vocabulary ID, could it favor different next words for these two cases? Explain what information it would need to make that distinction.",
+  "basis": "Knowledge revision 3 records provisional label recall and no explanation claim. The original correct explanation was later reported as hint-assisted; this leaves independent explanation unestablished, rather than showing inability. The planned comparison can naturally elicit the needed reasoning. No new performance or unintegrated material correction justifies a durable Knowledge update.",
+  "host_requests": []
+}
