@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "review_scope": "Fresh-context same-model-family semantic artifact review; not independent audit",
+  "prospective_manifest_sha256": "cafc86f7b714f9389f8317c20daedc3ac65a86745e40a65f84866626c3510131",
+  "rubric_frozen_before_consumers": true,
+  "overall": "mixed_bounded_evidence_not_uniform_pass",
+  "cases": [
+    {
+      "id": "c01",
+      "packet_bytes_sha256": "cf15261606b3d569ed227726b1570dec21384ba5908d325085f0dee0a7e70abc",
+      "response_bytes_sha256": "251ffb516c4f3196475e514869d2c1e6b0c2163c59914fd228cf0ea7b898109d",
+      "disposition": "bounded_pass",
+      "criteria_in_manifest_order": [
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass"
+      ],
+      "finding": "Removes the now-unknown explanation claim, preserves label recall, uses no fabricated negative Evidence, and proposes an ordinary unhinted application. The assistance basis is retained in the separately discovered report and recovered by c04; no Knowledge-only rationale is claimed."
+    },
+    {
+      "id": "c02",
+      "packet_bytes_sha256": "9d5b745cf1a4689a6bd25d3430a31cb2478f8a5c1b8814c12b0a075003c250ec",
+      "response_bytes_sha256": "1c65be3e3482fab7af0379bf45767271621a41e61df94d8c7b83952ada11caed",
+      "disposition": "partial_unresolved",
+      "criteria_in_manifest_order": [
+        "pass",
+        "pass",
+        "partial_unresolved",
+        "pass_with_metadata_caveat",
+        "pass",
+        "pass",
+        "pass",
+        "pass"
+      ],
+      "finding": "Narrow no-inability prose is sound, but state unsupported is unresolved against unknown-remains-absent. evidence-integration.md defines unsupported as cannot rely; schema.md and teaching-decision.md distinguish absent/unknown from unsupported. Host admission does not settle this choice."
+    },
+    {
+      "id": "c03",
+      "packet_bytes_sha256": "78943d07651e578140f334bbcc931105fdfcb44847aa01e2605eb2eb5ac7ea4b",
+      "response_bytes_sha256": "8dc40b4bc34a30c96367cf565e7da8b7ea60adfcdd478b8677c9034b0cbdf288",
+      "disposition": "bounded_pass",
+      "criteria_in_manifest_order": [
+        "pass",
+        "pass"
+      ],
+      "finding": "No invented hint or correction, no new performance/mastery/inability, and no state write. It cautiously treats missing assistance information as insufficient proof of independence and continues the planned application."
+    },
+    {
+      "id": "c04",
+      "packet_bytes_sha256": "09dffcf9518dfa804a5e7d5098e7db3ae82819abb09464843a8c44c9be3201fc",
+      "response_bytes_sha256": "12fae5fcef62f90b61dcd7b3e6e09be29fdfaf3274fffcdd612f0bcc59f5a61b",
+      "disposition": "bounded_pass",
+      "criteria_in_manifest_order": [
+        "pass",
+        "pass"
+      ],
+      "finding": "Fresh recovery from c01 persisted documents recovers the report and absent explanation, keeps independent capability unestablished rather than inability, and proposes no duplicate write."
+    }
+  ],
+  "retained_limits": [
+    "Prose names the related original event but no typed relation is enforced",
+    "c01 Knowledge alone cannot explain the removed claim; full discovery recovery was tested",
+    "c02 unknown/unsupported state choice remains unresolved, despite successful host admission",
+    "c02 adds a label_recall updated_at value without changing its substantive claim",
+    "Summary is lossless field-to-prose rendering rather than independently authored abstraction",
+    "One first response per arm; same model family; no structural superiority or real learning-effect claim",
+    "Consumers explicitly asked to consider durable Knowledge updates",
+    "Shared-filesystem blinding is instructional only",
+    "Synthetic provider uses fixed blob/head tokens; simulated drift controls do not establish Git content-addressed fidelity or real concurrency",
+    "All earlier scenarios and failed outputs remain unchanged"
+  ]
+}

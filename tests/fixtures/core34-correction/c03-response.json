@@ -1,0 +1,5 @@
+{
+  "next_action": "Let’s apply the token-ID/context distinction to predicting the next word. Compare these two sentence prefixes, treating ‘bank’ as the same vocabulary token in both: (A) ‘She deposited her paycheck at the bank’ and (B) ‘The canoe drifted toward the river bank’. Suggest one plausible next word for each, then explain which earlier information makes the continuations differ and what must distinguish the two contexts despite the shared final token ID.",
+  "basis": "The recorded sentence-pair response provisionally supports the token-ID/context distinction, so continue with the planned application and observe naturally. The record does not establish independent performance merely because assistance was not mentioned. No new performance or material reinterpretation warrants changing durable Knowledge here.",
+  "host_requests": []
+}
