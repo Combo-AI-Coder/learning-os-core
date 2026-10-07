@@ -1,0 +1,6 @@
+{
+  "source": "unchanged first structured response replay through existing host",
+  "packet_bytes_sha256": "8f23e99c9361875a7547040e1f6e802b2e7a9272130692b0433394a92b78a328",
+  "response_bytes_sha256": "7a55bec3d7351c33a8d940995ce9dba748d46de53fde597b8eb385f322264053",
+  "first_output_only": true
+}

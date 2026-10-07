@@ -1,0 +1,14 @@
+{
+  "case_id": "sole",
+  "next_action": "Compare these two sentence prefixes: ‘She spread her toast with’ and ‘He tightened the bolt with’. Both end in the same vocabulary token, ‘with’. Suggest a plausible next word for each. Then explain what information distinguishes the two contexts, whether the token ID for ‘with’ alone can capture that difference, and what a contextual representation would need to retain. Everyday language is fine.",
+  "basis": "Resume the planned comparison and observe the explanation naturally; no separate diagnostic is needed. The complete supplied portfolio contains only one apparent support for independent explanation, evi-synthetic-answer-001. In evi-synthetic-report-002, the learner concretely identifies a hint that supplied that explanation, while confirming independent recall of the two labels. This neutral report withdraws the independent-explanation support without showing inability. Remove the stale explanation claim so it is absent/unknown; preserve provisional label_recall and the original Evidence. No new performance or capability gain is inferred.",
+  "host_requests": [
+    {
+      "operation": "reconcile_knowledge",
+      "arguments": {
+        "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\nupdated_at: '2026-10-07T02:43:07Z'\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+        "expected_version_token": "9999999999999999999999999999999999999999"
+      }
+    }
+  ]
+}

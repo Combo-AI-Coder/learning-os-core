@@ -1,0 +1,6 @@
+{
+  "case_id": "sole",
+  "next_action": "Let's continue with two sentence prefixes: (A) 'After paddling downstream, we reached the bank' and (B) 'To deposit her cheque, she entered the bank'. Assume 'bank' is one vocabulary token with the same ID in both. Suggest a plausible continuation for each, then explain how the model could prefer different next words after the same final token. Point to the earlier words that distinguish the contexts, and explain what information the model would need beyond the final token's ID; naming the two labels alone is not enough.",
+  "basis": "Continue the planned comparison as a natural opportunity to observe explanation, without a separate prerequisite test. Current Knowledge preserves provisional label recall, supported by the observed naming and the learner's report of independent recall. The sole explanation was hint-assisted, so independent explanation remains unknown and absent, not unsupported. The neutral report is not a challenge or a second performance. Coverage is complete, the existing Knowledge already reflects this distinction, and no new performance or material Knowledge change justifies reconciliation.",
+  "host_requests": []
+}
