@@ -1,0 +1,3 @@
+# Preserve exact historical source bytes frozen by the withdrawn-support check.
+/core34-correction-propagation-plan.md -text
+/core34-correction-propagation-results.md -text

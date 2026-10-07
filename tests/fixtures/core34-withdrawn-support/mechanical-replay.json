@@ -1,0 +1,399 @@
+[
+  {
+    "consumer_id": "structured",
+    "case_id": "sole",
+    "response_bytes_sha256": "f6b4429135ca6952c6fda7bef5916c1c8d18b24eb0984f849e499d020318aa55",
+    "host_results": [
+      {
+        "surface_version": "v3",
+        "ok": true,
+        "operation": "reconcile_knowledge",
+        "result": {
+          "applied": true
+        }
+      }
+    ],
+    "result_documents": [
+      {
+        "path": "learner/knowledge/synthetic.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\nupdated_at: '2026-10-07T02:43:07Z'\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "evidence/evi-synthetic-answer-001.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-report-002.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-report-002\nobserved_at: '2026-10-06T09:15:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner later said about the answer recorded in evi-synthetic-answer-001:\n    \"I recalled the two names myself, but for the explanation I looked at a hint saying\n    the vocabulary ID is fixed and the contextual representation varies with context.\n    I have not attempted another answer since then.\"'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-102\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  {
+    "consumer_id": "summary",
+    "case_id": "sole",
+    "response_bytes_sha256": "62473fd24f0bb1487eda059b4f6bef3f3b2ce3e327d205d6bccaa174b6ab2103",
+    "host_results": [
+      {
+        "surface_version": "v3",
+        "ok": true,
+        "operation": "reconcile_knowledge",
+        "result": {
+          "applied": true
+        }
+      }
+    ],
+    "result_documents": [
+      {
+        "path": "learner/knowledge/synthetic.yaml",
+        "content": "schema_version: \"0.3\"\ndocument_type: learner_knowledge\nrevision: 3\nupdated_at: \"2026-10-07T02:43:52Z\"\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      label_recall:\n        state: provisional\n        confidence: medium\n        updated_at: \"2026-10-07T02:43:52Z\"\n        evidence_refs:\n          support:\n            - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: \"One observed correct naming of token ID and contextual representation provisionally supports recalling these two labels. No broader vocabulary claim is made.\"\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "evidence/evi-synthetic-answer-001.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-report-002.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-report-002\nobserved_at: '2026-10-06T09:15:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner later said about the answer recorded in evi-synthetic-answer-001:\n    \"I recalled the two names myself, but for the explanation I looked at a hint saying\n    the vocabulary ID is fixed and the contextual representation varies with context.\n    I have not attempted another answer since then.\"'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-102\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  {
+    "consumer_id": "boundaries",
+    "case_id": "independent",
+    "response_bytes_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+    "host_results": [
+      {
+        "surface_version": "v3",
+        "ok": true,
+        "operation": "reconcile_knowledge",
+        "result": {
+          "applied": true
+        }
+      }
+    ],
+    "result_documents": [
+      {
+        "path": "learner/knowledge/synthetic.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      explanation:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-independent-003\n          challenge: []\n        basis_summary: Independent explanation on sentence-pair applications remains\n          provisionally supported by the separate delayed, unassisted performance\n          evi-independent-003. Neutral report evi-synthetic-report-002 specifies that\n          evi-synthetic-answer-001 used an explanation-supplying hint, so that observation\n          is not retained as independent-explanation support. Its correct assisted\n          performance and independent label recall are preserved in the source record\n          and unaffected claim. No substantive challenge is present; this is not mastery\n          or a derivation claim.\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "evidence/evi-independent-003.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-independent-003\nobserved_at: '2026-10-07T01:00:00Z'\nobservation:\n  kind: task_response\n  summary: On a different sentence pair a day later, without a hint or displayed answer,\n    the learner independently explained why the same vocabulary token ID can have\n    different contextual representations, with a correct contrasting prediction. This\n    was a separate performance.\ninterpretation:\n  direction: support\n  diagnosticity: high\n  novelty: medium\n  confidence: high\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-evi-independent-003\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-answer-001.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-report-002.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-report-002\nobserved_at: '2026-10-06T09:15:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner later said about the answer recorded in evi-synthetic-answer-001:\n    \"I recalled the two names myself, but for the explanation I looked at a hint saying\n    the vocabulary ID is fixed and the contextual representation varies with context.\n    I have not attempted another answer since then.\"'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-102\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  {
+    "consumer_id": "boundaries",
+    "case_id": "negative",
+    "response_bytes_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+    "host_results": [
+      {
+        "surface_version": "v3",
+        "ok": true,
+        "operation": "reconcile_knowledge",
+        "result": {
+          "applied": true
+        }
+      }
+    ],
+    "result_documents": [
+      {
+        "path": "learner/knowledge/synthetic.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      explanation:\n        state: unsupported\n        confidence: high\n        evidence_refs:\n          support: []\n          challenge:\n          - evi-negative-004\n          - evi-negative-005\n        basis_summary: Reliable independent explanation of why the same vocabulary\n          token ID can have different contextual representations on controlled sentence-pair\n          tasks is unsupported. Separate high-diagnosticity unassisted performances\n          evi-negative-004 and evi-negative-005 directly challenge that scoped reliability,\n          with relevant terms and instructions established and no observed prerequisite\n          barrier. Neutral report evi-synthetic-report-002 identifies the explanation-supplying\n          hint in evi-synthetic-answer-001; that correct assisted observation therefore\n          no longer supports independence, but is not a failure or challenge. The\n          negative performances, not support withdrawal, justify this state. This\n          does not establish a global trait or a stable causal error mechanism.\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "evidence/evi-negative-004.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-negative-004\nobserved_at: '2026-10-07T01:00:00Z'\nobservation:\n  kind: task_response\n  summary: On a separate controlled unassisted sentence-pair task, all relevant terms\n    were established and instructions were understood. The learner asserted that a\n    fixed vocabulary ID forces an identical contextual representation and could not\n    explain the differing contexts. No assistance or composite prerequisite barrier\n    was observed. This is evidence against reliable independent explanation on this\n    task type, not a global trait.\ninterpretation:\n  direction: challenge\n  diagnosticity: high\n  novelty: medium\n  confidence: high\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-evi-negative-004\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-negative-005.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-negative-005\nobserved_at: '2026-10-07T01:00:00Z'\nobservation:\n  kind: task_response\n  summary: On a separate controlled unassisted sentence-pair task, all relevant terms\n    were established and instructions were understood. The learner asserted that a\n    fixed vocabulary ID forces an identical contextual representation and could not\n    explain the differing contexts. No assistance or composite prerequisite barrier\n    was observed. This is evidence against reliable independent explanation on this\n    task type, not a global trait.\ninterpretation:\n  direction: challenge\n  diagnosticity: high\n  novelty: medium\n  confidence: high\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-evi-negative-005\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-answer-001.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-report-002.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-report-002\nobserved_at: '2026-10-06T09:15:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner later said about the answer recorded in evi-synthetic-answer-001:\n    \"I recalled the two names myself, but for the explanation I looked at a hint saying\n    the vocabulary ID is fixed and the contextual representation varies with context.\n    I have not attempted another answer since then.\"'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-102\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  {
+    "consumer_id": "boundaries",
+    "case_id": "assisted",
+    "response_bytes_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+    "host_results": [
+      {
+        "surface_version": "v3",
+        "ok": true,
+        "operation": "reconcile_knowledge",
+        "result": {
+          "applied": true
+        }
+      }
+    ],
+    "result_documents": [
+      {
+        "path": "learner/knowledge/synthetic.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n      explanation_with_hint:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: The one correct sentence-pair explanation supports explanation\n          with the supplied hint only. Independence is not part of this scoped claim.\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "evidence/evi-synthetic-answer-001.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation_with_hint\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-report-002.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-report-002\nobserved_at: '2026-10-06T09:15:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner later said about the answer recorded in evi-synthetic-answer-001:\n    \"I recalled the two names myself, but for the explanation I looked at a hint saying\n    the vocabulary ID is fixed and the contextual representation varies with context.\n    I have not attempted another answer since then.\"'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-102\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  {
+    "consumer_id": "boundaries",
+    "case_id": "ambiguous",
+    "response_bytes_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+    "host_results": [],
+    "result_documents": [
+      {
+        "path": "learner/knowledge/synthetic.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 2\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      explanation:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One correct explanation appeared unassisted. Independent explanation\n          is provisionally supported for the next conceptual application; this is\n          not mastery or a derivation claim.\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "evidence/evi-synthetic-answer-001.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-report-002.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-report-002\nobserved_at: '2026-10-06T09:15:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner said of evi-synthetic-answer-001: \"I may have seen something\n    similar earlier, but I do not remember whether I looked at a hint while answering\n    or what it said.\" No new performance occurred.'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: low\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-102\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  {
+    "consumer_id": "boundaries",
+    "case_id": "no_report",
+    "response_bytes_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+    "host_results": [],
+    "result_documents": [
+      {
+        "path": "learner/knowledge/synthetic.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 2\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      explanation:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One correct explanation appeared unassisted. Independent explanation\n          is provisionally supported for the next conceptual application; this is\n          not mastery or a derivation claim.\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "evidence/evi-synthetic-answer-001.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  {
+    "consumer_id": "boundaries",
+    "case_id": "repeated",
+    "response_bytes_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+    "host_results": [
+      {
+        "surface_version": "v3",
+        "ok": true,
+        "operation": "reconcile_knowledge",
+        "result": {
+          "applied": true
+        }
+      }
+    ],
+    "result_documents": [
+      {
+        "path": "learner/knowledge/synthetic.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "evidence/evi-report-006.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-report-006\nobserved_at: '2026-10-06T09:20:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner repeated about evi-synthetic-answer-001: \"The explanation\n    used the same hint I already reported. This is the same answer, and I have made\n    no new attempt.\"'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-103\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-answer-001.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-report-002.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-report-002\nobserved_at: '2026-10-06T09:15:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner later said about the answer recorded in evi-synthetic-answer-001:\n    \"I recalled the two names myself, but for the explanation I looked at a hint saying\n    the vocabulary ID is fixed and the contextual representation varies with context.\n    I have not attempted another answer since then.\"'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-102\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  {
+    "consumer_id": "boundaries",
+    "case_id": "contradictory",
+    "response_bytes_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+    "host_results": [],
+    "result_documents": [
+      {
+        "path": "learner/knowledge/synthetic.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 2\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      explanation:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One correct explanation appeared unassisted. Independent explanation\n          is provisionally supported for the next conceptual application; this is\n          not mastery or a derivation claim.\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "evidence/evi-report-006.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-report-006\nobserved_at: '2026-10-06T09:20:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner then said about evi-synthetic-answer-001: \"I did not consult\n    a hint for that answer; my earlier report referred to another exercise.\" This\n    contradicts the earlier report, and no independent record resolves which report\n    is accurate. No new performance occurred.'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-103\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-answer-001.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-report-002.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-report-002\nobserved_at: '2026-10-06T09:15:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner later said about the answer recorded in evi-synthetic-answer-001:\n    \"I recalled the two names myself, but for the explanation I looked at a hint saying\n    the vocabulary ID is fixed and the contextual representation varies with context.\n    I have not attempted another answer since then.\"'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-102\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  {
+    "consumer_id": "boundaries",
+    "case_id": "mixed",
+    "response_bytes_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+    "host_results": [
+      {
+        "surface_version": "v3",
+        "ok": true,
+        "operation": "reconcile_knowledge",
+        "result": {
+          "applied": true
+        }
+      }
+    ],
+    "result_documents": [
+      {
+        "path": "learner/knowledge/synthetic.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      explanation:\n        state: conflicted\n        confidence: high\n        evidence_refs:\n          support:\n          - evi-independent-003\n          challenge:\n          - evi-negative-004\n          - evi-negative-005\n        basis_summary: 'Independent explanation on controlled sentence-pair tasks\n          has unresolved valid support and challenge: evi-independent-003 is a separate\n          delayed unassisted correct explanation and contrasting prediction; evi-negative-004\n          and evi-negative-005 directly challenge reliable explanation under the same\n          stated conditions. No supplied condition distinction resolves the conflict.\n          Neutral report evi-synthetic-report-002 identifies the explanation-supplying\n          hint in evi-synthetic-answer-001, removing that observation as independent\n          support without turning it into challenge. Preserve the correct assisted\n          observation, the neutral report, and unaffected label recall. The conflicted\n          state reflects the unresolved portfolio, not majority voting or a global\n          trait.'\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "evidence/evi-independent-003.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-independent-003\nobserved_at: '2026-10-07T01:00:00Z'\nobservation:\n  kind: task_response\n  summary: On a different sentence pair a day later, without a hint or displayed answer,\n    the learner independently explained why the same vocabulary token ID can have\n    different contextual representations, with a correct contrasting prediction. This\n    was a separate performance.\ninterpretation:\n  direction: support\n  diagnosticity: high\n  novelty: medium\n  confidence: high\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-evi-independent-003\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-negative-004.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-negative-004\nobserved_at: '2026-10-07T01:00:00Z'\nobservation:\n  kind: task_response\n  summary: On a separate controlled unassisted sentence-pair task, all relevant terms\n    were established and instructions were understood. The learner asserted that a\n    fixed vocabulary ID forces an identical contextual representation and could not\n    explain the differing contexts. No assistance or composite prerequisite barrier\n    was observed. This is evidence against reliable independent explanation on this\n    task type, not a global trait.\ninterpretation:\n  direction: challenge\n  diagnosticity: high\n  novelty: medium\n  confidence: high\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-evi-negative-004\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-negative-005.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-negative-005\nobserved_at: '2026-10-07T01:00:00Z'\nobservation:\n  kind: task_response\n  summary: On a separate controlled unassisted sentence-pair task, all relevant terms\n    were established and instructions were understood. The learner asserted that a\n    fixed vocabulary ID forces an identical contextual representation and could not\n    explain the differing contexts. No assistance or composite prerequisite barrier\n    was observed. This is evidence against reliable independent explanation on this\n    task type, not a global trait.\ninterpretation:\n  direction: challenge\n  diagnosticity: high\n  novelty: medium\n  confidence: high\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-evi-negative-005\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-answer-001.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-report-002.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-report-002\nobserved_at: '2026-10-06T09:15:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner later said about the answer recorded in evi-synthetic-answer-001:\n    \"I recalled the two names myself, but for the explanation I looked at a hint saying\n    the vocabulary ID is fixed and the contextual representation varies with context.\n    I have not attempted another answer since then.\"'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-102\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  {
+    "consumer_id": "boundaries",
+    "case_id": "denied",
+    "response_bytes_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+    "host_results": [],
+    "result_documents": [
+      {
+        "path": "learner/knowledge/synthetic.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 2\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      explanation:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One correct explanation appeared unassisted. Independent explanation\n          is provisionally supported for the next conceptual application; this is\n          not mastery or a derivation claim.\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "evidence/evi-synthetic-answer-001.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-report-002.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-report-002\nobserved_at: '2026-10-06T09:15:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner later said about the answer recorded in evi-synthetic-answer-001:\n    \"I recalled the two names myself, but for the explanation I looked at a hint saying\n    the vocabulary ID is fixed and the contextual representation varies with context.\n    I have not attempted another answer since then.\"'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-102\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  {
+    "consumer_id": "boundaries",
+    "case_id": "missing",
+    "response_bytes_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+    "host_results": [],
+    "result_documents": [
+      {
+        "path": "learner/knowledge/synthetic.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 2\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      explanation:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One correct explanation appeared unassisted. Independent explanation\n          is provisionally supported for the next conceptual application; this is\n          not mastery or a derivation claim.\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "evidence/evi-synthetic-answer-001.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-report-002.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-report-002\nobserved_at: '2026-10-06T09:15:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner later said about the answer recorded in evi-synthetic-answer-001:\n    \"I recalled the two names myself, but for the explanation I looked at a hint saying\n    the vocabulary ID is fixed and the contextual representation varies with context.\n    I have not attempted another answer since then.\"'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-102\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  {
+    "consumer_id": "boundaries",
+    "case_id": "over_budget",
+    "response_bytes_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+    "host_results": [],
+    "result_documents": [
+      {
+        "path": "learner/knowledge/synthetic.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 2\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      explanation:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One correct explanation appeared unassisted. Independent explanation\n          is provisionally supported for the next conceptual application; this is\n          not mastery or a derivation claim.\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "evidence/evi-synthetic-answer-001.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-report-002.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-report-002\nobserved_at: '2026-10-06T09:15:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner later said about the answer recorded in evi-synthetic-answer-001:\n    \"I recalled the two names myself, but for the explanation I looked at a hint saying\n    the vocabulary ID is fixed and the contextual representation varies with context.\n    I have not attempted another answer since then.\"'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-102\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  }
+]

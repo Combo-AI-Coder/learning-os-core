@@ -1,0 +1,110 @@
+{
+  "cases": [
+    {
+      "case_id": "independent",
+      "next_action": "Let’s continue with the next comparison. Assume the final “the” is the same vocabulary token in both prefixes: “The gardener buried the seed in the” and “The teacher wrote the answer on the”. Suggest one plausible next word for each. Explain what information distinguishes the predictions, and whether the shared final token ID requires the same contextual representation, meaning the model’s representation of that token in its current prefix.",
+      "basis": "Complete coverage: evi-synthetic-report-002 identifies the hint behind evi-synthetic-answer-001, withdrawing its independent-explanation support without adding negative evidence. The separate, delayed, unassisted evi-independent-003 remains valid direct support. Refine the provisional claim’s basis and retain label_recall; continue the planned application with natural observation, without a separate retest.",
+      "host_requests": [
+        {
+          "operation": "reconcile_knowledge",
+          "arguments": {
+            "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      explanation:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-independent-003\n          challenge: []\n        basis_summary: Independent explanation on sentence-pair applications remains\n          provisionally supported by the separate delayed, unassisted performance\n          evi-independent-003. Neutral report evi-synthetic-report-002 specifies that\n          evi-synthetic-answer-001 used an explanation-supplying hint, so that observation\n          is not retained as independent-explanation support. Its correct assisted\n          performance and independent label recall are preserved in the source record\n          and unaffected claim. No substantive challenge is present; this is not mastery\n          or a derivation claim.\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+            "expected_version_token": "9999999999999999999999999999999999999999"
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "negative",
+      "next_action": "A vocabulary ID identifies a token; it does not identify the whole prefix. A context-processing model uses the prefix to form a contextual representation, meaning its representation of a token in that particular context. We can treat the model’s internal machinery as a black box here. Apply this distinction to “The gardener buried the seed in the” and “The teacher wrote the answer on the”, assuming the final “the” is the same vocabulary token: propose a plausible next word for each and explain which earlier information can distinguish the predictions despite the shared final token ID.",
+      "basis": "Complete coverage: evi-synthetic-report-002 removes the apparent independent support from evi-synthetic-answer-001. Separate controlled performances evi-negative-004 and evi-negative-005 provide high-diagnosticity, high-confidence evidence against reliable independent explanation on this sentence-pair task type. This substantive scoped negative evidence, rather than the hint report, justifies unsupported and a brief targeted explanation. Preserve label_recall and the correct assisted observation.",
+      "host_requests": [
+        {
+          "operation": "reconcile_knowledge",
+          "arguments": {
+            "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      explanation:\n        state: unsupported\n        confidence: high\n        evidence_refs:\n          support: []\n          challenge:\n          - evi-negative-004\n          - evi-negative-005\n        basis_summary: Reliable independent explanation of why the same vocabulary\n          token ID can have different contextual representations on controlled sentence-pair\n          tasks is unsupported. Separate high-diagnosticity unassisted performances\n          evi-negative-004 and evi-negative-005 directly challenge that scoped reliability,\n          with relevant terms and instructions established and no observed prerequisite\n          barrier. Neutral report evi-synthetic-report-002 identifies the explanation-supplying\n          hint in evi-synthetic-answer-001; that correct assisted observation therefore\n          no longer supports independence, but is not a failure or challenge. The\n          negative performances, not support withdrawal, justify this state. This\n          does not establish a global trait or a stable causal error mechanism.\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+            "expected_version_token": "9999999999999999999999999999999999999999"
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "assisted",
+      "next_action": "Let’s continue with the next comparison. Assume the final “the” is the same vocabulary token in both prefixes: “The gardener buried the seed in the” and “The teacher wrote the answer on the”. Suggest one plausible next word for each. Explain what information distinguishes the predictions, and whether the shared final token ID requires the same contextual representation, meaning the model’s representation of that token in its current prefix.",
+      "basis": "Complete coverage: evi-synthetic-report-002 specifies that the explanation in evi-synthetic-answer-001 used the answer-supplying hint while the labels were recalled independently. No independent explanation support or substantive negative evidence remains, so remove the stale explanation claim rather than record unsupported. Retain the existing explanation_with_hint and label_recall claims unchanged. The planned comparison offers proportionate natural observation; uncertainty alone does not require a separate probe.",
+      "host_requests": [
+        {
+          "operation": "reconcile_knowledge",
+          "arguments": {
+            "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n      explanation_with_hint:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: The one correct sentence-pair explanation supports explanation\n          with the supplied hint only. Independence is not part of this scoped claim.\n",
+            "expected_version_token": "9999999999999999999999999999999999999999"
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "ambiguous",
+      "next_action": "Let’s continue with the next comparison. Assume the final “the” is the same vocabulary token in both prefixes: “The gardener buried the seed in the” and “The teacher wrote the answer on the”. Suggest one plausible next word for each. Explain what information distinguishes the predictions, and whether the shared final token ID requires the same contextual representation, meaning the model’s representation of that token in its current prefix.",
+      "basis": "evi-synthetic-report-002 is neutral and low-confidence: it does not establish whether a hint was consulted or what it contained. It cannot alone justify withdrawal or a persistent state transition. Retain the current provisional claims, consider the unresolved assistance possibility, and observe naturally during the planned comparison. No material durable update is justified.",
+      "host_requests": []
+    },
+    {
+      "case_id": "no_report",
+      "next_action": "Let’s continue with the next comparison. Assume the final “the” is the same vocabulary token in both prefixes: “The gardener buried the seed in the” and “The teacher wrote the answer on the”. Suggest one plausible next word for each. Explain what information distinguishes the predictions, and whether the shared final token ID requires the same contextual representation, meaning the model’s representation of that token in its current prefix.",
+      "basis": "The supplied complete record contains evi-synthetic-answer-001 supporting the already-provisional explanation and label_recall claims, with no assistance report or substantive challenge. Retain those claims and continue the planned application with caution. Do not import another case’s report or infer mastery; no durable update is justified.",
+      "host_requests": []
+    },
+    {
+      "case_id": "repeated",
+      "next_action": "Let’s continue with the next comparison. Assume the final “the” is the same vocabulary token in both prefixes: “The gardener buried the seed in the” and “The teacher wrote the answer on the”. Suggest one plausible next word for each. Explain what information distinguishes the predictions, and whether the shared final token ID requires the same contextual representation, meaning the model’s representation of that token in its current prefix.",
+      "basis": "Complete coverage: evi-synthetic-report-002 concretely identifies the hint used in evi-synthetic-answer-001, and evi-report-006 repeats that account of the same performance. These are not additional performances or negative capability evidence. With no remaining independent support or substantive challenge, remove only the stale explanation claim and preserve label_recall and the observation/report history. Continue the planned comparison rather than add an uncertainty-driven pretest.",
+      "host_requests": [
+        {
+          "operation": "reconcile_knowledge",
+          "arguments": {
+            "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+            "expected_version_token": "9999999999999999999999999999999999999999"
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "contradictory",
+      "next_action": "Let’s continue with the next comparison. Assume the final “the” is the same vocabulary token in both prefixes: “The gardener buried the seed in the” and “The teacher wrote the answer on the”. Suggest one plausible next word for each. Explain what information distinguishes the predictions, and whether the shared final token ID requires the same contextual representation, meaning the model’s representation of that token in its current prefix.",
+      "basis": "evi-synthetic-report-002 and evi-report-006 give contradictory assistance histories for evi-synthetic-answer-001, and no independent record resolves them. Neither the latest report nor the pair of reports settles withdrawal or supplies capability challenge evidence. Retain the current provisional claim without claiming independence is established; preserve both neutral reports. Continue the planned comparison with caution and natural observation, with no persistent update on this unresolved history.",
+      "host_requests": []
+    },
+    {
+      "case_id": "mixed",
+      "next_action": "Compare “The gardener buried the seed in the” and “The teacher wrote the answer on the”. Assume the final “the” is the same vocabulary token. Someone claims: “The identical final vocabulary ID forces an identical contextual representation of that token.” Is that claim necessarily correct? Give a plausible next word for each prefix and explain what information a predictor would need, and whether the claimed identity of the contextual representations follows. By contextual representation, I mean the model’s representation of a token in its current prefix.",
+      "basis": "Complete coverage: the hint report removes evi-synthetic-answer-001 as independent-explanation support, but evi-independent-003 remains valid independent support. evi-negative-004 and evi-negative-005 provide substantive direct challenge under the same stated task conditions; the record supplies no condition distinction that resolves the conflict. Persist conflicted rather than count votes or discard either side, preserving label_recall. The short planned contrast directly tests the recorded fixed-ID-implies-identical-representation claim, informing a narrow repair versus continuation; label recall alone cannot resolve it.",
+      "host_requests": [
+        {
+          "operation": "reconcile_knowledge",
+          "arguments": {
+            "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      explanation:\n        state: conflicted\n        confidence: high\n        evidence_refs:\n          support:\n          - evi-independent-003\n          challenge:\n          - evi-negative-004\n          - evi-negative-005\n        basis_summary: 'Independent explanation on controlled sentence-pair tasks\n          has unresolved valid support and challenge: evi-independent-003 is a separate\n          delayed unassisted correct explanation and contrasting prediction; evi-negative-004\n          and evi-negative-005 directly challenge reliable explanation under the same\n          stated conditions. No supplied condition distinction resolves the conflict.\n          Neutral report evi-synthetic-report-002 identifies the explanation-supplying\n          hint in evi-synthetic-answer-001, removing that observation as independent\n          support without turning it into challenge. Preserve the correct assisted\n          observation, the neutral report, and unaffected label recall. The conflicted\n          state reflects the unresolved portfolio, not majority voting or a global\n          trait.'\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+            "expected_version_token": "9999999999999999999999999999999999999999"
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "denied",
+      "next_action": "Let’s continue with the next comparison. Assume the final “the” is the same vocabulary token in both prefixes: “The gardener buried the seed in the” and “The teacher wrote the answer on the”. Suggest one plausible next word for each. Explain what information distinguishes the predictions, and whether the shared final token ID requires the same contextual representation, meaning the model’s representation of that token in its current prefix.",
+      "basis": "Only the current provisional Knowledge is supplied. Relevant Evidence coverage is incomplete and the supplied read result is non-retryable guard_rejected. That access gap is neither withdrawn support nor inability; do not bypass it or persist a downgrade/removal. Preserve current Knowledge and use the planned comparison as natural observation without claiming the unavailable portfolio was checked.",
+      "host_requests": []
+    },
+    {
+      "case_id": "missing",
+      "next_action": "Let’s continue with the next comparison. Assume the final “the” is the same vocabulary token in both prefixes: “The gardener buried the seed in the” and “The teacher wrote the answer on the”. Suggest one plausible next word for each. Explain what information distinguishes the predictions, and whether the shared final token ID requires the same contextual representation, meaning the model’s representation of that token in its current prefix.",
+      "basis": "Only the current provisional Knowledge is supplied. Coverage explicitly says relevant Evidence is unavailable; the supplied read result is non-retryable guard_rejected. The case name does not establish a different cause. Missing accessible context cannot establish that support is absent. Preserve Knowledge without a host request and continue the planned comparison with cautious natural observation.",
+      "host_requests": []
+    },
+    {
+      "case_id": "over_budget",
+      "next_action": "Let’s continue with the next comparison. Assume the final “the” is the same vocabulary token in both prefixes: “The gardener buried the seed in the” and “The teacher wrote the answer on the”. Suggest one plausible next word for each. Explain what information distinguishes the predictions, and whether the shared final token ID requires the same contextual representation, meaning the model’s representation of that token in its current prefix.",
+      "basis": "Only the current provisional Knowledge is supplied. Relevant Evidence coverage is incomplete and the supplied read result is non-retryable resolution_failed. This coverage gap cannot justify withdrawal or inability, and no unavailable Evidence can be assumed inspected. Retain current Knowledge with no host request and use the planned comparison as natural observation.",
+      "host_requests": []
+    }
+  ]
+}
