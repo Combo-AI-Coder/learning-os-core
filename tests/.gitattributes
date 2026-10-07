@@ -1,3 +1,6 @@
 # Frozen evaluation fixtures are byte-identity evidence. Preserve their exact
 # blob bytes instead of applying platform-specific line-ending conversions.
 fixtures/** -text
+# Exact historical sources frozen by the withdrawn-support prospective manifest.
+/correction_propagation_fixture.py -text
+/test_correction_propagation.py -text

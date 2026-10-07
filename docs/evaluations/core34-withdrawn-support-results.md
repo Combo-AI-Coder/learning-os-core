@@ -31,7 +31,7 @@ The [plan](core34-withdrawn-support-plan.md) and
 packets, policy snapshot and semantic criteria before first consumer outputs.
 All 100 canonical baseline blobs were verified before isolated implementation.
 Only `protocol/evidence-integration.md` changes production guidance; the remaining
-changes are synthetic fixture, test and evaluation material.
+changes are synthetic fixture, test, evaluation and byte-preserving checkout material.
 
 - Four fresh native consumers produced four frozen first responses: structured,
   summary, eleven-case boundary bundle, and fresh successor
@@ -104,6 +104,26 @@ internal result, retaining missed findings and remediation counts. No new review
 layer, scheduler or resource policy is introduced. Actual token/compute/monetary
 costs and provider-model diversity are not measured; dispatch count and elapsed
 conversation time are not estimates of those costs.
+
+### Later CI finding and repair
+
+The first published candidate `f0178d7bc7ff5963e16b3fa5849575814bfa7b24`
+passed Linux CI but failed Windows historical-byte checks in
+[push run 37564220208](https://github.com/Combo-AI-Coder/learning-os-core/actions/runs/37564220208).
+Four pre-existing Markdown/Python sources newly covered by the history manifest
+were outside the existing frozen-fixture attributes and were converted to CRLF.
+This is one portability defect with four subtest failures, missed by the initial
+internal gate. It is not a semantic consumer failure or an independent Codex finding.
+The initial reviewer report remains unchanged rather than being rewritten as if
+the defect had been caught before publication.
+
+The repair adds four exact-path `-text` attributes and extends the existing
+autocrlf checkout regression to all historical manifest paths. That regression
+reproduces failure without the attributes and passes with them; its unprotected
+sentinel still converts to CRLF, proving conversion was actually exercised.
+No historical file bytes, expected hashes, consumer outputs or semantic criteria
+are normalized, regenerated or weakened. The new exact-head CI and review receipt
+owns final verification; the initial head's Linux pass is not borrowed.
 
 ## Remaining boundaries
 

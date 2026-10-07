@@ -1,5 +1,6 @@
 """Frozen evidence bytes must survive Git's platform newline conversion."""
 import os
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -37,16 +38,23 @@ class FrozenFixtureCheckoutTests(unittest.TestCase):
                 ).stdout
 
             git("init", "--quiet", f"--template={template}")
-            attributes = ROOT / "tests/.gitattributes"
-            if attributes.exists():
-                destination = checkout / "tests/.gitattributes"
-                destination.parent.mkdir(parents=True)
-                destination.write_bytes(attributes.read_bytes())
+            for attribute_path in ('docs/evaluations/.gitattributes', 'tests/.gitattributes'):
+                attributes = ROOT / attribute_path
+                if attributes.exists():
+                    destination = checkout / attribute_path
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_bytes(attributes.read_bytes())
             fixture_paths = (
                 "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd01.json",
                 "tests/fixtures/core34-policy-history/teaching-decision-v0.3.md",
                 "tests/fixtures/core34-diagnostic-repair/candidate3-reproduction-exporter.py.txt",
             )
+            # The new experiment also freezes four pre-existing Markdown/Python
+            # source files. Exercise their actual checkout attributes as well as
+            # frozen fixture data; never weaken byte hashes by normalizing reads.
+            history_manifest = ROOT / "tests/fixtures/core34-withdrawn-support/prospective-manifest.json"
+            history_paths = json.loads(history_manifest.read_text(encoding="utf-8"))["historical_files"]
+            fixture_paths += tuple(history_paths)
             expected = {path: (ROOT / path).read_bytes() for path in fixture_paths}
             expected["tests/fixtures/synthetic-crlf.txt"] = b"frozen\r\nbytes\r\n"
             sentinel = "tests/unprotected-sentinel.txt"
