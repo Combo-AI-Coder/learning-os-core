@@ -2,13 +2,15 @@
 import copy
 import hashlib
 import json
+from pathlib import Path
 import unittest
+from unittest import mock
 
 import yaml
 
 from tests.withdrawn_support_fixture import (
     FIXTURES, ROOT, CASES, WithdrawalJourney, packet, inputs, digest,
-    READ_PATH, PERFORMANCE_PATH, REPORT_PATH, PERFORMANCE_ID, REPORT_ID,
+    READ_PATH, PERFORMANCE_PATH, REPORT_PATH, PERFORMANCE_ID, REPORT_ID, remediation_packet,
 )
 
 
@@ -21,7 +23,6 @@ class WithdrawnSupportTests(unittest.TestCase):
         manifest = read('prospective-manifest.json')
         self.assertEqual(manifest['policy_bytes_sha256'], hashlib.sha256((FIXTURES / 'policy-snapshot.json').read_bytes()).hexdigest())
         policy = read('policy-snapshot.json')
-        self.assertEqual((ROOT / 'protocol/evidence-integration.md').read_text(encoding='utf-8'), policy['evidence-integration.md'])
         self.assertEqual(5, len(policy))
         for row in manifest['consumers']:
             raw = (FIXTURES / (row['id'] + '-packet.json')).read_bytes()
@@ -30,6 +31,66 @@ class WithdrawnSupportTests(unittest.TestCase):
             self.assertEqual(json.loads(raw), packet(row['id']))
             self.assertNotIn('criteria', json.loads(raw))
             self.assertNotIn('expected', json.loads(raw))
+
+    def test_historical_packet_policy_ignores_later_live_protocol_revision(self):
+        original = Path.read_text
+        live_reads = []
+
+        def revised_live_policy(path, *args, **kwargs):
+            content = original(path, *args, **kwargs)
+            if path == ROOT / 'protocol/evidence-integration.md':
+                live_reads.append(path)
+                return content + '\nSynthetic later protocol revision for this control.\n'
+            return content
+
+        # Host startup may still read live Core files for safety validation;
+        # those reads must not rewrite the historical model-policy input.
+        with mock.patch.object(Path, 'read_text', revised_live_policy):
+            for kind in ('structured', 'summary', 'boundaries'):
+                self.assertEqual(read(kind + '-packet.json'), packet(kind))
+        self.assertTrue(live_reads)
+
+    def test_remediation_packet_preserves_all_prior_artifacts(self):
+        manifest = read('remediation-manifest.json')
+        for kind in ('packet', 'policy-snapshot'):
+            raw = (FIXTURES / ('remediation-' + kind + '.json')).read_bytes()
+            key = 'packet_bytes_sha256' if kind == 'packet' else 'policy_bytes_sha256'
+            self.assertEqual(manifest[key], hashlib.sha256(raw).hexdigest())
+        self.assertEqual(read('remediation-packet.json'), remediation_packet())
+        for name, expected in manifest['prior_frozen_artifacts'].items():
+            self.assertEqual(expected, hashlib.sha256((FIXTURES / name).read_bytes()).hexdigest())
+        policy = read('remediation-policy-snapshot.json')
+        self.assertIn('## 3. Learner feedback persistence routing', policy['persistence-policy.md'])
+        self.assertIn('Learner feedback MUST NOT by itself', policy['teaching-decision.md'])
+        self.assertNotIn('criteria', read('remediation-packet.json'))
+
+    def test_remediation_first_requests_replay_without_repair(self):
+        raw = (FIXTURES / 'remediation-response.json').read_bytes()
+        receipt = read('remediation-replay.json')
+        self.assertEqual(receipt['response_bytes_sha256'], hashlib.sha256(raw).hexdigest())
+        answers = json.loads(raw)['cases']
+        self.assertEqual(2, len(answers))
+        self.assertEqual({'sole', 'preference_only'}, {x['case_id'] for x in answers})
+        self.assertEqual(2, len(receipt['cases']))
+        self.assertEqual({'sole', 'preference_only'}, {x['case_id'] for x in receipt['cases']})
+        for row in receipt['cases']:
+            answer = next(x for x in answers if x['case_id'] == row['case_id'])
+            with WithdrawalJourney('sole' if row['case_id'] == 'sole' else 'no_report') as journey:
+                results = [journey.apply(request) for request in answer['host_requests']]
+                self.assertEqual(row['host_results'], results)
+                self.assertEqual(row['result_documents'], journey.recover())
+                before = {p: b for p, b in journey.before.items() if p.startswith('evidence/')}
+                after = {p: b for p, b in journey.provider.docs.items() if p.startswith('evidence/')}
+                self.assertEqual(before, after)
+
+    def test_current_feedback_owners_link_to_reassessment_without_direct_transition(self):
+        link = 'evidence-integration.md#withdrawing-an-apparent-support-basis'
+        for name in ('persistence-policy.md', 'teaching-decision.md'):
+            content = (ROOT / 'protocol' / name).read_text(encoding='utf-8')
+            self.assertIn(link, content)
+            self.assertIn('MUST NOT', content)
+            self.assertIn('original', content)
+        # This is a source-binding guard, not semantic model compliance.
 
     def test_summary_changes_representation_only(self):
         structured = read('structured-packet.json')
@@ -86,7 +147,12 @@ class WithdrawnSupportTests(unittest.TestCase):
                 self.assertFalse(any(c[0] in {'create', 'update'} for c in journey.provider.calls))
 
     def test_first_requests_replay_exactly_and_preserve_evidence(self):
-        for row in read('mechanical-replay.json'):
+        rows = read('mechanical-replay.json')
+        expected = {('structured', 'sole'), ('summary', 'sole')}
+        expected.update(('boundaries', case) for case in CASES if case != 'sole')
+        self.assertEqual(len(expected), len(rows))
+        self.assertEqual(expected, {(r['consumer_id'], r['case_id']) for r in rows})
+        for row in rows:
             raw = (FIXTURES / (row['consumer_id'] + '-response.json')).read_bytes()
             self.assertEqual(row['response_bytes_sha256'], hashlib.sha256(raw).hexdigest())
             response = json.loads(raw)
@@ -98,6 +164,24 @@ class WithdrawnSupportTests(unittest.TestCase):
                 before = {p: b for p, b in journey.before.items() if p.startswith('evidence/')}
                 after = {p: b for p, b in journey.provider.docs.items() if p.startswith('evidence/')}
                 self.assertEqual(before, after)
+
+    def test_missing_or_duplicate_replay_rows_cannot_skip_verification(self):
+        original = read
+        checks = (
+            ('mechanical-replay.json', self.test_first_requests_replay_exactly_and_preserve_evidence),
+            ('remediation-replay.json', self.test_remediation_first_requests_replay_without_repair),
+        )
+        for name, check in checks:
+            good = original(name)
+            rows = good if isinstance(good, list) else good['cases']
+            for changed in ([], rows[:-1], [rows[0]] * len(rows)):
+                altered = changed if isinstance(good, list) else dict(good, cases=changed)
+                def replacement(filename, target=name, value=altered):
+                    return value if filename == target else original(filename)
+                with self.subTest(name=name, count=len(changed)):
+                    with mock.patch(__name__ + '.read', side_effect=replacement):
+                        with self.assertRaises(AssertionError):
+                            check()
 
     def test_semantic_review_is_bound_to_first_output_bytes(self):
         review = read('semantic-review.json')

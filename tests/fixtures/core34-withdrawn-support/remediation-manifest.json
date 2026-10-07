@@ -1,0 +1,39 @@
+{
+  "frozen_at": "2026-10-07T03:35:00Z",
+  "baseline_head": "d2b5604a8e2cc9f003cdb553ce1ba4d708251a25",
+  "purpose": "Prospective paired check after adjacent-owner clarification; does not replace or regrade the first experiment",
+  "packet_bytes_sha256": "47b4213ab176d7fb71ce25ca79c437f300a70c351b2c9dd1dc2339b6b741f7c3",
+  "policy_bytes_sha256": "af79b5f2975ee220a87f860a98d8b79c914f75059b97f0b5e4afa939bd631227",
+  "criteria": {
+    "sole": [
+      "Reassess the concrete hint-production report with original Evidence and full relevant portfolio",
+      "Independent explanation remains unknown/absent or explicitly assisted-only, not unsupported merely from withdrawal",
+      "Preserve label recall and immutable Evidence; neutral report is not challenge; exact justified request should be admitted"
+    ],
+    "preference_only": [
+      "Helpful/easy/preferred/confident feedback with no new performance does not by itself change persistent capability state",
+      "Do not invent a hint, new performance or skill improvement; no Knowledge update justified by this feedback alone"
+    ]
+  },
+  "limits": [
+    "One fresh native consumer shares context across two cases",
+    "Full current relevant owner files supplied, unlike the initial persistence write-order excerpt",
+    "Prompted synthetic compliance, instructional isolation, same-model semantic review; no learner benefit or general compliance proof"
+  ],
+  "prior_frozen_artifacts": {
+    "boundaries-response.json": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+    "summary-response.json": "62473fd24f0bb1487eda059b4f6bef3f3b2ce3e327d205d6bccaa174b6ab2103",
+    "summary-packet.json": "25e805845c2c71811e5bd90d52e7af28b15d8167c0bdedec6935889b3549aed5",
+    "boundaries-packet.json": "72a53a0a2e54b4150541e6f97eb2e36ea11549eacbdd559cef1da338fb409da0",
+    "successor-packet.json": "8f23e99c9361875a7547040e1f6e802b2e7a9272130692b0433394a92b78a328",
+    "counterexample-review.json": "649405cd51a5bb9eb04458e4b5ea1c10c0414b171bb9f5ce10a46f8e12ad4052",
+    "structured-packet.json": "055f3b030454b5b0c38f4486a3764e7ab37da4651bfe394a8d61484852f88635",
+    "policy-snapshot.json": "4fadea4ee409fb8590c441c978b11936577fb2c2a7db43458c04e19dd69fc74a",
+    "successor-receipt.json": "e86aab8c7a2f24054a4aaff10096eff4ca9f61185df36d23cc2c02dca73dfd88",
+    "successor-response.json": "7a55bec3d7351c33a8d940995ce9dba748d46de53fde597b8eb385f322264053",
+    "prospective-manifest.json": "beb088c87d7bcd5c7abc983612ec31e116c8660c85bb3030e272978a50ad50e6",
+    "semantic-review.json": "7fbba187ec90d880a907705acc1387e977839536acab2a081540c0d5a81cc8c1",
+    "structured-response.json": "f6b4429135ca6952c6fda7bef5916c1c8d18b24eb0984f849e499d020318aa55",
+    "mechanical-replay.json": "a65547937815e01e5dd0c678ba0cc1f9351e81fb352512c052cbf02e9f30f714"
+  }
+}

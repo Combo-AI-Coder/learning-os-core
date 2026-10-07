@@ -124,7 +124,9 @@ class DiagnosticRepairTests(unittest.TestCase):
         self.assertIn('version: "0.3"', value["policy"])
         self.assertNotIn("### Target-discriminating check", value["policy"])
         repaired = repair_packet(value)
-        self.assertIn('version: "0.4"', repaired["policy"])
+        # This helper prepares a current candidate; only the original v0.3
+        # input above is historical. Later compatible owner revisions are valid.
+        self.assertEqual((ROOT / "protocol/teaching-decision.md").read_text(encoding="utf-8") + "\n", repaired["policy"])
         self.assertIn("### Target-discriminating check", repaired["policy"])
         self.assertEqual(value["context"], repaired["context"])
         self.assertNotIn("diagnostic_design", value["output_contract"])

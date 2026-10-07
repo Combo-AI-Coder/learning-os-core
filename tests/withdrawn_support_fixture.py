@@ -4,13 +4,12 @@ import hashlib
 import json
 from pathlib import Path
 import tempfile
-from unittest import mock
 
 import yaml
 
 from tests.correction_propagation_fixture import (
     CorrectionJourney, ROOT, READ_PATH, PERFORMANCE_ID, REPORT_ID, PERFORMANCE_PATH,
-    REPORT_PATH, performance, report, initial_knowledge, policies, REQUEST, digest,
+    REPORT_PATH, performance, report, initial_knowledge, REQUEST, digest,
 )
 from tests.test_runtime_broker import BrokerProvider, typed_evidence, RUNTIME_PATH, locator
 from scripts.reference_host import ReferenceLearningHost
@@ -106,13 +105,6 @@ class WithdrawalJourney(CorrectionJourney):
         return host.invoke({'operation': 'read_learning_context', 'arguments': {'required_paths': [REPORT_PATH]}})
 
 
-def policy_snapshot():
-    result = policies()
-    result['evidence-integration.md'] = (ROOT / 'protocol/evidence-integration.md').read_text(encoding='utf-8')
-    # Preserve the old owner keys while replacing only the owner under test.
-    return result
-
-
 def summary(documents):
     lines = []
     def render(value, label):
@@ -152,3 +144,22 @@ def packet(kind):
         common['cases'] = [case_context(case) for case in CASES if case != 'sole']
     else: raise ValueError('unknown packet kind')
     return common
+
+
+def remediation_packet():
+    """Second prospective input; the first experiment stays frozen unchanged."""
+    original = packet('structured')
+    feedback = case_context('no_report')
+    feedback['case_id'] = 'preference_only'
+    feedback['current_learner_feedback'] = (
+        'This explanation felt helpful and easy to follow. I like this teaching '
+        'style and feel more confident now. I have not answered another task.'
+    )
+    return {
+        'recipe_version': 'core34-withdrawn-support-owner-alignment-v1',
+        'request': REQUEST + ' Evaluate the separately named cases independently and return a cases list. Current learner feedback is supplied separately where present; no case is evidence for another case.',
+        'policy': json.loads((FIXTURES / 'remediation-policy-snapshot.json').read_text(encoding='utf-8')),
+        'cases': [case_context('sole'), feedback],
+        'host_interface': original['host_interface'],
+        'output_contract': original['output_contract'],
+    }

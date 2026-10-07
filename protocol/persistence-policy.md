@@ -1,6 +1,6 @@
 ---
 protocol: persistence-policy
-version: "0.6"
+version: "0.7"
 schema_compatibility: "0.3"
 ---
 
@@ -51,10 +51,19 @@ Route feedback by semantics rather than storing a generic feedback log:
 - an explicit durable preference or subjective cost MAY be written directly to the responsible learner preference/cost artifact when the learner is clearly expressing a future-relevant preference, not merely reacting to one local example;
 - repeated scoped observations about task difficulty, duration, diagnostic value, or interaction calibration MAY become learner calibration signals when they have future decision value;
 - a higher-level learner-model hypothesis about which representations, probes, or strategies tend to work requires broader cross-event evidence and SHOULD update more slowly than immediate adaptation;
-- capability Knowledge State MUST NOT change solely because of teaching feedback or preference; capability evidence still follows evidence classification and integration;
+- capability Knowledge State MUST NOT change solely because of teaching feedback or preference; capability evidence still follows evidence classification and integration. Concrete reports about how an existing performance was produced follow the reinterpretation rule below, not a direct feedback-to-state transition;
 - do not create an Evidence record merely because feedback occurred. Persist Evidence only when the feedback is part of a qualifying diagnostic/learning observation whose future interpretation matters.
 
 When a learner's feedback materially changes the interpretation of an already observed task in the same interaction, classify the resulting observation with the feedback included as context. If historical immutable Evidence later needs reinterpretation, normally add a new evidence/interpretation event rather than rewriting the old record.
+
+A concrete report that a hint supplied an earlier explanation is interpretive
+context for that performance, not another performance or evidence of inability.
+Reassess the report together with the original Evidence, current Knowledge and
+relevant portfolio under `evidence-integration.md#withdrawing-an-apparent-support-basis`.
+That justified integration may persist refinement or withdrawal of stale support;
+the report alone does not authorize a state transition or bypass this policy's
+persistence, fresh-read and CAS gates. Vague task feedback and preferences retain
+the non-transition boundary above.
 
 Avoid unbounded accumulation of local likes/dislikes. Persist only scoped patterns or learner-authoritative durable preferences/costs that are likely to improve future decisions.
 

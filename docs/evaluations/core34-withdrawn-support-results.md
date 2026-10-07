@@ -30,8 +30,11 @@ The [plan](core34-withdrawn-support-plan.md) and
 `tests/fixtures/core34-withdrawn-support/prospective-manifest.json` fixed the input
 packets, policy snapshot and semantic criteria before first consumer outputs.
 All 100 canonical baseline blobs were verified before isolated implementation.
-Only `protocol/evidence-integration.md` changes production guidance; the remaining
-changes are synthetic fixture, test, evaluation and byte-preserving checkout material.
+The first candidate changed only `protocol/evidence-integration.md` guidance.
+The later review repair also aligns the existing feedback boundaries in
+`persistence-policy.md` and `teaching-decision.md` with that same rule; it adds no
+new capability semantics. Other changes are synthetic fixture, test, evaluation
+and byte-preserving checkout material.
 
 - Four fresh native consumers produced four frozen first responses: structured,
   summary, eleven-case boundary bundle, and fresh successor
@@ -124,6 +127,53 @@ sentinel still converts to CRLF, proving conversion was actually exercised.
 No historical file bytes, expected hashes, consumer outputs or semantic criteria
 are normalized, regenerated or weakened. The new exact-head CI and review receipt
 owns final verification; the initial head's Linux pass is not borrowed.
+
+### Independent review findings and prospective follow-up
+
+The first independent Code Review on `d2b5604a8e2cc9f003cdb553ce1ba4d708251a25`
+identified two additional preflight misses:
+
+1. A P1 cross-owner ambiguity: the intended report-plus-original-performance
+   reassessment conflicted with categorical feedback-only state-transition bans
+   in the persistence and teaching owners. The initial packet included the
+   persistence write-order excerpt, not its feedback-routing section. Its 14
+   accepted decisions therefore do not prove consistency with every live owner.
+2. A P2 historical-test coupling: the test compared frozen policy with the live
+   integration file, and an unused preparation helper read that live file.
+   Future legitimate revisions could fail historical reproduction unnecessarily.
+
+The P1 repair explicitly distinguishes concrete production-context reports from
+preferences or vague feedback in those two existing owners. Such reports remain
+context, not another performance or direct capability evidence; justified
+reassessment still needs the original Evidence, relevant portfolio and ordinary
+confidence/persistence/CAS gates. The P2 repair removes live-policy equality and
+the unused preparer. A regression supplies a later live revision while asserting
+identical frozen model-policy packets. Host startup still performs ordinary live
+Core safety validation; this does not promise operation without readable Core.
+
+The first policy snapshots, outputs, grades and review reports remain immutable.
+A separate `remediation-manifest.json` freezes a new paired input before a new
+consumer: the sole-support case and a preference-only no-performance control,
+with the complete current relevant persistence/teaching owners. Its first output,
+exact replay and semantic judgment are retained separately. This is supplemental
+prompted evidence, not a replacement of the first experiment or unprompted proof.
+Final results and independent re-review belong to the exact-head PR receipt.
+
+In that supplemental first output, the concrete-hint case removes the stale
+independent claim and preserves label recall; its exact request is admitted.
+The preference-only case makes no Knowledge request or invented capability gain.
+Both choose the same proportionate natural-observation action. The extra consumer
+shares one context across the pair; its two decisions are not independent trials.
+
+Observed miss counts are one CI portability defect plus two supported independent
+Code Review findings; these are three distinct preflight misses, not a cost or
+quality-rate estimate. Initial internal zero-finding reports remain dated history.
+During remediation, complementary internal review caught one new receipt-coverage
+test gap before publication: an empty replay row list could skip the replay loop.
+Exact count/unique-case coverage and empty/missing/duplicate-row negative controls
+now protect both primary and supplemental receipts. This was a repaired test gap,
+not a missing real receipt or failed consumer output, and is separate from the
+three earlier misses.
 
 ## Remaining boundaries
 
