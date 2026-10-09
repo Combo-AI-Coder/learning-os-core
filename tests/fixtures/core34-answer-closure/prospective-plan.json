@@ -1,0 +1,82 @@
+{
+  "version": "prospective-v1",
+  "created_at_utc": "2026-10-09T14:27:10.770448+00:00",
+  "timestamp_note": "Actual UTC creation time. Event timestamps in the fictional fixture are separately synthetic.",
+  "owner": "Core #34",
+  "core_commit": "73d7d37c8492bae800ef3e31239cd190a4423f23",
+  "core_tree": "05ee86873e660b16547130ed77337f7425613d5a",
+  "question": "Does the tutor execute content-sensitive feedback and bounded persistence after the already retained q03 diagnostic, and can a fresh successor resume from its actual durable result?",
+  "nonrepeat": "Earlier q03 established question quality and described contingent actions. It did not execute learner-answer grading, feedback branching or downstream successor recovery.",
+  "scope": "Temporary fictional local fixture, current unchanged existing host/BrokerProvider operations. No Core source edits, public writes, new PR, runtime/schema change, deployment, real learner, credentials, external services or fees.",
+  "source_question": "A tray is described only by “Every triangular piece in this tray is green.” Could a selected green piece from this tray be square? Explain whether that would break the description.",
+  "source_question_response_sha256": "6b34a18668ccf55ba5c60efe1234d7faa6345952398bad4e7496ca4a3d054cb1",
+  "source_case": "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd03.json",
+  "source_adaptation": "Copy source Knowledge/Evidence semantics into the existing synthetic Topic/unit fixture; context locator fields only are remapped to synthetic/unit. Produce prior source records and checkpoint through existing owning host operations. No new Domain asset. Existing source Knowledge revision 1 is advanced to revision 2 to reconcile over the fake provider empty revision-1 owner; semantic claims and prior observation content remain unchanged. The checkpoint is newly created using the retained q03 learner-facing question, without its private design record.",
+  "conditions": [
+    {
+      "id": "elm",
+      "answer": "Yes. The sentence only requires triangular pieces to be green. A green square is not triangular, so it does not break that requirement.",
+      "causal_role": "conclusion and explicit direction-sensitive reason"
+    },
+    {
+      "id": "pine",
+      "answer": "No. Since every triangular piece is green, a green piece must be triangular, so it cannot be square.",
+      "causal_role": "explicit reversal of the stated implication"
+    },
+    {
+      "id": "reed",
+      "answer": "Yes.",
+      "causal_role": "correct surface conclusion without requested explanation"
+    }
+  ],
+  "minimality": "Three conditions separate supported explanation, an explicit rival interpretation, and underdetermined reasoning. No sampling count is used to estimate reliability.",
+  "consumer_input": "Only actual existing-host recovery results; exact retained learner-facing q03 question; current fictional answer and round identity; current product protocols; normal host operation interface. No q03 design record, expected answers, acceptance set, case labels, producer transcript, reviewer notes or source filesystem browsing.",
+  "ordinary_task": "Please respond to my answer and leave us at a sensible stopping point. We will pick this up in a fresh session next time.",
+  "trajectory": "One fresh instruction-isolated consumer per distinct input, interacting with a temporary bridge to existing host operations. Preserve the first emitted request/response and every subsequent operation result. It is one unrestarted trajectory, not resampling. One answer occurrence permits at most one create_evidence, one reconcile_knowledge, one save_learning_checkpoint. Fresh reads required by current policy occur between dependent writes. Rejected requests remain failures; no repair/retry of failed writes is used to obtain a pass. Optional no-write is allowed and reported, not forcibly converted into persistence success.",
+  "fake_scope": "The bridge may persist fake provider bytes only in this experiment directory; capability policy is host-owned. Instruction-isolated native contexts share a filesystem and are not claimed to be a security sandbox. Static fake tokens do not establish production freshness or real CAS.",
+  "prospective_semantic_criteria": [
+    "elm: feedback recognizes the actual valid reason; can proceed with bounded application/continuation. A single newer correct answer must not automatically erase old unresolved conflict or claim independent mastery.",
+    "pine: feedback addresses the reversed relationship, not merely the conclusion or unrelated forward prerequisite; can explain/contrast then continue. One response does not establish a stable misconception or global inability.",
+    "reed: feedback does not infer the missing reason. Natural clarification, explanation or continued observation is allowed; no mandated probe, and no full-credit claim for a bare yes.",
+    "Across arms acceptable actions are sets, not exact prose/action labels. Uniform safe continuation can be valid if feedback/basis and persisted interpretation remain appropriate.",
+    "No gratuitous broad restart or new diagnostic loop. Preserve forward capability and original evidence. Do not rewrite or double-count one current source occurrence.",
+    "Knowledge updates must be grounded in full prior portfolio, actual answer and existing schema/claim conditions. No simple vote-count transition; actual host admission is separate from semantic correctness.",
+    "Any proposed checkpoint must reflect a real stopping/resume point in the current response, not claim a future learner answer or treat the diagnostic as completed curriculum mastery.",
+    "Fresh successor receives only actual bounded host readback and current ordinary resume request, no parent response. It must use any saved next step faithfully, preserve unresolved claim conditions, not invent a second performance or duplicate persistence.",
+    "If no material task-relevant state is persisted, successor can safely resume the older unresolved checkpoint; this is not scored as demonstrated answer-conditioned durable continuity."
+  ],
+  "successor_selection": "One fresh successor per distinct task-relevant readback packet after each completed first trajectory; byte-identical packets are deduplicated and one output shared explicitly. No replayed learner answer is supplied as a separate sidecar.",
+  "mechanical_criteria": [
+    "Preserve all input/output and host result bytes plus SHA256 and actual UTC operation times",
+    "Same initial durable facts and q03 question across conditions, only fictional answer differs",
+    "One current occurrence at most once; preexisting Evidence immutable; unrelated forward capability unchanged",
+    "Replay exact returned requests without rewriting content or tokens; preserve zero/partial/failed write states",
+    "Recover successor from actual post-trajectory provider state with fresh session; no transcript sidecar",
+    "No model output resampling and no post-output oracle change"
+  ],
+  "limitations": [
+    "No real learner correctness, learning benefit, retention or transfer evidence",
+    "Same-model instructional isolation and no independent-provider attestation",
+    "Existing fakeprovider tokens and fixed selection recipe, not autonomous context recovery or production concurrency",
+    "Known historical q03 question; no novel-transfer claim",
+    "Only current synthetic question and authored answers; no statistical reliability"
+  ],
+  "stop_conditions": [
+    "Required source/permission/safety boundary fails",
+    "Unexpected real/external service or state would be needed",
+    "Unresolvable existing-host setup failure: preserve and stop pending scope decision",
+    "After all distinct first trajectories and distinct readback successors plus independent semantic review, report actual results"
+  ],
+  "review": "Independent fresh-context reviewer examines this prospective design before consumer runs and reviews unchanged first trajectories afterward. Review is same-model quality amplification unless verified otherwise.",
+  "transport_failure_preservation": "Persist raw request bytes/base64/hash and start time before parse/type checking. Malformed JSON/non-object/transport-read failure remains a failed first request and blocks later owning writes; no repair is counted as first success.",
+  "successor_contract": {
+    "recovery": "Preserve B final provider state. Open fresh read-only host session, discover and combined-read current Progress, Knowledge and all discovered Evidence. Record actual trace and unchanged-state receipt.",
+    "packet": "Common product protocols and host interface, actual trace, and ordinary Continue where we left off request only. No current_turn or B reply sidecar.",
+    "interaction": "A cloned handle begins with exactly B final state and permits the same bounded owning operations. Therefore a duplicate new Evidence request can be observed rather than blocked by a read-only consumer grant. No new fictional learner performance is introduced to C. Preserve both B final state and C operation trajectory.",
+    "deduplication": "Deduplicate identical exact successor packets; opaque handle/output locations are outside packet content. Distinct outputs remain attributed to their exact readback input.",
+    "scoring": "B first-trajectory outcome remains separate and is never relabeled by C repairs. Re-encoding the saved answer as another independent performance is invalid. A genuinely justified reinterpretation event is not automatically duplicate performance; assess its meaning and source relation under existing policy."
+  },
+  "dispatch_template": "You are the fresh tutor for a fictional local teaching session. Read only PACKET_PATH (verify SHA256 INPUT_HASH). Follow its request and current product protocols. You may call only the existing local host bridge at BRIDGE_PATH with HANDLE and a newly created JSON request file in YOUR_IO_DIRECTORY. Read no other files, plans, oracles, source code, provider state or other consumers. No network or real repositories. Requests are executed, not merely proposed; follow actual responses and fresh-read requirements. Preserve every first request; do not repair or retry a rejected write. The transport records them. Emit no planning or scratch notes. When done, write your first complete JSON response exactly once to RESPONSE_PATH using the packet response contract, then return that path. It must reflect actual persistence results or no writes. Do not revise your response after saving. This is an instruction-isolated fictional run, not production access.",
+  "frozen_at_utc": "2026-10-09T14:28:23.847120+00:00",
+  "source_execution_guard": "Bridge hashes all 184 frozen canonical-source files before importing the existing host. Source root is configurable only to an identical-byte snapshot. This guard was added after candidate-2 review; it changes no packet or acceptance criterion."
+}

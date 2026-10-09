@@ -1,0 +1,185 @@
+{
+  "baseline": {
+    "commit": "73d7d37c8492bae800ef3e31239cd190a4423f23",
+    "tree": "05ee86873e660b16547130ed77337f7425613d5a"
+  },
+  "executed_at_utc": "2026-10-09T14:40:03.894236+00:00",
+  "first_trajectories": [
+    {
+      "original_handle": "4cecb8101ae8acb7",
+      "replay_handle": "7e4f28d57337289f",
+      "operation_rows": [
+        {
+          "index": 1,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        },
+        {
+          "index": 2,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        },
+        {
+          "index": 3,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        },
+        {
+          "index": 4,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        },
+        {
+          "index": 5,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        },
+        {
+          "index": 6,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        }
+      ],
+      "final_state_exact": true,
+      "model_resampled": false
+    },
+    {
+      "original_handle": "7bb8e4e5a5448ec5",
+      "replay_handle": "bb5e28d4b71054b2",
+      "operation_rows": [
+        {
+          "index": 1,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        },
+        {
+          "index": 2,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        },
+        {
+          "index": 3,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        },
+        {
+          "index": 4,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        },
+        {
+          "index": 5,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        },
+        {
+          "index": 6,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        }
+      ],
+      "final_state_exact": true,
+      "model_resampled": false
+    },
+    {
+      "original_handle": "7bfe2562b40417b1",
+      "replay_handle": "856e210b2c20fec2",
+      "operation_rows": [
+        {
+          "index": 1,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        },
+        {
+          "index": 2,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        },
+        {
+          "index": 3,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        }
+      ],
+      "final_state_exact": true,
+      "model_resampled": false
+    }
+  ],
+  "successors": [
+    {
+      "original_handle": "d13451db56264e51",
+      "replay_handle": "06aadba433033524",
+      "operation_rows": [
+        {
+          "index": 1,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        }
+      ],
+      "final_state_exact": true,
+      "model_resampled": false
+    },
+    {
+      "original_handle": "566ebabcac3cb5d6",
+      "replay_handle": "9ffe6010b4189295",
+      "operation_rows": [
+        {
+          "index": 1,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        }
+      ],
+      "final_state_exact": true,
+      "model_resampled": false
+    },
+    {
+      "original_handle": "c7dc9ef818622929",
+      "replay_handle": "91e4189e46c7d4db",
+      "operation_rows": [
+        {
+          "index": 1,
+          "raw_request_exact": true,
+          "response_exact": true,
+          "provider_calls_exact": true,
+          "changed_paths_exact": true
+        }
+      ],
+      "final_state_exact": true,
+      "model_resampled": false
+    }
+  ]
+}

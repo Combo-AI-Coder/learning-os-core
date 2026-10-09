@@ -1,0 +1,520 @@
+{
+  "review_version": "final-six-trajectory-semantic-method-review-v1",
+  "reviewed_at_utc": "2026-10-09T14:43:01.420125+00:00",
+  "reviewer": "Separate instruction-isolated same-model semantic review; quality amplification, not an independent-provider audit.",
+  "prospective_plan_sha256": "4398165d8dd05ab8c5ab276b86a4f1613f5922f4e88535b42a7e48b58a29ea29",
+  "prospective_freeze_sha256": "be5c65fd95495e817b1445bfa03e810ee6777205a5d49aea69529b65d99e6dc0",
+  "frozen_bindings_all_match": true,
+  "canonical_source_files_checked": 184,
+  "canonical_source_files_all_match": true,
+  "rows": [
+    {
+      "arm": "elm",
+      "handle": "4cecb8101ae8acb7",
+      "stage": "B outcome evaluated separately from corresponding C result",
+      "bindings": {
+        "packet.json": "96845d4e18342d56e9f4b974496474ea176bef50126c5c8472321cf3664777c3",
+        "dispatch.txt": "f6bd5427fb1192949326487858165d0a60666c57de29310a5379edb3d6fb6df2",
+        "first-response.json": "91812460039b3074aee924c71ec895a3247bd2a466c850f0fe39cb4996b1c4b6",
+        "sealed-state.json": "b46a9929ac0c66e8ae132763778a1deaa15e2143e1286ae7a4615f64340b67d6",
+        "first-trajectory-receipt.json": "11b211feb3e9a6194e1b635af04d561082cf3cfbb62003e90b5d2b385a5084b3",
+        "successor-recovery.json": "85fcf32c0b12d592d2e0b14b8efb9ca717b56a98c6234f4c38ec79a71c2aa2ee",
+        "successor-binding.json": "9b10a404da87ed04ef4bcc76214b9592b08f8eb66bb303d54633ba6ccb081bed"
+      },
+      "request_log_sha256": {
+        "001.json": "1d9f81feb56ef95bac14e4988f368483f0981c2a0599c4f2a162a3d840616362",
+        "002.json": "ba710d9ce5b8d82044a48ec4bcd1336b35daebc6c14a734940a754e97e046876",
+        "003.json": "335d6e05b77e63565894ca3ba6bf8aad461a0a0541e4800aa35f7a305fefd963",
+        "004.json": "91c3e42862c1963ea56cb0a23883783924e2e3723c5899cd4f329f014346e1af",
+        "005.json": "73482fac1073be0ff4a29fc760e1d2cb14189d0e16f7f3aae6dc92b84de656ce",
+        "006.json": "4c71dec504404304761d50d1c4cb7047357fac2d304bad279a3c841874c62f89"
+      },
+      "verdict": {
+        "answer_feedback": "bounded_pass",
+        "semantic_persistence": "bounded_pass",
+        "actual_write_outcomes": "all three owning writes applied once",
+        "material_answer_conditioned_durability": "demonstrated in fake-provider sealed state and actual host readback",
+        "successor_fidelity": "assessed separately in corresponding successor_rows entry; does not relabel B outcome",
+        "learning_benefit": "not_measured"
+      },
+      "semantic_basis": "The reply explicitly validates the direction-sensitive reason and gives the correct permitted/non-permitted contrast. New Evidence is direct scoped support. Knowledge retains the unresolved historical support/challenge with no mastery upgrade. The checkpoint truthfully closes this answered question and proposes reconnecting to the earlier red/star example without a forced probe.",
+      "occurrence": {
+        "new_evidence_path": "evidence/evi_20261009_q03_001.yaml",
+        "new_evidence_count": 1,
+        "source_round_id": "synthetic-q03-turn-001",
+        "observed_at": "2026-10-09T12:10:00Z",
+        "interpretation": {
+          "direction": "support",
+          "diagnosticity": "high",
+          "novelty": "medium",
+          "confidence": "high"
+        },
+        "targets": [
+          {
+            "type": "capability",
+            "domain": "synthetic",
+            "concept": "category_statements",
+            "capability": "respect_the_direction_of_an_every_statement"
+          }
+        ],
+        "single_current_occurrence_preserved": true,
+        "assistance_scope": "No assistance event recorded, not a claim of verified unaided performance. No post-correction learner performance invented."
+      },
+      "mechanical_checks": {
+        "input_response_state_hashes_match_receipt": true,
+        "all_raw_request_bytes_hashes_and_parsed_objects_match": true,
+        "ordered_operations": [
+          "create_evidence",
+          "read_learning_context",
+          "reconcile_knowledge",
+          "read_learning_context",
+          "save_learning_checkpoint",
+          "read_learning_context"
+        ],
+        "fresh_knowledge_after_evidence_before_reconcile": true,
+        "fresh_progress_after_reconcile_before_checkpoint": true,
+        "prior_evidence_bytes_unchanged": true,
+        "forward_capability_semantically_unchanged": true,
+        "unrelated_progress_fields_semantically_unchanged": true,
+        "direction_state": "conflicted",
+        "knowledge_revision": 3,
+        "progress_revision": 3,
+        "writes_claimed_in_reply_are_actual": [
+          {
+            "applied": true
+          },
+          {
+            "applied": true
+          },
+          {
+            "applied": true
+          }
+        ],
+        "B_provider_state_remains_sealed": true,
+        "B_handle_closed": true,
+        "successor_packet_hash_verified": true,
+        "successor_uses_actual_recovery_trace": true,
+        "successor_no_current_turn_or_reply_sidecar": true,
+        "all_combined_readback_bytes_and_tokens_match_sealed_B": true
+      },
+      "semantic_failures_found": [],
+      "qualifications": [
+        "Knowledge document revision/ref/basis update is not a capability-state transition.",
+        "Actual host admission is checked separately from semantic appropriateness.",
+        "The fake tokens are static; observed fresh-read ordering does not establish production CAS/freshness."
+      ]
+    },
+    {
+      "arm": "pine",
+      "handle": "7bb8e4e5a5448ec5",
+      "stage": "B outcome evaluated separately from corresponding C result",
+      "bindings": {
+        "packet.json": "aed042c338890ecf963eb5c12010fdff1e82f66cbe223868068b20a0a925fcd6",
+        "dispatch.txt": "f2821e4950674d4a4101f0aecd6b4bbcb6d628b6eb942a300555bd0e537d1a85",
+        "first-response.json": "fb2044f335d06fca6fe1041045f120e4b99a65d6cd4bd7cce4e1e5df55aa4af0",
+        "sealed-state.json": "67ac126a245f94616e4a3a95992b09323faa280541b6aa0b3ff287a16f2cc69f",
+        "first-trajectory-receipt.json": "9253fbc9cf53c96f76b2da0e963aad6b44c1744a463a0da4cd67aa5ecfdb9def",
+        "successor-recovery.json": "26ef6d102820e34c0f046b2864704a40cf6b7d60a9941f9c3205399d408481d1",
+        "successor-binding.json": "ac493c463a9bd5a6bc1174ae9475ed6fb757aeb385ee4eb9d4075ffd98600fa1"
+      },
+      "request_log_sha256": {
+        "001.json": "eef15a881b990cbcff30a3e7565f0836d15ef9271f5edccba25860562df60f5c",
+        "002.json": "921d04fe1034b7e8a7f4eb0a31fa2ee7455dcc5f9a335d2820c03139fb73a823",
+        "003.json": "6a0295be175b8927f481d8a0e4129367293afeed61069dbd2198a3290b53e0d2",
+        "004.json": "ce7e9bbf897f09b489ebdd4e3b995d6abf1e6c7f61983f497b90bdd0341105a1",
+        "005.json": "2ea07a222eb291ff37988888cbba81d6c3411f9914678a117547ded66500a898",
+        "006.json": "a8705a3005747e7ff5869ed20a39ce5367836db9dc83388916298343d2d3cdff"
+      },
+      "verdict": {
+        "answer_feedback": "bounded_pass",
+        "semantic_persistence": "bounded_pass",
+        "actual_write_outcomes": "all three owning writes applied once",
+        "material_answer_conditioned_durability": "demonstrated in fake-provider sealed state and actual host readback",
+        "successor_fidelity": "assessed separately in corresponding successor_rows entry; does not relabel B outcome",
+        "learning_benefit": "not_measured"
+      },
+      "semantic_basis": "The reply identifies and explains the exact reverse implication, with a valid green-square counterexample and non-green-triangle violation. New Evidence is direct scoped challenge. Existing valid support remains and the direction claim stays conflicted, without a stable-misconception or global-inability claim. The checkpoint records the delivered correction and explicitly states that no learner response to it has been observed.",
+      "occurrence": {
+        "new_evidence_path": "evidence/evi_20261009_q03_direction_01.yaml",
+        "new_evidence_count": 1,
+        "source_round_id": "synthetic-q03-turn-001",
+        "observed_at": "2026-10-09T12:10:00Z",
+        "interpretation": {
+          "direction": "challenge",
+          "diagnosticity": "high",
+          "novelty": "medium",
+          "confidence": "high"
+        },
+        "targets": [
+          {
+            "type": "capability",
+            "domain": "synthetic",
+            "concept": "category_statements",
+            "capability": "respect_the_direction_of_an_every_statement"
+          }
+        ],
+        "single_current_occurrence_preserved": true,
+        "assistance_scope": "No assistance event recorded, not a claim of verified unaided performance. No post-correction learner performance invented."
+      },
+      "mechanical_checks": {
+        "input_response_state_hashes_match_receipt": true,
+        "all_raw_request_bytes_hashes_and_parsed_objects_match": true,
+        "ordered_operations": [
+          "create_evidence",
+          "read_learning_context",
+          "reconcile_knowledge",
+          "read_learning_context",
+          "save_learning_checkpoint",
+          "read_learning_context"
+        ],
+        "fresh_knowledge_after_evidence_before_reconcile": true,
+        "fresh_progress_after_reconcile_before_checkpoint": true,
+        "prior_evidence_bytes_unchanged": true,
+        "forward_capability_semantically_unchanged": true,
+        "unrelated_progress_fields_semantically_unchanged": true,
+        "direction_state": "conflicted",
+        "knowledge_revision": 3,
+        "progress_revision": 3,
+        "writes_claimed_in_reply_are_actual": [
+          {
+            "applied": true
+          },
+          {
+            "applied": true
+          },
+          {
+            "applied": true
+          }
+        ],
+        "B_provider_state_remains_sealed": true,
+        "B_handle_closed": true,
+        "successor_packet_hash_verified": true,
+        "successor_uses_actual_recovery_trace": true,
+        "successor_no_current_turn_or_reply_sidecar": true,
+        "all_combined_readback_bytes_and_tokens_match_sealed_B": true
+      },
+      "semantic_failures_found": [],
+      "qualifications": [
+        "Knowledge document revision/ref/basis update is not a capability-state transition.",
+        "Actual host admission is checked separately from semantic appropriateness.",
+        "The fake tokens are static; observed fresh-read ordering does not establish production CAS/freshness."
+      ]
+    },
+    {
+      "arm": "reed",
+      "handle": "7bfe2562b40417b1",
+      "stage": "B outcome evaluated separately from corresponding C result",
+      "bindings": {
+        "packet.json": "b80dcfdcda01ae40dd4a86d2a78f37f6a097bc2ee7819ee51cb0d021d21e3ac0",
+        "dispatch.txt": "44787f5a157de82d2b6cc907c89aefc47e082fb0c81f2623505c8e153b5a85c7",
+        "first-response.json": "761a9ecdaf6be0bb14fe254fa4b94dd05f2ef8042c30137c4693e218166f438b",
+        "sealed-state.json": "4c708d14c108f3b60c07a8ad99b4b3b3174a7d69bf6c472b00cff7829b0b29ef",
+        "first-trajectory-receipt.json": "d8a92e6f6415b7a8feb9560ce3127ceaf666b829e2dba9b72bcfb97e37ea82d4",
+        "successor-recovery.json": "ddda5b4fee092b1a1b953b69b57a6eccd5c7a105c2fc6ba7e5addf063d676051",
+        "successor-binding.json": "faaf5175498312e5eb10cb5a19bffb353eacc6519a194e90d43f09fb64276e77"
+      },
+      "request_log_sha256": {
+        "001.json": "094d6079abf4263aff64ddd28565fe56b9a43b069f8d6e63f58cadb04b22c9d1",
+        "002.json": "cdcc94d1ca81da32f71361a4c5563eeb4fffe56c43d4935a077488262b13c3fb",
+        "003.json": "77c16f7438c921c439658d213cceb9cbd5af912efaab380c3383ae69094f5e32"
+      },
+      "verdict": {
+        "answer_feedback": "bounded_pass",
+        "semantic_persistence": "bounded_pass",
+        "actual_write_outcomes": "one checkpoint save applied; no Evidence or Knowledge write attempted",
+        "material_answer_conditioned_durability": "demonstrated in checkpoint and actual host readback; this is not P0",
+        "successor_fidelity": "assessed separately in corresponding successor_rows entry; does not relabel B outcome",
+        "learning_benefit": "not_measured"
+      },
+      "semantic_basis": "The learner-facing reply affirms the correct yes/no conclusion, then provides the missing explanation itself; it does not claim the learner supplied that explanation or mastered the capability. Its basis and saved checkpoint explicitly retain the missing explanation, unresolved prior conflict and tutor-provided nature of the explanation. Saving the stopping point prevents treating the old diagnostic as unanswered without promoting the bare yes to capability support. A short fresh-example explanation next session is permitted ordinary application/observation and is not an automatically required probe imposed by this review.",
+      "occurrence": {
+        "new_evidence_count": 0,
+        "knowledge_document_unchanged": true,
+        "checkpoint_records_actual_answer": "Yes, with missing requested explanation",
+        "checkpoint_separates_tutor_explanation_from_learner_performance": true,
+        "no_guessing_inability_or_assistance_inferred": true
+      },
+      "mechanical_checks": {
+        "input_response_state_hashes_match_receipt": true,
+        "all_raw_request_bytes_hashes_and_parsed_objects_match": true,
+        "ordered_operations": [
+          "read_learning_context",
+          "save_learning_checkpoint",
+          "read_learning_context"
+        ],
+        "fresh_progress_and_knowledge_before_checkpoint": true,
+        "checkpoint_readback_verified": true,
+        "evidence_and_knowledge_bytes_unchanged": true,
+        "unrelated_progress_fields_semantically_unchanged": true,
+        "changed_paths": [
+          "topics/synthetic/subtopics/unit/progress.yaml"
+        ],
+        "write_result": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "save_learning_checkpoint",
+          "result": {
+            "applied": true
+          }
+        },
+        "knowledge_revision": 2,
+        "progress_revision": 3,
+        "B_provider_state_remains_sealed": true,
+        "B_handle_closed": true,
+        "successor_packet_hash_verified": true,
+        "successor_uses_actual_recovery_trace": true,
+        "successor_no_current_turn_or_reply_sidecar": true,
+        "all_combined_readback_bytes_and_tokens_match_sealed_B": true
+      },
+      "semantic_failures_found": [],
+      "qualifications": [
+        "No Evidence write is required for a useful continuity checkpoint.",
+        "Correctness feedback is not itself a full-credit explanation or mastery judgment.",
+        "The three answers produce different durable interpretations without requiring different capability-state enums."
+      ]
+    }
+  ],
+  "all_study_disposition": "bounded_pass_against_frozen_criteria",
+  "review_did_not_change_or_execute_consumer_artifacts": true,
+  "earlier_incremental_review_sha256": "f546feece13135c56b8aeabfca1d222fe91bd63ccbf9abda91a14624c73199d6",
+  "B_stage_disposition": "All three first B trajectories meet the frozen bounded feedback, persistence and trace criteria. They show explicit support, explicit challenge, and checkpoint-only unresolved reasoning respectively. All preserve the existing conflicted direction claim and supported forward capability.",
+  "earlier_all_B_review_sha256": "e18efe21af16ea158a2ee75abd5aad6841cb73f5c887a0c13aecd42631c12161",
+  "successor_rows": [
+    {
+      "arm": "elm",
+      "stage": "C",
+      "handle": "d13451db56264e51",
+      "parent_handle": "4cecb8101ae8acb7",
+      "bindings": {
+        "packet.json": "2bbc76ea1ee252d50467b071ee40550842be19089e580b1f8ddb54f76e93dfbc",
+        "dispatch.txt": "21650409b6067a83faaa1976049f10a8eb49e901fc901e79d46436d76c823698",
+        "dispatch-receipt.json": "f2f1075eb398dd11819976e79da43cde8a312bacc7990d3566b64b4d6a3c0572",
+        "first-response.json": "5ce676120400f535942b65cd4855e60462a34f8f28bad6bf253042fb04a3655b",
+        "sealed-state.json": "b46a9929ac0c66e8ae132763778a1deaa15e2143e1286ae7a4615f64340b67d6",
+        "first-trajectory-receipt.json": "4abc9d1fe392a015442687ad6dde3afed459f86c23fd56550666728dd66ef93b"
+      },
+      "request_log_sha256": {
+        "001.json": "55e6820d434ade0833187a95c7255c5484b698746e4747d8e2c0a7f0df3a48ab"
+      },
+      "verdict": {
+        "successor_fidelity": "bounded_pass",
+        "teaching_correctness": "bounded_pass",
+        "claim_and_occurrence_preservation": "bounded_pass",
+        "actual_write_outcomes": "no writes; one successful fresh read",
+        "learning_benefit": "not_measured"
+      },
+      "semantic_basis": "The response follows the actual saved instruction to connect the accepted triangular/green explanation to the older red/star-shaped reversal. A red circle alongside red stars is a valid counterexample to reversing the requirement. It does not reissue the answered q03 question, retest foundation, invent a learner answer to the explanation, or upgrade the conflicted claim. It uses the saved explanation as historical performance, not a second performance.",
+      "mechanical_checks": {
+        "input_response_state_hashes_match_receipt": true,
+        "dispatch_text_hash_matches_record": true,
+        "input_hash_matches_producer_binding": true,
+        "packet_uses_exact_B_actual_recovery": true,
+        "packet_has_no_current_turn_or_parent_reply_sidecar": true,
+        "sealed_C_state_exactly_equals_sealed_B_state": true,
+        "single_actual_read": true,
+        "read_succeeded_without_mutation": true,
+        "returned_read_contents_tokens_match_B": true,
+        "raw_request_hash_and_parse_match": true,
+        "C_handle_closed": true,
+        "no_write_attempts": true
+      },
+      "semantic_failures_found": []
+    },
+    {
+      "arm": "pine",
+      "stage": "C",
+      "handle": "566ebabcac3cb5d6",
+      "parent_handle": "7bb8e4e5a5448ec5",
+      "bindings": {
+        "packet.json": "47f5c9910a547df385d6d9e536581b8c4aca2294e4c191582a16749c16db3f04",
+        "dispatch.txt": "9cb461517be8e40211777073f07a153c55398695fcc0cfceb16c4be64178053e",
+        "dispatch-receipt.json": "af2a48c82e3519063c1a1f0f13b6d6ed4f5a849a907cae05c964ed25d42c3998",
+        "first-response.json": "1b77847c99a115d17ffce12570751d6ff81eec4677c40c435e2a51699e03a2e9",
+        "sealed-state.json": "67ac126a245f94616e4a3a95992b09323faa280541b6aa0b3ff287a16f2cc69f",
+        "first-trajectory-receipt.json": "0b5a227220ee66c7c289e3607ff023179f943ded8608bc6bba2f2bedcde9bc89"
+      },
+      "request_log_sha256": {
+        "001.json": "043299cb0dea531dd2a2b15581b6708fd682a0d298812623c39933f66485659c"
+      },
+      "verdict": {
+        "successor_fidelity": "bounded_pass",
+        "teaching_correctness": "bounded_pass",
+        "claim_and_occurrence_preservation": "bounded_pass",
+        "actual_write_outcomes": "no writes; one successful fresh read",
+        "learning_benefit": "not_measured"
+      },
+      "semantic_basis": "The response follows the saved continuation with a short new tray comparison. Its explicit blue-round-piece question requires the reverse-direction distinction; the red-square case is a contrast using the known forward rule rather than a broad prerequisite retest. It does not repeat the answered triangular/green diagnostic, credit a nonexistent post-correction response, infer a stable misconception, or upgrade/downgrade Knowledge. No extra persistence is forced merely because the tutor issues a new ordinary application prompt.",
+      "mechanical_checks": {
+        "input_response_state_hashes_match_receipt": true,
+        "dispatch_text_hash_matches_record": true,
+        "input_hash_matches_producer_binding": true,
+        "packet_uses_exact_B_actual_recovery": true,
+        "packet_has_no_current_turn_or_parent_reply_sidecar": true,
+        "sealed_C_state_exactly_equals_sealed_B_state": true,
+        "single_actual_read": true,
+        "read_succeeded_without_mutation": true,
+        "returned_read_contents_tokens_match_B": true,
+        "raw_request_hash_and_parse_match": true,
+        "C_handle_closed": true,
+        "no_write_attempts": true
+      },
+      "semantic_failures_found": []
+    },
+    {
+      "arm": "reed",
+      "stage": "C",
+      "handle": "c7dc9ef818622929",
+      "parent_handle": "7bfe2562b40417b1",
+      "bindings": {
+        "packet.json": "b9e1f7f1613a10affb13b96152e86b965c2822df6916112ce620799c38e295ef",
+        "dispatch.txt": "80d713ee277ad7d0ebd0d4262c68d0055d39b38f8be9b5b05300ce62ed7627fa",
+        "dispatch-receipt.json": "47f58e46579b78a072ce620bbe80a09991d81ea4308727eaa57c7fcaf96ece3b",
+        "first-response.json": "4eb8b5552c5af27173787b85f4fd96e8b17c6c840158f5e46d22e90aa8c12304",
+        "sealed-state.json": "4c708d14c108f3b60c07a8ad99b4b3b3174a7d69bf6c472b00cff7829b0b29ef",
+        "first-trajectory-receipt.json": "a9c3b2c9092d6d8bb548a7548b421c97f40591ab93b7bd1f8fa7ff9c84e378c8"
+      },
+      "request_log_sha256": {
+        "001.json": "83259acc9aa2fa3440f4a9f77ef193874a29ee124ada75e4cba1a2536a322eba"
+      },
+      "verdict": {
+        "successor_fidelity": "bounded_pass",
+        "teaching_correctness": "bounded_pass",
+        "claim_and_occurrence_preservation": "bounded_pass",
+        "actual_write_outcomes": "no writes; one successful fresh read",
+        "learning_benefit": "not_measured"
+      },
+      "semantic_basis": "The response faithfully uses the saved striped/yellow example and requests the missing explanatory performance without supplying its answer in the new question. Its basis distinguishes the previous correct bare yes from the tutor-provided explanation, preserves the unresolved direction claim and supported forward capability, and does not infer a new learner performance. The checkpoint, not a replayed answer sidecar or newly invented Evidence, supplies the relevant continuation context. No new Evidence, Knowledge or checkpoint write occurs.",
+      "mechanical_checks": {
+        "input_response_state_hashes_match_receipt": true,
+        "dispatch_text_hash_matches_record": true,
+        "input_hash_matches_producer_binding": true,
+        "packet_uses_exact_B_actual_recovery": true,
+        "packet_has_no_current_turn_or_parent_reply_sidecar": true,
+        "sealed_C_state_exactly_equals_sealed_B_state": true,
+        "single_actual_read": true,
+        "read_succeeded_without_mutation": true,
+        "returned_read_contents_tokens_match_B": true,
+        "raw_request_hash_and_parse_match": true,
+        "C_handle_closed": true,
+        "no_write_attempts": true
+      },
+      "semantic_failures_found": []
+    }
+  ],
+  "postfreeze_helpers_review": {
+    "seal_trajectory.py": {
+      "sha256": "6f6a1bfff5c0bebaed1c353f09bf1a49dd542fcc990a7e7d1c69c47cc49b89ab",
+      "inspection": "Uses actual post-B state, read-only existing-host discovery+combined read, and common policy/interface to make C packet; no B reply/current_turn sidecar. Packet deduplication is exact-byte hash. Source state and first output are not rewritten."
+    },
+    "replay_trajectories.py": {
+      "sha256": "92b6d83a6219be1235f61799948dc083c25a05a89360596bacb23fd0e07e6051",
+      "inspection": "Reuses retained raw request bytes in new fake handles and compares host results, provider traces, changed paths and final state. No model sampling is present. Reviewer has not executed it."
+    },
+    "chronology": "Both are deterministic postprocessing authored after prospective freeze; they are not preregistered code or independently attested execution."
+  },
+  "earlier_C_elm_review_sha256": "5101e92be3d37c9445d8b070565141c49135669cf3b1d85d370862255a1c96db",
+  "earlier_C_elm_pine_review_sha256": "ee109eaaa3a26affd839d29d298f9f92b7b3a15ad495672cb8a50e6a443edbb0",
+  "successor_selection_review": {
+    "distinct_exact_packets": 3,
+    "one_output_per_distinct_packet": true,
+    "deduplication_needed_in_observed_run": false,
+    "all_three_producer_states_kept_separate": true,
+    "no_current_answer_or_parent_reply_sidecar": true
+  },
+  "mechanical_audit": {
+    "artifact_bindings": {
+      "mechanical-invariants.json": "f8c04bca1e4aba447170b44bfb6a5b9007297a6c973af3afb2ba890b8db81643",
+      "mechanical-exact-replay.json": "a3228d1b97801ec8f49fcb194474f001ab2079dc6e74bf2a5e9453b6288d2aea",
+      "seal_trajectory.py": "6f6a1bfff5c0bebaed1c353f09bf1a49dd542fcc990a7e7d1c69c47cc49b89ab",
+      "replay_trajectories.py": "92b6d83a6219be1235f61799948dc083c25a05a89360596bacb23fd0e07e6051",
+      "successor-index.json": "3b54556fd0ac933b21d9df99b139810d3f64aa31669ac514f5a7f6b0a5a9fb36"
+    },
+    "replay_rows": [
+      {
+        "original_handle": "4cecb8101ae8acb7",
+        "replay_handle": "7e4f28d57337289f",
+        "request_count": 6,
+        "independently_compared_raw_requests_results_provider_calls_changed_paths_all_exact": true,
+        "independently_compared_final_state_exact": true
+      },
+      {
+        "original_handle": "7bb8e4e5a5448ec5",
+        "replay_handle": "bb5e28d4b71054b2",
+        "request_count": 6,
+        "independently_compared_raw_requests_results_provider_calls_changed_paths_all_exact": true,
+        "independently_compared_final_state_exact": true
+      },
+      {
+        "original_handle": "7bfe2562b40417b1",
+        "replay_handle": "856e210b2c20fec2",
+        "request_count": 3,
+        "independently_compared_raw_requests_results_provider_calls_changed_paths_all_exact": true,
+        "independently_compared_final_state_exact": true
+      },
+      {
+        "original_handle": "d13451db56264e51",
+        "replay_handle": "06aadba433033524",
+        "request_count": 1,
+        "independently_compared_raw_requests_results_provider_calls_changed_paths_all_exact": true,
+        "independently_compared_final_state_exact": true
+      },
+      {
+        "original_handle": "566ebabcac3cb5d6",
+        "replay_handle": "9ffe6010b4189295",
+        "request_count": 1,
+        "independently_compared_raw_requests_results_provider_calls_changed_paths_all_exact": true,
+        "independently_compared_final_state_exact": true
+      },
+      {
+        "original_handle": "c7dc9ef818622929",
+        "replay_handle": "91e4189e46c7d4db",
+        "request_count": 1,
+        "independently_compared_raw_requests_results_provider_calls_changed_paths_all_exact": true,
+        "independently_compared_final_state_exact": true
+      }
+    ],
+    "total_original_host_requests": 18,
+    "model_resampling_in_replay": false,
+    "reviewer_executed_replay": false,
+    "verification_basis": "Reviewer read the deterministic replay code and independently compared original and replay artifact files, rather than relying only on summary true flags. Raw request bytes are retained; host result values are retained losslessly as JSON under the frozen deterministic response serialization. These are reproducibility checks, not signed provider/runtime attestation."
+  },
+  "supported_claim": "For the retained q03 question and exactly these three authored fictional answers, the first tutor trajectories produced content-appropriate feedback and bounded answer-conditioned durable state: scoped support, scoped challenge, and checkpoint-only unresolved reasoning. Each fresh successor used its actual bounded durable readback to continue the saved teaching step while preserving unresolved claims and source-occurrence boundaries. All eighteen retained host requests reproduced exactly in the fake provider, with no model resampling during replay.",
+  "outcome_counts": {
+    "first_B_trajectories": 3,
+    "fresh_C_trajectories": 3,
+    "B_create_evidence_calls_applied": 2,
+    "B_reconcile_knowledge_calls_applied": 2,
+    "B_checkpoint_calls_applied": 3,
+    "C_owning_writes": 0,
+    "capability_state_enum_transitions": 0,
+    "B_checkpoint_only_worlds": 1,
+    "semantic_failures_found": 0,
+    "current_answer_evidence_records_per_counterfactual_world": [
+      1,
+      1,
+      0
+    ],
+    "authored_current_answer_occurrences_per_counterfactual_world": [
+      1,
+      1,
+      1
+    ]
+  },
+  "scope_and_method_limits": [
+    "All learner answers are authored synthetic fixtures. No real learner participated; correctness of actual learner assessment, learning benefit, retention and transfer are not measured.",
+    "This is one retained first model trajectory per answer and one per distinct actual readback. It demonstrates only this bounded controlled-input contrast, not a reliability rate, population estimate or robust model-level causal effect.",
+    "The historical q03 question was supplied. This does not test choosing the question autonomously, unseen-domain transfer, or the diagnostic-question selection policy.",
+    "The request explicitly asked for a sensible stopping point and a fresh next session. Closure and checkpoint behavior are task-driven; autonomous detection of a stopping boundary is not established.",
+    "Recovery uses a fixed existing-host selection recipe. Successors do not autonomously discover arbitrary context, and failure/denied/missing/over-budget recovery was not part of these six trajectories.",
+    "The fake provider uses static version tokens and fixed fixture time. Actual read ordering and exact operation replay do not prove production freshness, true CAS concurrency, provider credential isolation or real deployment fencing.",
+    "A bridge call reconstructs the fake provider and opens/closes its own host session. The unrestarted trajectory refers to the consumer run, not a continuously live broker session or an OS-crash recovery test.",
+    "Consumers and reviewer are instruction-isolated contexts using the same model family and shared filesystem. This is quality amplification, not independent-provider attestation or a security sandbox. Exact backend build, seed, temperature and complete provider prompt are not exposed.",
+    "The final source hash guard was added before prospective freeze after the candidate-2 review and is explicitly disclosed. Sealing/replay helpers are deterministic postprocessing authored after freeze, not preregistered code. The frozen criteria and consumer packets remain unchanged.",
+    "The observed C trajectories made no writes. Successor-side repair, justified reinterpretation-event creation and failed-write recovery are therefore not demonstrated; C does not erase or relabel any B outcome.",
+    "The support and challenge observations belong to separate counterfactual worlds sharing a fictional source-round identifier. They must not be pooled as repeated independent performances by one learner.",
+    "Passing the frozen synthetic task is not a Core #34 blanket pass, deployment, project acceptance, real-state mutation authorization or basis for changing product protocols."
+  ],
+  "remaining_material_blockers": [],
+  "new_gold_requirements_added_posthoc": false,
+  "review_boundary": "Only review JSON files were authored by the reviewer in the experiment root. No consumer was invoked, output altered, Core source changed, public comment sent, or action outside this synthetic review scope performed."
+}

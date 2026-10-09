@@ -1,0 +1,232 @@
+{
+  "version": 1,
+  "experiment_core_commit": "73d7d37c8492bae800ef3e31239cd190a4423f23",
+  "experiment_core_tree": "05ee86873e660b16547130ed77337f7425613d5a",
+  "original_archive_sha256": "c4cf3d83014880940de4baa2e7cf8000a80da947c799b318f5693dfbf2638f9b",
+  "unique_b_inputs": 3,
+  "unique_c_inputs": 3,
+  "original_host_requests": 18,
+  "model_resampled": false,
+  "cases": {
+    "elm": {
+      "b_handle": "4cecb8101ae8acb7",
+      "c_handle": "d13451db56264e51",
+      "current_occurrence_count": 1,
+      "owning_write_count": 3,
+      "b_request_count": 6,
+      "c_request_count": 1
+    },
+    "pine": {
+      "b_handle": "7bb8e4e5a5448ec5",
+      "c_handle": "566ebabcac3cb5d6",
+      "current_occurrence_count": 1,
+      "owning_write_count": 3,
+      "b_request_count": 6,
+      "c_request_count": 1
+    },
+    "reed": {
+      "b_handle": "7bfe2562b40417b1",
+      "c_handle": "c7dc9ef818622929",
+      "current_occurrence_count": 0,
+      "owning_write_count": 1,
+      "b_request_count": 3,
+      "c_request_count": 1
+    }
+  },
+  "files": {
+    "prospective-plan.json": {
+      "sha256": "4398165d8dd05ab8c5ab276b86a4f1613f5922f4e88535b42a7e48b58a29ea29",
+      "kind": "verbatim",
+      "source_relative_path": "prospective-plan.json"
+    },
+    "prospective-freeze.json": {
+      "sha256": "be5c65fd95495e817b1445bfa03e810ee6777205a5d49aea69529b65d99e6dc0",
+      "kind": "verbatim",
+      "source_relative_path": "prospective-freeze.json"
+    },
+    "semantic-review-final.json": {
+      "sha256": "074a0993c121f930168e55bc7e625f1c8ddde6aa741064541e0854b2ed5eac8d",
+      "kind": "verbatim",
+      "source_relative_path": "semantic-review-final.json"
+    },
+    "mechanical-invariants.json": {
+      "sha256": "f8c04bca1e4aba447170b44bfb6a5b9007297a6c973af3afb2ba890b8db81643",
+      "kind": "verbatim",
+      "source_relative_path": "mechanical-invariants.json"
+    },
+    "mechanical-exact-replay.json": {
+      "sha256": "a3228d1b97801ec8f49fcb194474f001ab2079dc6e74bf2a5e9453b6288d2aea",
+      "kind": "verbatim",
+      "source_relative_path": "mechanical-exact-replay.json"
+    },
+    "initial-provider-state.json": {
+      "sha256": "76a38212d06d8f88f3f8298e1900f2767273df1915d5cc9e5ab501dd0e6da61d",
+      "kind": "verbatim",
+      "source_relative_path": "initial-provider-state.json"
+    },
+    "initial-provider-calls.json": {
+      "sha256": "5d5a465396568e2185180b8783e86703d9b34f0b14b59045754376ea61a2c2b5",
+      "kind": "verbatim",
+      "source_relative_path": "initial-provider-calls.json"
+    },
+    "preparation-attempt-1.json": {
+      "sha256": "81732da75a9f7967d1746bb52794075e2183c9a23afe3decaf162567ba26f864",
+      "kind": "verbatim",
+      "source_relative_path": "preparation-attempt-1.json"
+    },
+    "elm-post-state.json": {
+      "sha256": "b46a9929ac0c66e8ae132763778a1deaa15e2143e1286ae7a4615f64340b67d6",
+      "kind": "verbatim",
+      "source_relative_path": "handles/4cecb8101ae8acb7/sealed-state.json"
+    },
+    "elm-successor-recovery.json": {
+      "sha256": "85fcf32c0b12d592d2e0b14b8efb9ca717b56a98c6234f4c38ec79a71c2aa2ee",
+      "kind": "verbatim",
+      "source_relative_path": "handles/4cecb8101ae8acb7/successor-recovery.json"
+    },
+    "elm-b-packet.json": {
+      "sha256": "96845d4e18342d56e9f4b974496474ea176bef50126c5c8472321cf3664777c3",
+      "kind": "verbatim",
+      "source_relative_path": "handles/4cecb8101ae8acb7/packet.json"
+    },
+    "elm-b-response.json": {
+      "sha256": "91812460039b3074aee924c71ec895a3247bd2a466c850f0fe39cb4996b1c4b6",
+      "kind": "verbatim",
+      "source_relative_path": "handles/4cecb8101ae8acb7/first-response.json"
+    },
+    "elm-b-trajectory.json": {
+      "sha256": "60f2242aa2776ee5ed65c30a2811b40d0a3fe5a26751c3a164893cd9a8ec8315",
+      "kind": "derived_public_safe_receipt",
+      "source_log_hashes": {
+        "handles/4cecb8101ae8acb7/requests/001.json": "1d9f81feb56ef95bac14e4988f368483f0981c2a0599c4f2a162a3d840616362",
+        "handles/4cecb8101ae8acb7/requests/002.json": "ba710d9ce5b8d82044a48ec4bcd1336b35daebc6c14a734940a754e97e046876",
+        "handles/4cecb8101ae8acb7/requests/003.json": "335d6e05b77e63565894ca3ba6bf8aad461a0a0541e4800aa35f7a305fefd963",
+        "handles/4cecb8101ae8acb7/requests/004.json": "91c3e42862c1963ea56cb0a23883783924e2e3723c5899cd4f329f014346e1af",
+        "handles/4cecb8101ae8acb7/requests/005.json": "73482fac1073be0ff4a29fc760e1d2cb14189d0e16f7f3aae6dc92b84de656ce",
+        "handles/4cecb8101ae8acb7/requests/006.json": "4c71dec504404304761d50d1c4cb7047357fac2d304bad279a3c841874c62f89"
+      },
+      "derivation": "Only machine-specific request_file removed; source_log_sha256/omitted_source_fields added. Raw request bytes, parsed request, result values, UTC times, provider calls and changed paths preserved."
+    },
+    "elm-c-packet.json": {
+      "sha256": "2bbc76ea1ee252d50467b071ee40550842be19089e580b1f8ddb54f76e93dfbc",
+      "kind": "verbatim",
+      "source_relative_path": "handles/d13451db56264e51/packet.json"
+    },
+    "elm-c-response.json": {
+      "sha256": "5ce676120400f535942b65cd4855e60462a34f8f28bad6bf253042fb04a3655b",
+      "kind": "verbatim",
+      "source_relative_path": "handles/d13451db56264e51/first-response.json"
+    },
+    "elm-c-trajectory.json": {
+      "sha256": "1df78f88773ea0e448a51ba5eb9486fc9d0f4e72e23eba28918728c3fefe7b58",
+      "kind": "derived_public_safe_receipt",
+      "source_log_hashes": {
+        "handles/d13451db56264e51/requests/001.json": "55e6820d434ade0833187a95c7255c5484b698746e4747d8e2c0a7f0df3a48ab"
+      },
+      "derivation": "Only machine-specific request_file removed; source_log_sha256/omitted_source_fields added. Raw request bytes, parsed request, result values, UTC times, provider calls and changed paths preserved."
+    },
+    "pine-post-state.json": {
+      "sha256": "67ac126a245f94616e4a3a95992b09323faa280541b6aa0b3ff287a16f2cc69f",
+      "kind": "verbatim",
+      "source_relative_path": "handles/7bb8e4e5a5448ec5/sealed-state.json"
+    },
+    "pine-successor-recovery.json": {
+      "sha256": "26ef6d102820e34c0f046b2864704a40cf6b7d60a9941f9c3205399d408481d1",
+      "kind": "verbatim",
+      "source_relative_path": "handles/7bb8e4e5a5448ec5/successor-recovery.json"
+    },
+    "pine-b-packet.json": {
+      "sha256": "aed042c338890ecf963eb5c12010fdff1e82f66cbe223868068b20a0a925fcd6",
+      "kind": "verbatim",
+      "source_relative_path": "handles/7bb8e4e5a5448ec5/packet.json"
+    },
+    "pine-b-response.json": {
+      "sha256": "fb2044f335d06fca6fe1041045f120e4b99a65d6cd4bd7cce4e1e5df55aa4af0",
+      "kind": "verbatim",
+      "source_relative_path": "handles/7bb8e4e5a5448ec5/first-response.json"
+    },
+    "pine-b-trajectory.json": {
+      "sha256": "133c5d5ea375160ec290c55cbfe076a765711c9d42eb7b6d8c48b0eacf6557c7",
+      "kind": "derived_public_safe_receipt",
+      "source_log_hashes": {
+        "handles/7bb8e4e5a5448ec5/requests/001.json": "eef15a881b990cbcff30a3e7565f0836d15ef9271f5edccba25860562df60f5c",
+        "handles/7bb8e4e5a5448ec5/requests/002.json": "921d04fe1034b7e8a7f4eb0a31fa2ee7455dcc5f9a335d2820c03139fb73a823",
+        "handles/7bb8e4e5a5448ec5/requests/003.json": "6a0295be175b8927f481d8a0e4129367293afeed61069dbd2198a3290b53e0d2",
+        "handles/7bb8e4e5a5448ec5/requests/004.json": "ce7e9bbf897f09b489ebdd4e3b995d6abf1e6c7f61983f497b90bdd0341105a1",
+        "handles/7bb8e4e5a5448ec5/requests/005.json": "2ea07a222eb291ff37988888cbba81d6c3411f9914678a117547ded66500a898",
+        "handles/7bb8e4e5a5448ec5/requests/006.json": "a8705a3005747e7ff5869ed20a39ce5367836db9dc83388916298343d2d3cdff"
+      },
+      "derivation": "Only machine-specific request_file removed; source_log_sha256/omitted_source_fields added. Raw request bytes, parsed request, result values, UTC times, provider calls and changed paths preserved."
+    },
+    "pine-c-packet.json": {
+      "sha256": "47f5c9910a547df385d6d9e536581b8c4aca2294e4c191582a16749c16db3f04",
+      "kind": "verbatim",
+      "source_relative_path": "handles/566ebabcac3cb5d6/packet.json"
+    },
+    "pine-c-response.json": {
+      "sha256": "1b77847c99a115d17ffce12570751d6ff81eec4677c40c435e2a51699e03a2e9",
+      "kind": "verbatim",
+      "source_relative_path": "handles/566ebabcac3cb5d6/first-response.json"
+    },
+    "pine-c-trajectory.json": {
+      "sha256": "2045a82418add0c43ca542b7f2d12999c6850aa30a243cc203e1cadb8399ec04",
+      "kind": "derived_public_safe_receipt",
+      "source_log_hashes": {
+        "handles/566ebabcac3cb5d6/requests/001.json": "043299cb0dea531dd2a2b15581b6708fd682a0d298812623c39933f66485659c"
+      },
+      "derivation": "Only machine-specific request_file removed; source_log_sha256/omitted_source_fields added. Raw request bytes, parsed request, result values, UTC times, provider calls and changed paths preserved."
+    },
+    "reed-post-state.json": {
+      "sha256": "4c708d14c108f3b60c07a8ad99b4b3b3174a7d69bf6c472b00cff7829b0b29ef",
+      "kind": "verbatim",
+      "source_relative_path": "handles/7bfe2562b40417b1/sealed-state.json"
+    },
+    "reed-successor-recovery.json": {
+      "sha256": "ddda5b4fee092b1a1b953b69b57a6eccd5c7a105c2fc6ba7e5addf063d676051",
+      "kind": "verbatim",
+      "source_relative_path": "handles/7bfe2562b40417b1/successor-recovery.json"
+    },
+    "reed-b-packet.json": {
+      "sha256": "b80dcfdcda01ae40dd4a86d2a78f37f6a097bc2ee7819ee51cb0d021d21e3ac0",
+      "kind": "verbatim",
+      "source_relative_path": "handles/7bfe2562b40417b1/packet.json"
+    },
+    "reed-b-response.json": {
+      "sha256": "761a9ecdaf6be0bb14fe254fa4b94dd05f2ef8042c30137c4693e218166f438b",
+      "kind": "verbatim",
+      "source_relative_path": "handles/7bfe2562b40417b1/first-response.json"
+    },
+    "reed-b-trajectory.json": {
+      "sha256": "0ff44058a6d019f15d4d8fe74f0ed376acd59e16a8c6284dcbdb577c3f496aad",
+      "kind": "derived_public_safe_receipt",
+      "source_log_hashes": {
+        "handles/7bfe2562b40417b1/requests/001.json": "094d6079abf4263aff64ddd28565fe56b9a43b069f8d6e63f58cadb04b22c9d1",
+        "handles/7bfe2562b40417b1/requests/002.json": "cdcc94d1ca81da32f71361a4c5563eeb4fffe56c43d4935a077488262b13c3fb",
+        "handles/7bfe2562b40417b1/requests/003.json": "77c16f7438c921c439658d213cceb9cbd5af912efaab380c3383ae69094f5e32"
+      },
+      "derivation": "Only machine-specific request_file removed; source_log_sha256/omitted_source_fields added. Raw request bytes, parsed request, result values, UTC times, provider calls and changed paths preserved."
+    },
+    "reed-c-packet.json": {
+      "sha256": "b9e1f7f1613a10affb13b96152e86b965c2822df6916112ce620799c38e295ef",
+      "kind": "verbatim",
+      "source_relative_path": "handles/c7dc9ef818622929/packet.json"
+    },
+    "reed-c-response.json": {
+      "sha256": "4eb8b5552c5af27173787b85f4fd96e8b17c6c840158f5e46d22e90aa8c12304",
+      "kind": "verbatim",
+      "source_relative_path": "handles/c7dc9ef818622929/first-response.json"
+    },
+    "reed-c-trajectory.json": {
+      "sha256": "5b6bad09849666c6a2371296ddcaf0fb806a7d9cb19ae1fb1d010158d3a588d5",
+      "kind": "derived_public_safe_receipt",
+      "source_log_hashes": {
+        "handles/c7dc9ef818622929/requests/001.json": "83259acc9aa2fa3440f4a9f77ef193874a29ee124ada75e4cba1a2536a322eba"
+      },
+      "derivation": "Only machine-specific request_file removed; source_log_sha256/omitted_source_fields added. Raw request bytes, parsed request, result values, UTC times, provider calls and changed paths preserved."
+    },
+    ".gitattributes": {
+      "sha256": "9e8f041ed812cb5288282cc6b187de804e96b688d56647fdae181c49fec71863",
+      "kind": "publication_checkout_rule"
+    }
+  }
+}
