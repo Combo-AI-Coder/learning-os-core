@@ -1,0 +1,486 @@
+[
+  {
+    "index": 1,
+    "at_started": "2026-10-09T15:54:04.066462+00:00",
+    "request_sha256": "745a665f81fa37370144051e808e9e4f70ba34f91f04db22992a5410fa6a27c4",
+    "request_raw_base64": "eyJvcGVyYXRpb24iOiAicmVhZF9sZWFybmluZ19jb250ZXh0IiwgImFyZ3VtZW50cyI6IHsicmVxdWlyZWRfcGF0aHMiOiBbInRvcGljcy9zeW50aGV0aWMvc3VidG9waWNzL3VuaXQvcHJvZ3Jlc3MueWFtbCJdLCAib3B0aW9uYWxfcGF0aHMiOiBbInRvcGljcy9zeW50aGV0aWMvc3VidG9waWNzL3VuaXQvZGVmaW5pdGlvbi55YW1sIl19fQ==",
+    "request_raw_utf8": "{\"operation\": \"read_learning_context\", \"arguments\": {\"required_paths\": [\"topics/synthetic/subtopics/unit/progress.yaml\"], \"optional_paths\": [\"topics/synthetic/subtopics/unit/definition.yaml\"]}}",
+    "request": {
+      "operation": "read_learning_context",
+      "arguments": {
+        "required_paths": [
+          "topics/synthetic/subtopics/unit/progress.yaml"
+        ],
+        "optional_paths": [
+          "topics/synthetic/subtopics/unit/definition.yaml"
+        ]
+      }
+    },
+    "provider_calls": [
+      [
+        "materialize",
+        9100000101,
+        "main"
+      ],
+      [
+        "read",
+        9100000101,
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "deployment.yaml"
+      ],
+      [
+        "materialize",
+        9100000102,
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      [
+        "materialize",
+        9100000103,
+        "main"
+      ],
+      [
+        "release",
+        9100000103,
+        "8888888888888888888888888888888888888888"
+      ],
+      [
+        "release",
+        9100000102,
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      [
+        "release",
+        9100000101,
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      [
+        "read",
+        9100000103,
+        "main",
+        "topics/synthetic/coordination/branches/main/runtime.yaml"
+      ],
+      [
+        "read",
+        9100000103,
+        "8888888888888888888888888888888888888888",
+        "topics/synthetic/coordination/branches.yaml"
+      ],
+      [
+        "read",
+        9100000101,
+        "main",
+        "deployment.yaml"
+      ],
+      [
+        "resolve",
+        9100000103,
+        "main"
+      ],
+      [
+        "materialize",
+        9100000103,
+        "8888888888888888888888888888888888888888"
+      ],
+      [
+        "snapshot_read",
+        9100000103,
+        "8888888888888888888888888888888888888888",
+        "topics/synthetic/subtopics/unit/progress.yaml"
+      ],
+      [
+        "release",
+        9100000103,
+        "8888888888888888888888888888888888888888"
+      ],
+      [
+        "resolve",
+        9100000103,
+        "main"
+      ],
+      [
+        "resolve",
+        9100000101,
+        "main"
+      ]
+    ],
+    "state_unchanged": true,
+    "changed_paths": [],
+    "response": {
+      "surface_version": "v4",
+      "ok": true,
+      "operation": "read_learning_context",
+      "result": {
+        "documents": [
+          {
+            "path": "topics/synthetic/subtopics/unit/progress.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: subtopic_progress\nrevision: 3\nupdated_at: '2026-10-09T12:10:00Z'\ntopic: synthetic\nsubtopic: unit\nplan_revision: 1\nmilestones:\n  foundation:\n    status: completed\n  next-step:\n    status: in_progress\ncurrent:\n  milestone:\n  - next-step\nblockers: []\nresume:\n  return_point:\n    kind: teaching_thread\n    focus: 'Descriptions of groups: direction of an Every statement'\n    activity: 'The triangular/green question has been answered: the learner inferred\n      triangular from green and ruled out a green square. Closing feedback explains\n      that a green square is allowed alongside green triangles; only a non-green triangle\n      would break the description. Stop here at the learner request. No learner response\n      to this correction has been observed; the direction claim remains conflicted.\n      Next session continue from this correction with a new simple tray comparison\n      that distinguishes what the description requires from what it leaves open, rather\n      than repeating the answered question or retesting the completed foundation.'\n    scope: Use familiar colors and shapes, an existing selected piece in the stated\n      tray, and only the supplied description. Formal symbols and technical logic\n      vocabulary remain outside this step.\n  ready_next: []\nwatch:\n- kind: node\n  reason: preserve me\navoid_retesting:\n- foundation\n",
+            "version_token": "9999999999999999999999999999999999999999"
+          }
+        ],
+        "missing_optional": [
+          "topics/synthetic/subtopics/unit/definition.yaml"
+        ]
+      }
+    },
+    "at_finished": "2026-10-09T15:54:04.294193+00:00",
+    "source_log_sha256": "c06d4b9f5fb7326ee2869701e6afc3a2b7abe02f876d67a46cce4c191affa6f0",
+    "omitted_fields": [
+      "request_file"
+    ]
+  },
+  {
+    "index": 2,
+    "at_started": "2026-10-09T15:54:11.170848+00:00",
+    "request_sha256": "cf8a36702c795e2223003ab8be2de64b7fb2ed5c5b5e7abd599f8b4535a9f1e1",
+    "request_raw_base64": "eyJvcGVyYXRpb24iOiAiZGlzY292ZXJfbGVhcm5pbmdfZXZpZGVuY2UiLCAiYXJndW1lbnRzIjoge319",
+    "request_raw_utf8": "{\"operation\": \"discover_learning_evidence\", \"arguments\": {}}",
+    "request": {
+      "operation": "discover_learning_evidence",
+      "arguments": {}
+    },
+    "provider_calls": [
+      [
+        "materialize",
+        9100000101,
+        "main"
+      ],
+      [
+        "read",
+        9100000101,
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "deployment.yaml"
+      ],
+      [
+        "materialize",
+        9100000102,
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      [
+        "materialize",
+        9100000103,
+        "main"
+      ],
+      [
+        "release",
+        9100000103,
+        "8888888888888888888888888888888888888888"
+      ],
+      [
+        "release",
+        9100000102,
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      [
+        "release",
+        9100000101,
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      [
+        "read",
+        9100000103,
+        "main",
+        "topics/synthetic/coordination/branches/main/runtime.yaml"
+      ],
+      [
+        "read",
+        9100000103,
+        "8888888888888888888888888888888888888888",
+        "topics/synthetic/coordination/branches.yaml"
+      ],
+      [
+        "read",
+        9100000101,
+        "main",
+        "deployment.yaml"
+      ],
+      [
+        "resolve",
+        9100000103,
+        "main"
+      ],
+      [
+        "materialize",
+        9100000103,
+        "8888888888888888888888888888888888888888"
+      ],
+      [
+        "snapshot_read",
+        9100000103,
+        "8888888888888888888888888888888888888888",
+        "evidence/evi_20261006_hd03_01.yaml"
+      ],
+      [
+        "snapshot_read",
+        9100000103,
+        "8888888888888888888888888888888888888888",
+        "evidence/evi_20261006_hd03_02.yaml"
+      ],
+      [
+        "snapshot_read",
+        9100000103,
+        "8888888888888888888888888888888888888888",
+        "evidence/evi_20261006_hd03_03.yaml"
+      ],
+      [
+        "snapshot_read",
+        9100000103,
+        "8888888888888888888888888888888888888888",
+        "evidence/evi_20261009_q03_direction_01.yaml"
+      ],
+      [
+        "snapshot_read",
+        9100000103,
+        "8888888888888888888888888888888888888888",
+        "learner/knowledge/synthetic.yaml"
+      ],
+      [
+        "release",
+        9100000103,
+        "8888888888888888888888888888888888888888"
+      ],
+      [
+        "resolve",
+        9100000103,
+        "main"
+      ],
+      [
+        "resolve",
+        9100000101,
+        "main"
+      ]
+    ],
+    "state_unchanged": true,
+    "changed_paths": [],
+    "response": {
+      "surface_version": "v4",
+      "ok": true,
+      "operation": "discover_learning_evidence",
+      "result": {
+        "recipe_version": "bound-evidence-discovery-v1",
+        "scope": {
+          "topic": "synthetic",
+          "subtopic": "unit"
+        },
+        "coverage": "all_context_matches_in_bounded_snapshot",
+        "evidence": [
+          {
+            "path": "evidence/evi_20261006_hd03_01.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi_20261006_hd03_01\nobserved_at: '2026-10-05T09:01:00Z'\nobservation:\n  kind: synthetic_task_response\n  summary: Given the sentence Every blue piece in this tray is round, the learner\n    said a blue piece from that tray must be round. On another tray, given Every striped\n    piece is yellow, the learner said a striped piece must be yellow.\ninterpretation:\n  direction: support\n  diagnosticity: high\n  novelty: medium\n  confidence: high\ntargets:\n- type: capability\n  domain: synthetic\n  concept: category_statements\n  capability: apply_the_stated_forward_relationship\ncontext:\n  topic: synthetic\n  subtopic: unit\n  execution:\n    session: null\n    daily_window: null\n    objective: null\nsource:\n  round_id: null\n",
+            "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "knowledge_references": [
+              {
+                "target": {
+                  "type": "capability",
+                  "domain": "synthetic",
+                  "concept": "category_statements",
+                  "capability": "apply_the_stated_forward_relationship"
+                },
+                "knowledge_path": "learner/knowledge/synthetic.yaml",
+                "reference_status": "referenced",
+                "sides": [
+                  "support"
+                ]
+              }
+            ]
+          },
+          {
+            "path": "evidence/evi_20261006_hd03_02.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi_20261006_hd03_02\nobserved_at: '2026-10-05T09:02:00Z'\nobservation:\n  kind: synthetic_task_response\n  summary: 'Given Every yellow piece in this tray is round and told that a selected\n    piece is round, the learner said its color is not determined: the tray could also\n    contain round pieces of other colors.'\ninterpretation:\n  direction: support\n  diagnosticity: high\n  novelty: medium\n  confidence: high\ntargets:\n- type: capability\n  domain: synthetic\n  concept: category_statements\n  capability: respect_the_direction_of_an_every_statement\ncontext:\n  topic: synthetic\n  subtopic: unit\n  execution:\n    session: null\n    daily_window: null\n    objective: null\nsource:\n  round_id: null\n",
+            "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "knowledge_references": [
+              {
+                "target": {
+                  "type": "capability",
+                  "domain": "synthetic",
+                  "concept": "category_statements",
+                  "capability": "respect_the_direction_of_an_every_statement"
+                },
+                "knowledge_path": "learner/knowledge/synthetic.yaml",
+                "reference_status": "referenced",
+                "sides": [
+                  "support"
+                ]
+              }
+            ]
+          },
+          {
+            "path": "evidence/evi_20261006_hd03_03.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi_20261006_hd03_03\nobserved_at: '2026-10-05T09:03:00Z'\nobservation:\n  kind: synthetic_task_response\n  summary: Given only Every star-shaped piece in this tray is red and told that a\n    selected piece is red, the learner said it must be star-shaped, because the sentence\n    connects red and star-shaped pieces.\ninterpretation:\n  direction: challenge\n  diagnosticity: high\n  novelty: medium\n  confidence: high\ntargets:\n- type: capability\n  domain: synthetic\n  concept: category_statements\n  capability: respect_the_direction_of_an_every_statement\ncontext:\n  topic: synthetic\n  subtopic: unit\n  execution:\n    session: null\n    daily_window: null\n    objective: null\nsource:\n  round_id: null\n",
+            "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "knowledge_references": [
+              {
+                "target": {
+                  "type": "capability",
+                  "domain": "synthetic",
+                  "concept": "category_statements",
+                  "capability": "respect_the_direction_of_an_every_statement"
+                },
+                "knowledge_path": "learner/knowledge/synthetic.yaml",
+                "reference_status": "referenced",
+                "sides": [
+                  "challenge"
+                ]
+              }
+            ]
+          },
+          {
+            "path": "evidence/evi_20261009_q03_direction_01.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi_20261009_q03_direction_01\nobserved_at: '2026-10-09T12:10:00Z'\nobservation:\n  kind: synthetic_task_response\n  summary: 'Given only Every triangular piece in this tray is green, the learner was asked whether a selected green piece could be square without breaking the description. The learner answered No, reasoning that every triangular piece is green means a green piece must be triangular and therefore cannot be square.'\n  assistance_context: 'Only the question and answer are recorded; no assistance event is recorded.'\ninterpretation:\n  direction: challenge\n  diagnosticity: high\n  novelty: medium\n  confidence: high\ntargets:\n- type: capability\n  domain: synthetic\n  concept: category_statements\n  capability: respect_the_direction_of_an_every_statement\ncontext:\n  topic: synthetic\n  subtopic: unit\n  execution:\n    session: null\n    daily_window: null\n    objective: null\nsource:\n  round_id: synthetic-q03-turn-001\n",
+            "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "knowledge_references": [
+              {
+                "target": {
+                  "type": "capability",
+                  "domain": "synthetic",
+                  "concept": "category_statements",
+                  "capability": "respect_the_direction_of_an_every_statement"
+                },
+                "knowledge_path": "learner/knowledge/synthetic.yaml",
+                "reference_status": "referenced",
+                "sides": [
+                  "challenge"
+                ]
+              }
+            ]
+          }
+        ],
+        "knowledge_owners": [
+          {
+            "path": "learner/knowledge/synthetic.yaml",
+            "state": "present",
+            "version_token": "9999999999999999999999999999999999999999"
+          }
+        ]
+      }
+    },
+    "at_finished": "2026-10-09T15:54:11.499727+00:00",
+    "source_log_sha256": "5d88e798a02e77a26a364b45aa1bb8f752cfbaedcf14356bf2629ebebdceb659",
+    "omitted_fields": [
+      "request_file"
+    ]
+  },
+  {
+    "index": 3,
+    "at_started": "2026-10-09T15:54:20.610260+00:00",
+    "request_sha256": "30161b4e8dad8c100792bc26cbafcf674d6bdb50a88e2890aa9d2e58f7f176a7",
+    "request_raw_base64": "eyJvcGVyYXRpb24iOiAicmVhZF9sZWFybmluZ19jb250ZXh0IiwgImFyZ3VtZW50cyI6IHsicmVxdWlyZWRfcGF0aHMiOiBbImxlYXJuZXIva25vd2xlZGdlL3N5bnRoZXRpYy55YW1sIl19fQ==",
+    "request_raw_utf8": "{\"operation\": \"read_learning_context\", \"arguments\": {\"required_paths\": [\"learner/knowledge/synthetic.yaml\"]}}",
+    "request": {
+      "operation": "read_learning_context",
+      "arguments": {
+        "required_paths": [
+          "learner/knowledge/synthetic.yaml"
+        ]
+      }
+    },
+    "provider_calls": [
+      [
+        "materialize",
+        9100000101,
+        "main"
+      ],
+      [
+        "read",
+        9100000101,
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "deployment.yaml"
+      ],
+      [
+        "materialize",
+        9100000102,
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      [
+        "materialize",
+        9100000103,
+        "main"
+      ],
+      [
+        "release",
+        9100000103,
+        "8888888888888888888888888888888888888888"
+      ],
+      [
+        "release",
+        9100000102,
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      [
+        "release",
+        9100000101,
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      [
+        "read",
+        9100000103,
+        "main",
+        "topics/synthetic/coordination/branches/main/runtime.yaml"
+      ],
+      [
+        "read",
+        9100000103,
+        "8888888888888888888888888888888888888888",
+        "topics/synthetic/coordination/branches.yaml"
+      ],
+      [
+        "read",
+        9100000101,
+        "main",
+        "deployment.yaml"
+      ],
+      [
+        "resolve",
+        9100000103,
+        "main"
+      ],
+      [
+        "materialize",
+        9100000103,
+        "8888888888888888888888888888888888888888"
+      ],
+      [
+        "snapshot_read",
+        9100000103,
+        "8888888888888888888888888888888888888888",
+        "learner/knowledge/synthetic.yaml"
+      ],
+      [
+        "release",
+        9100000103,
+        "8888888888888888888888888888888888888888"
+      ],
+      [
+        "resolve",
+        9100000103,
+        "main"
+      ],
+      [
+        "resolve",
+        9100000101,
+        "main"
+      ]
+    ],
+    "state_unchanged": true,
+    "changed_paths": [],
+    "response": {
+      "surface_version": "v4",
+      "ok": true,
+      "operation": "read_learning_context",
+      "result": {
+        "documents": [
+          {
+            "path": "learner/knowledge/synthetic.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\nupdated_at: '2026-10-09T12:10:00Z'\ndomain: synthetic\nconcepts:\n  category_statements:\n    capabilities:\n      apply_the_stated_forward_relationship:\n        state: supported\n        confidence: high\n        updated_at: '2026-10-06T10:40:00Z'\n        evidence_refs:\n          support:\n          - evi_20261006_hd03_01\n          challenge: []\n        basis_summary: Correctly applied the stated relationship when the selected piece was known to belong to the first named group.\n      respect_the_direction_of_an_every_statement:\n        state: conflicted\n        confidence: high\n        updated_at: '2026-10-09T12:10:00Z'\n        evidence_refs:\n          support:\n          - evi_20261006_hd03_02\n          challenge:\n          - evi_20261006_hd03_03\n          - evi_20261009_q03_direction_01\n        basis_summary: 'Previously left color undetermined for a round piece under Every yellow piece is round, but inferred star shape from red under Every star-shaped piece is red. In the current triangular/green example, explicitly inferred triangular from green and rejected a possible green square. This adds direct scoped challenge without resolving the valid prior support; the conflict remains. The current response does not challenge forward application, and no response to corrective teaching has yet been observed.'\n",
+            "version_token": "9999999999999999999999999999999999999999"
+          }
+        ],
+        "missing_optional": []
+      }
+    },
+    "at_finished": "2026-10-09T15:54:20.884594+00:00",
+    "source_log_sha256": "b235185b36464f34e9bf554f21352cb0f5b417da4577b4dba7b4cb6c0bbc189b",
+    "omitted_fields": [
+      "request_file"
+    ]
+  }
+]

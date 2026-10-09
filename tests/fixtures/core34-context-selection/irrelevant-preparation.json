@@ -1,0 +1,120 @@
+{
+  "at": "2026-10-09T15:43:19.677015+00:00",
+  "request": {
+    "operation": "create_evidence",
+    "arguments": {
+      "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi_20261007_arrangement_01\nobserved_at: '2026-10-07T10:05:00Z'\nobservation:\n  kind: synthetic_task_response\n  summary: In a separate completed counting activity, the learner counted three wooden\n    beads correctly before and after their spacing was changed.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: low\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: small_group_counting\n  capability: preserve_count_when_spacing_changes\ncontext:\n  topic: synthetic\n  subtopic: unit\n  execution:\n    session: null\n    daily_window: null\n    objective: null\nsource:\n  round_id: synthetic-counting-observation-001\n"
+    }
+  },
+  "response": {
+    "surface_version": "v4",
+    "ok": true,
+    "operation": "create_evidence",
+    "result": {
+      "applied": true
+    }
+  },
+  "provider_calls": [
+    [
+      "materialize",
+      9100000101,
+      "main"
+    ],
+    [
+      "read",
+      9100000101,
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "deployment.yaml"
+    ],
+    [
+      "materialize",
+      9100000102,
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    [
+      "materialize",
+      9100000103,
+      "main"
+    ],
+    [
+      "release",
+      9100000103,
+      "8888888888888888888888888888888888888888"
+    ],
+    [
+      "release",
+      9100000102,
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    [
+      "release",
+      9100000101,
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    ],
+    [
+      "read",
+      9100000103,
+      "main",
+      "topics/synthetic/coordination/branches/main/runtime.yaml"
+    ],
+    [
+      "read",
+      9100000103,
+      "8888888888888888888888888888888888888888",
+      "topics/synthetic/coordination/branches.yaml"
+    ],
+    [
+      "read",
+      9100000101,
+      "main",
+      "deployment.yaml"
+    ],
+    [
+      "resolve",
+      9100000103,
+      "main"
+    ],
+    [
+      "materialize",
+      9100000103,
+      "8888888888888888888888888888888888888888"
+    ],
+    [
+      "materialize",
+      9100000102,
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    [
+      "resolve",
+      9100000103,
+      "main"
+    ],
+    [
+      "resolve",
+      9100000101,
+      "main"
+    ],
+    [
+      "release",
+      9100000103,
+      "8888888888888888888888888888888888888888"
+    ],
+    [
+      "release",
+      9100000102,
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    [
+      "create",
+      9100000103,
+      "main",
+      "evidence/evi_20261007_arrangement_01.yaml",
+      "8888888888888888888888888888888888888888"
+    ]
+  ],
+  "before_state_sha256": "b46a9929ac0c66e8ae132763778a1deaa15e2143e1286ae7a4615f64340b67d6",
+  "after_state_sha256": "e3ea12a2bb88d1d3566faaf2e8b037a56ba486689c05e64f6e09d6d7bb573044",
+  "changed_paths": [
+    "evidence/evi_20261007_arrangement_01.yaml"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "elm_post_state_sha256": "b46a9929ac0c66e8ae132763778a1deaa15e2143e1286ae7a4615f64340b67d6",
+  "pine_post_state_sha256": "67ac126a245f94616e4a3a95992b09323faa280541b6aa0b3ff287a16f2cc69f",
+  "source_head": "8fbc5289b53757d094b372ae91c32612e628159b",
+  "main_now": "0c1611568c9222d1329a6963bd64c93c5c3b5ec7",
+  "main_tree": "593090cf68c7e56f5c319602ade9da48a313f5f8",
+  "baseline_and_relevant_state_copy": "verbatim semantic JSON values copied; source files untouched",
+  "irrelevant_state_derivation": "one existing-host create_evidence operation; target Knowledge and checkpoint preserved"
+}
