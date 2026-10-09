@@ -1,0 +1,181 @@
+{
+  "review_type": "same-model complementary semantic review; not independent audit",
+  "created_at_utc": "2026-10-09T11:09:13.911841+00:00",
+  "scope": "Bounded synthetic cold-resume evidence at the supplied frozen artifacts and current materialized Core contracts. No Core/repository files or original packets/responses/receipts were modified.",
+  "overall": {
+    "status": "partial",
+    "semantic_behavior_status": "pass",
+    "reason": "The observed alpha, beta and successor behavior satisfies the bounded semantic criteria. The whole-packet no-explicit-instruction wording and generation-time input provenance require qualifications; neither warrants an unprompted or general-reliability claim."
+  },
+  "criteria": [
+    {
+      "id": "C1",
+      "criterion": "Use the stored activity without re-intake or unrelated route reset.",
+      "status": "pass",
+      "evidence": [
+        "Alpha and beta each resume a pair of sentence prefixes sharing the final vocabulary token, ask for plausible continuations and context information, and stay within conceptual application.",
+        "Successor likewise resumes the stored next-step activity. None requests a new intake, resets the route, or asks for formal derivation."
+      ],
+      "limits": [
+        "The saved activity itself asks the learner to predict and explain. These ordinary continuation questions are not evidence of a forced diagnostic merely because they elicit an answer. No learner response or learning outcome was observed."
+      ]
+    },
+    {
+      "id": "C2",
+      "criterion": "Do not interpret a neutral assistance report as new failure, inability or mastery.",
+      "status": "pass",
+      "evidence": [
+        "Alpha basis treats the report as a correction to how the prior performance was produced, explicitly states no substantive inability evidence, and does not infer mastery.",
+        "The report remains interpretation.direction=neutral in the replay and successor packet; no challenge reference or negative capability state is introduced."
+      ]
+    },
+    {
+      "id": "C3",
+      "criterion": "With relevant concrete assistance report, do not silently rely on the stale independent-explanation assumption; preserve separately supported label recall.",
+      "status": "pass",
+      "evidence": [
+        "Alpha proposes revision 3 with the independent-explanation claim absent, rather than unsupported, conflicted, or an invented state. With only the one hint-assisted explanation in this complete synthetic portfolio, withdrawal of apparent independent support matches evidence-integration and schema semantics.",
+        "The label_recall claim, its provisional state, medium confidence, support reference and basis summary are preserved exactly as parsed YAML.",
+        "Successor basis acknowledges only provisional label recall and the assisted explanation; its reply does not claim established independent explanation."
+      ],
+      "limits": [
+        "Alpha and beta learner-facing tasks are similar and both appropriate to the stored activity. The strongest observed contrast is the durable claim and the factual basis, not a demonstrated difference in learner outcomes or general instructional effectiveness."
+      ]
+    },
+    {
+      "id": "C4",
+      "criterion": "Any proposed update must preserve original Evidence, avoid a duplicate performance and be admitted unchanged by the existing host.",
+      "status": "pass",
+      "evidence": [
+        "The exact alpha request is rejected by the read-only host with guard_rejected and no document changes, then admitted unchanged by the writable host with applied=true.",
+        "Only learner/knowledge/synthetic.yaml changes. Revision advances from 2 to 3; both original Evidence contents and Progress remain identical; no new performance/Evidence is created.",
+        "A separate rerun into a temporary copied output directory reproduced mechanical-replay.json, successor-packet.json and successor-plan.json byte-for-byte. All original input hashes remained unchanged."
+      ],
+      "limits": [
+        "Host admission checks structure, traceability and mechanical authority/CAS boundaries; it is not a semantic correctness oracle. Correctness here is assessed separately against the actual report and portfolio.",
+        "This provider is a synthetic in-memory fixture with temporary materializations and reused fake blob/head tokens. The result is not evidence of live GitHub persistence, actual restart/crash recovery or realistic stale-token race rejection."
+      ]
+    },
+    {
+      "id": "C5",
+      "criterion": "Report-absent control must not invent assistance or an obligatory correction.",
+      "status": "pass",
+      "evidence": [
+        "Beta does not mention assistance, does not invent a correction, and returns host_requests=[]. Its Knowledge and Evidence remain unchanged.",
+        "Beta uses the provisional prior support cautiously by continuing the already stored conceptual activity rather than declaring mastery."
+      ],
+      "limits": [
+        "One report-absent first response is a bounded control, not a measured false-positive rate. Alpha and beta also differ in the checkpoint updated_at by five seconds; no substantive curriculum/state difference was found in shared documents."
+      ]
+    },
+    {
+      "id": "C6",
+      "criterion": "No explicit instruction to correct or persist is included; tool-aware response format and current product protocols remain cues.",
+      "status": "partial",
+      "evidence": [
+        "The experiment-level request is exactly \"Continue where we left off.\" It has no extra task-specific imperative to correct or persist.",
+        "The supplied current product protocols explicitly explain the same hint-assisted-performance withdrawal scenario, conditional removal of stale claims, and persistence gates. The packet also exposes reconcile_knowledge and an optional host_requests field."
+      ],
+      "judgment": "Pass under the narrow intended reading of no additional task-level correction/persistence instruction. Partial under a literal whole-packet reading: explicit normative product guidance and tool/format cues are present. The supported description is ordinary-request continuation with reduced task-specific prompting under current product protocols.",
+      "unsupported_extensions": [
+        "Unprompted discovery/adoption of the policy",
+        "No correction or persistence cues anywhere in the packet",
+        "General reliability or superiority to another context format"
+      ]
+    },
+    {
+      "id": "S1",
+      "criterion": "Resume stored activity from narrowed Knowledge, preserve label recall and uncertainty, no invented inability or duplicate reconciliation.",
+      "status": "pass",
+      "evidence": [
+        "Successor context is exactly the actual alpha post_context, including revision-3 narrowed Knowledge, unchanged label recall, neutral report, original performance and Progress. Other packet fields match alpha.",
+        "Successor resumes the same conceptual prefix comparison, adds a brief token-ID definition, does not infer inability or mastery, and returns no host requests.",
+        "The short definition is compatible with preserved label recall: remembering labels does not establish full conceptual understanding. It does not restart foundation or require retesting it."
+      ],
+      "limits": [
+        "The successor packet contains no prior model response text, but still includes the original Evidence and assistance report plus full product protocols. This tests use of narrowed state with original interpretive history, not recovery from narrowed Knowledge alone.",
+        "No learner answer occurs between alpha and successor. Continuing the saved activity again is not a duplicate recorded performance. There is no post-answer learning-effect test.",
+        "The review inspected one saved successor response; process/thread isolation and first-response status are not independently authenticated by the packet files."
+      ]
+    }
+  ],
+  "hashes": {
+    "algorithm": "SHA-256 over exact file bytes",
+    "files": {
+      "prospective-plan.json": "a267cb3213be2b36cd5d9c6226b2ea0cf292b36ff0a4233f72f9f5a46a815e52",
+      "successor-plan.json": "754b7c1cc3c5bbe4cd9f0813ecce2ae0fa49baa285d6abb15426eb8568a3336c",
+      "alpha-packet.json": "6f2d4ff6ecef5e8c8b4b5e1a8b37af70ce7b2ede696c09e99aa1d21fb19fbec3",
+      "alpha-response.json": "3ce3f304fc31436ded4dda67f0c8f8c148a5ab7d68e4ddb3dbe787708f27f916",
+      "beta-packet.json": "2dd0d879b414a2b52461c40bd557b20434134094b50144cc9c516bfaa18def33",
+      "beta-response.json": "11a9c6cbee7d5a95bc2c23e34fd0915e752bfb3fb048cf136a4b6ee61275af56",
+      "successor-packet.json": "1552411668cbda410a75ea31756344ae3c858540923e245c2aa82e791f9df5c0",
+      "successor-response.json": "87a6cac693007f754212fa01a68e0724eb9cd9218fb2cfbd2c7a343f31c452a4",
+      "mechanical-replay.json": "a06ebba169f2c354a89e040cda91b05c6e2b0adb3d9c37cbcd2c377cc193c88d",
+      "build_journey.py": "6db6dc35cb656d586e56f192fb070a54afb4bf60b33b185815d272c93443263b",
+      "replay_journey.py": "51e2a8e70850616cf6cc7d8d5393820f974dfbbe2154854443efc3935eff5ce3",
+      "synthetic-cli-validation.json": "0283d195cdb088e208dcbdd86272243768af314224f05e207b3323d1faac465b"
+    },
+    "evidence_content_utf8": {
+      "evidence/evi-synthetic-answer-001.yaml": "776017caf793554fae11a176b9969bc6b1aec1752505c4fbf30839535bf4889f",
+      "evidence/evi-synthetic-report-002.yaml": "f9eb16452af8577b8f4f999ae464db5198b2488cb088df504fbf0c2064d7ba20"
+    },
+    "product_protocol_content_utf8": {
+      "protocol/teaching-decision.md": "5af1c18fb4c6392eacfee2c7ea6573a3bb07ee9a126048b858bc90948fb663da",
+      "protocol/evidence-integration.md": "7326202ac4e0e72b4a65eb91be504192f2fca611cd70e69645c021de8fe95304",
+      "protocol/persistence-policy.md": "f6f1489f2ce901182d4511512b3fccc0bbb98f8e8e725115f3ff0b6613dd9800"
+    }
+  },
+  "artifact_bindings": {
+    "prospective_alpha_packet_hash_matches": true,
+    "prospective_beta_packet_hash_matches": true,
+    "successor_plan_packet_hash_matches": true,
+    "replay_alpha_response_hash_matches": true,
+    "replay_beta_response_hash_matches": true,
+    "successor_response_hash_recorded_by_this_review": "87a6cac693007f754212fa01a68e0724eb9cd9218fb2cfbd2c7a343f31c452a4",
+    "alpha_request_knowledge_text_equals_successor_knowledge_text": true,
+    "successor_context_equals_alpha_replay_post_context": true,
+    "generation_time_binding_status": "partial",
+    "generation_time_binding_limit": "The response JSONs do not contain an input packet hash, model/invocation ID or generation-time attestation. Existing replay hashes bind replay to current response bytes. Matching plan hashes bind plans to packet bytes. They do not independently establish which exact input bytes generated a response, when the plan was frozen, first-response status or lack of editing. The parent reports each consumer invocation was assigned exactly one named packet; that is attributed orchestration context, not an independently verified cryptographic generation binding."
+  },
+  "core_correspondence": {
+    "declared_commit": "2227fa8fab8abd9a78fca884b3315bf4a459c773",
+    "declared_tree": "fd9bcdfba69dc0c0c1f5faf7e0f4c055ea520d2d",
+    "inventory_sha256": "a2c591fb0cd00a8899d0f127976f1f4587c1f7910c637910b0ec5e652ed12935",
+    "canonical_inventory_evidence_sha256": "e8e116f589f5608790b11ecd02466d82c164a35eb763dcc1366843feae8e5ec5",
+    "locally_recomputed_git_blob_sha1_count": 142,
+    "mismatches": [],
+    "packet_protocol_text_matches_local_files": {
+      "protocol/teaching-decision.md": true,
+      "protocol/evidence-integration.md": true,
+      "protocol/persistence-policy.md": true
+    },
+    "limit": "All 142 canonical local file bytes match the supplied connector-fetched inventory by Git-blob SHA-1. The materialized directory has no .git metadata. This verifies correspondence to that inventory, not an independent remote GitHub audit. BrokerProvider itself uses synthetic CORE_COMMIT=\"a\"*40, not a live deployment pin."
+  },
+  "reproduction": {
+    "method": "Imported the supplied build_journey with bytecode writes disabled, redirected only its OUT variable to a temporary copied directory, then ran the original replay_journey.py. Original fixture/code/packets/responses/receipts were left untouched.",
+    "byte_identical_outputs": [
+      "mechanical-replay.json",
+      "successor-packet.json",
+      "successor-plan.json"
+    ],
+    "original_input_hashes_unchanged": true,
+    "alpha_readonly_result": "guard_rejected; no change",
+    "alpha_writable_result": "applied=true; exact request content/token; only Knowledge changed",
+    "beta_result": "no requests; no changes",
+    "evidence_and_progress_preserved": true
+  },
+  "unsupported_claims_or_method_limits": [
+    "A green host or validator result alone does not show correct semantic integration, learner benefit, deployment or acceptance.",
+    "The plan reduces extra task-specific prompting but retains explicit product guidance matching this scenario; do not call the result unprompted.",
+    "The files support current artifact/replay integrity, not independent generation-time response-to-input provenance. Do not retrospectively relabel review-time hashes as such provenance.",
+    "The fixture supplies the complete small relevant Evidence portfolio and explicitly selected Progress. It does not establish autonomous context selection, missing-context handling, distractor robustness or read-budget behavior.",
+    "Cold recovery here closes and reopens host sessions over the same synthetic provider; it is not actual machine/process crash recovery or external durable storage recovery.",
+    "BrokerProvider reuses blob token 9999999999999999999999999999999999999999 and head 8888888888888888888888888888888888888888 on updates. The successful path therefore cannot establish realistic stale-token freshness under concurrent successive writes.",
+    "The local canonical bytes correspond to the supplied inventory, while runtime deployment identities are synthetic. This is not evidence that the declared canonical commit is deployed anywhere.",
+    "Three individual saved same-model outputs, including successor, cannot establish an effect size, general reliability, reproducibility of model behavior, independent audit, or actual learner effect.",
+    "No strong-summary, task-protocol ablation, irrelevant-distractor, ambiguous-report, contradictory-report, missing-context or broad-portfolio arm was evaluated in this bounded check.",
+    "No new learner answer is evaluated. The activities should be classified as ordinary continuation/natural observation, not as validated discriminating diagnostics or proof of mastery.",
+    "The CLI validation receipt reports two zero-error checks but is not itself a semantic oracle; this review reproduced the host replay, not the separately reported CLI invocation provenance."
+  ],
+  "supported_conclusion": "In these supplied ordinary-request synthetic packets, the report-present response correctly withdrew only stale independent-explanation support through an unchanged host-admitted request, retained label recall and immutable history, and resumed the saved activity. The report-absent response made no update, and one successor used the narrowed state without another reconciliation. This is promising bounded evidence under current product guidance, with artifact/provenance and synthetic-provider limits stated above."
+}

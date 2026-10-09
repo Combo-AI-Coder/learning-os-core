@@ -59,9 +59,10 @@ repository's `main` branch alone does not change the deployed Core.
 ## Thin reference host
 
 The development reference host façade in `scripts/reference_host.py` exposes
-only the bounded learning-context, Main-bound learning-checkpoint,
-Evidence-create, and Knowledge-reconcile operations needed by the synthetic
-reference journey. Trusted locator,
+seven bounded operations: learning-context read, Evidence discovery,
+Main-bound learning-checkpoint save, Evidence creation, Knowledge reconciliation,
+and scoped intake preference set/reset. These serve the synthetic reference
+journeys. Trusted locator,
 repository/provider bindings, capability policy and broker session authority
 remain host-side. See [`docs/reference-host.md`](docs/reference-host.md) for the
 public-safe boundary and synthetic coverage; this is not a deployment or a
