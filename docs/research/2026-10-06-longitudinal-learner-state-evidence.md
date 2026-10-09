@@ -12,7 +12,7 @@ The completed Chat Deep Research covered classic ITS / learner modeling / knowle
 ## Executive synthesis
 
 1. **Persist only state with plausible decision value.** The strongest candidate class is concept/skill-level knowledge state tied to concrete actions such as review vs advance, problem selection, difficulty, and diagnostic probing. A learner model that cannot change a teaching decision should not be retained merely because it is inferable.
-2. **Time matters.** Recency/spacing/forgetting should change review decisions; old demonstrations should not remain permanent learner truth. The evidence base for spacing is strong at the learning-science level, though the completed report did not directly verify the primary Cepeda source and instead cited a secondary summary.
+2. **Time matters for verification priority, not automatic state decay.** Recency and spacing can inform whether relevant review or natural verification is worthwhile; old demonstrations do not permanently establish current readiness. Preserve those historical observations and existing Knowledge/capability state unless new evidence warrants reassessment: elapsed time alone neither creates forgetting evidence nor authorizes a downgrade. The evidence base for spacing is strong at the learning-science level, though the completed report did not directly verify the primary Cepeda source and instead cited a secondary summary.
 3. **One observation is weak evidence.** A single error, guess, typo, assisted solution, or transient affective signal should not permanently rewrite learner state. Repeated, independent evidence should carry more weight than duplicate or highly assisted observations.
 4. **Assisted success is not equivalent to independent success.** Hint/scaffolding history is useful mainly as a qualifier on interpretation and next-action choice. In the cited Sao Pedro et al. EDM study, incorporating scaffolding yielded better predictions than classic BKT in that inquiry-skill setting. This is positive but narrow evidence that assistance context can matter; it does not establish that detailed assistance history should always be persisted or that acting on it improves durable learning across domains.
 5. **Misconceptions and error patterns can be decision-relevant when they are stable and domain-grounded.** They are most defensible in domains with validated misconception/bug taxonomies; evidence for a generic cross-domain "misconception state" is much weaker.
@@ -27,7 +27,7 @@ The completed Chat Deep Research covered classic ITS / learner modeling / knowle
 | State / signal | Reasonable teaching actions | Evidence disposition | Important failure modes / conditions |
 | --- | --- | --- | --- |
 | Skill/concept knowledge or mastery estimate | review vs advance; problem selection; difficulty; diagnostic probe; prerequisite revisit | **Strong candidate** | Requires valid knowledge decomposition and calibrated uncertainty. The completed report overreached when it used a general tutoring meta-analysis as if it isolated mastery adaptation; mechanism-specific primary evidence still needs direct verification. |
-| Recency / spacing / forgetting | review timing; interleaving; revisit old material | **Strong candidate** | Broad learning-science support is strong, but this run used an indirect source for Cepeda et al.; exact decay function and thresholds are not established here. |
+| Recency / spacing / forgetting | relevant review timing; interleaving; verification priority | **Strong candidate** | Broad learning-science support is strong, but this run used an indirect source for Cepeda et al.; exact decay function and thresholds are not established here. Elapsed time alone must not create forgetting evidence, erase observations, or downgrade capability state. |
 | Recent independent performance plus longer history | challenge level; pause/advance; request more evidence | **Strong candidate** | One recent outcome is noisy; duplicated items and correlated attempts should not be treated as independent evidence. |
 | Hint / assistance usage; assisted vs independent success | scaffold amount; request independent retry; weaken confidence in mastery update | **Conditionally useful** | A cited EDM study found that incorporating scaffolding yielded better predictions than classic BKT in one inquiry-skill setting and suggested the scaffolding was effective. This is positive but narrow evidence that assistance context can matter; it does not establish a universal tutoring-policy benefit or justify retaining detailed hint histories by default. |
 | Repeated misconception / error pattern | targeted explanation; contrast case; prerequisite diagnostic | **Conditionally useful** | Strongest only when the domain has a validated misconception taxonomy. Generic inferred "misconceptions" risk overfitting. |
@@ -64,7 +64,7 @@ The tutor should normally remain invariant to:
 - a low-confidence LLM inference of boredom, motivation, or personality;
 - decorative personalization context that cannot plausibly change the pedagogical decision.
 
-When learner state is uncertain, the robust action is usually to **probe uncertainty** or choose a safe middle action rather than committing to a strong personalized path.
+When learner state is uncertain, prefer natural teaching or observation rather than making active diagnosis the default. Under the existing `protocol/teaching-decision.md` probe rule, actively probe only when resolving the uncertainty could materially change the next teaching action **and** expected information value exceeds learner and flow cost. Prefer existing evidence and lower-cost clarification before a discriminating probe; otherwise a proportionate teaching or observation action may leave the uncertainty unresolved.
 
 ## Longitudinal update and correction
 
@@ -73,7 +73,7 @@ The research supports the following semantic constraints without specifying a st
 - **Observation is not mastery.** Keep source behavior separate from its interpretation.
 - **Evidence should preserve provenance and assistance conditions.** A correct answer after hints and a clean independent answer are different observations even when the visible task result is "correct."
 - **Interpretation should remain revisable.** Later correction such as "I used a hint" should narrow/reopen the earlier judgment without deleting the original observation or inventing another independent failure.
-- **Evidence ages.** Long-unrefreshed competence should become less decision-authoritative for readiness without pretending the learner "never knew" it.
+- **Readiness may need verification; historical evidence does not expire.** Long-unrefreshed demonstrations may raise verification priority for a relevant next step, but remain preserved observations. Elapsed time alone must not downgrade Knowledge/capability state or imply the learner "never knew" it; reassessment requires new evidence.
 - **Repeated evidence is not automatically independent.** Same-item repetition, copied work, or tightly scaffolded retries should add less confidence than varied independent demonstrations.
 - **One behavior can support multiple claim-specific interpretations.** A single performance may bear on multiple knowledge components; the system should not force deterministic one-event-to-one-skill attribution.
 - **Unknown remains valid.** If the available evidence does not distinguish "forgotten", "never mastered", "misread", "used help", or "conceptually confused", the next action can be a diagnostic rather than a permanent classification.
@@ -85,7 +85,7 @@ These constraints align directly with #34's existing recovery/correction require
 ### Strongly justified candidates to persist and allow to affect teaching
 
 - concept/skill-level knowledge or capability estimate **with uncertainty**;
-- recency/time since relevant evidence sufficient to support review/forgetting decisions;
+- recency/time since relevant evidence sufficient to inform relevant review or verification priority, without elapsed-time-only state downgrades;
 - recent independent performance in context of longer history;
 - provenance needed to distinguish independent vs assisted performance.
 
@@ -119,7 +119,7 @@ This research does **not** justify a new learner schema. It does sharpen the val
 2. Build **irrelevant-state invariance cases** where learning-style labels, unrelated profile fields, stale context, or noisy inferred affect change but the acceptable next-action set should not.
 3. Add a **strong-summary control** containing the same permitted facts in a competent narrative summary so structured state must beat or match a fair baseline rather than a weak control.
 4. Add a **structured-state ablation** removing the state under test; require a meaningful decision-quality difference before treating the state as valuable.
-5. Include **uncertainty cases** where probing is acceptable and forced personalization is not.
+5. Include **uncertainty cases** where active probing is acceptable only when both decision-impact and learner/flow-cost gates are met; otherwise natural teaching or observation may preserve uncertainty. Forced personalization is not a substitute for those gates.
 6. For later real-user work, measure **delayed retention/transfer**, not only tutor-task correctness, engagement, human-rated response quality, or automated LLM grading.
 7. Keep correction semantics consistent with #34: reinterpret one source occurrence without rewriting history or double-counting it.
 
