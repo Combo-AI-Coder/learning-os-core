@@ -1,0 +1,80 @@
+[
+  {
+    "case": "alpha",
+    "exact_packet_reproduced": true,
+    "response_sha256": "3ce3f304fc31436ded4dda67f0c8f8c148a5ab7d68e4ddb3dbe787708f27f916",
+    "readonly_negative_results": [
+      {
+        "surface_version": "v4",
+        "ok": false,
+        "operation": "reconcile_knowledge",
+        "error": {
+          "code": "guard_rejected",
+          "retryable": false
+        }
+      }
+    ],
+    "unchanged_request_results": [
+      {
+        "surface_version": "v4",
+        "ok": true,
+        "operation": "reconcile_knowledge",
+        "result": {
+          "applied": true
+        }
+      }
+    ],
+    "changed_paths": [
+      "learner/knowledge/synthetic.yaml"
+    ],
+    "original_evidence_bytes_unchanged": true,
+    "post_context": [
+      {
+        "path": "topics/synthetic/subtopics/unit/progress.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: subtopic_progress\nrevision: 2\nupdated_at: '2026-10-09T11:02:00Z'\ntopic: synthetic\nsubtopic: unit\nplan_revision: 1\nmilestones:\n  foundation:\n    status: completed\n  next-step:\n    status: in_progress\ncurrent:\n  milestone:\n  - next-step\nblockers: []\nresume:\n  return_point:\n    kind: teaching_thread\n    focus: Token identity and contextual representations\n    activity: Compare two sentence prefixes ending in the same vocabulary token, predict\n      how plausible next words can differ, and explain what information distinguishes\n      the contexts.\n    scope: Conceptual application; no formal derivation is the current target.\n  ready_next: []\nwatch:\n- kind: node\n  reason: preserve me\navoid_retesting:\n- foundation\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "learner/knowledge/synthetic.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "evidence/evi-synthetic-answer-001.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "path": "evidence/evi-synthetic-report-002.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-report-002\nobserved_at: '2026-10-06T09:15:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner later said about the answer recorded in evi-synthetic-answer-001:\n    \"I recalled the two names myself, but for the explanation I looked at a hint saying\n    the vocabulary ID is fixed and the contextual representation varies with context.\n    I have not attempted another answer since then.\"'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-102\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  {
+    "case": "beta",
+    "exact_packet_reproduced": true,
+    "response_sha256": "11a9c6cbee7d5a95bc2c23e34fd0915e752bfb3fb048cf136a4b6ee61275af56",
+    "readonly_negative_results": [],
+    "unchanged_request_results": [],
+    "changed_paths": [],
+    "original_evidence_bytes_unchanged": true,
+    "post_context": [
+      {
+        "path": "topics/synthetic/subtopics/unit/progress.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: subtopic_progress\nrevision: 2\nupdated_at: '2026-10-09T11:02:05Z'\ntopic: synthetic\nsubtopic: unit\nplan_revision: 1\nmilestones:\n  foundation:\n    status: completed\n  next-step:\n    status: in_progress\ncurrent:\n  milestone:\n  - next-step\nblockers: []\nresume:\n  return_point:\n    kind: teaching_thread\n    focus: Token identity and contextual representations\n    activity: Compare two sentence prefixes ending in the same vocabulary token, predict\n      how plausible next words can differ, and explain what information distinguishes\n      the contexts.\n    scope: Conceptual application; no formal derivation is the current target.\n  ready_next: []\nwatch:\n- kind: node\n  reason: preserve me\navoid_retesting:\n- foundation\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "learner/knowledge/synthetic.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 2\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      explanation:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One correct explanation appeared unassisted. Independent explanation\n          is provisionally supported for the next conceptual application; this is\n          not mastery or a derivation claim.\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+        "version_token": "9999999999999999999999999999999999999999"
+      },
+      {
+        "path": "evidence/evi-synthetic-answer-001.yaml",
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+        "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  }
+]

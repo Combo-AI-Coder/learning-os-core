@@ -1,0 +1,16 @@
+{
+  "kind": "post-observation artifact integrity; not generation-time attestation",
+  "baseline_commit": "2227fa8fab8abd9a78fca884b3315bf4a459c773",
+  "files": {
+    "alpha-packet.json": "6f2d4ff6ecef5e8c8b4b5e1a8b37af70ce7b2ede696c09e99aa1d21fb19fbec3",
+    "alpha-response.json": "3ce3f304fc31436ded4dda67f0c8f8c148a5ab7d68e4ddb3dbe787708f27f916",
+    "beta-packet.json": "2dd0d879b414a2b52461c40bd557b20434134094b50144cc9c516bfaa18def33",
+    "beta-response.json": "11a9c6cbee7d5a95bc2c23e34fd0915e752bfb3fb048cf136a4b6ee61275af56",
+    "successor-packet.json": "1552411668cbda410a75ea31756344ae3c858540923e245c2aa82e791f9df5c0",
+    "successor-response.json": "87a6cac693007f754212fa01a68e0724eb9cd9218fb2cfbd2c7a343f31c452a4",
+    "mechanical-replay.json": "a06ebba169f2c354a89e040cda91b05c6e2b0adb3d9c37cbcd2c377cc193c88d",
+    "prospective-plan.json": "a267cb3213be2b36cd5d9c6226b2ea0cf292b36ff0a4233f72f9f5a46a815e52",
+    "successor-plan.json": "754b7c1cc3c5bbe4cd9f0813ecce2ae0fa49baa285d6abb15426eb8568a3336c",
+    "semantic-review.json": "169c724f1172830b89efdd289edd849d8282e57fc73b73feb210b6290f50177f"
+  }
+}
