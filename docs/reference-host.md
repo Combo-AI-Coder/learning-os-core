@@ -14,13 +14,15 @@ The trusted host owns:
 - the shared deployment-operation admission object;
 - the broker-issued opaque session capability and its lifetime.
 
-The external conversation/model surface receives none of those objects. It can submit only one of five versioned reference-host operations:
+The external conversation/model surface receives none of those objects. It can submit only one of seven versioned reference-host operations:
 
 - `read_learning_context`;
 - `discover_learning_evidence` (surface v3; no arguments);
 - `save_learning_checkpoint`;
 - `create_evidence`;
-- `reconcile_knowledge`.
+- `reconcile_knowledge`;
+- `set_intake_preference` (surface v4);
+- `reset_intake_preference` (surface v4).
 
 The host does **not** expose generic Instance replacement, raw repository access, successor claim, deployment promotion, Branch authority mutation, repository credentials, private Instance commit identity, or a raw checkout.
 
@@ -117,3 +119,44 @@ The [prospective cut and limits](evaluations/core34-interruption-recovery-plan.m
 and `tests/test_evidence_discovery.py` own the synthetic verification. Producer
 loss is session revocation after save, not an OS/process-crash claim. Correction
 propagation, real learner benefit, deployment and product acceptance remain open.
+
+
+## Scoped intake controls (surface v4)
+
+`set_intake_preference` takes exactly `scope` (`topic` or `global`), `depth`
+(`minimal`, `balanced`, `thorough`), and `expected_version_token`.
+`reset_intake_preference` takes exactly `scope` and `expected_version_token`.
+No path, Topic ID, arbitrary YAML/key, revision or commit message is accepted.
+A current-only instruction uses the existing resolver and makes no host write.
+The conversation consumer, not a keyword classifier in the broker, interprets
+explicit durable scope under `protocol/new-topic-start.md`.
+
+Both operations initially require a bound Main Branch plus existing host-granted
+read and write capabilities for the target. They do not grant or broaden either
+capability. Topic scope patches only `goal.preferences.intake_depth` in the bound
+Topic's existing Goal; it cannot initialize a Goal or rewrite a Plan. Global
+scope patches only `preferences.intake_depth` in `learner/execution.yaml`.
+
+Read the owner using `read_learning_context` (global may be an optional path).
+An existing owner requires its current version token. An absent global owner
+requires an explicit null token; only `minimal` or `thorough` creates a minimal
+schema-0.3 Learner Execution with revision 1, timestamp and scoped preference.
+Absent-global `balanced` and reset are no-ops with `applied: false`; an existing
+owner may explicitly store `balanced`. Reset deletes only the scoped key,
+preserving the owner and all other preferences. Repeating a set or resetting a
+missing key is also a no-op. Successful changes advance revision and timestamp;
+other owner fields preserve semantic values, not YAML comments/formatting.
+
+Create/update/no-op are decided from one fresh pinned authority snapshot inside
+the shared deployment write lease. All use current session, role, path policy,
+deployment, generation, deployed Core provenance/validator and write-policy
+fingerprint checks, including no-ops. Updates use blob plus exact ref-head CAS;
+first creation uses create-only plus exact ref-head CAS. A conflict means reread
+and reconsider the request; do not overwrite concurrent changes or automatically
+reapply stale intent. A missing Topic Goal is rejected.
+
+The dedicated operation registry and Core manifest fingerprint changed together.
+A new host against an old deployed write policy fails closed for ordinary writes,
+not only these operations. This is a deployment compatibility change, not a
+Core promotion or permission to update a real host. See
+`tests/test_intake_operations.py` and the separate synthetic experience report.

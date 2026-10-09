@@ -56,6 +56,34 @@ to start immediately takes precedence over intake depth (`defer_intake`); begin 
 provisional route and handle only genuinely blocking uncertainty without a survey.
 Depth changes neither evidence/Knowledge semantics nor privacy or write authority.
 
+### Narrow persistence and current interaction agency
+
+The reference host exposes `set_intake_preference(scope, depth,
+expected_version_token)` and `reset_intake_preference(scope,
+expected_version_token)`; see `docs/reference-host.md` for admission and absence
+semantics. Explicit durable scope is necessary before either call. An ambiguous
+“少问一点” applies to the current intake only; “这个 Topic 以后少问” selects Topic
+scope, while “以后新 Topic 默认深入了解” selects global scope. If durable scope is
+unclear, honor the current interaction without silently persisting a guess.
+
+“别问了先讲” or “简短点” during teaching is current interaction agency. Stop or
+defer optional questioning and respond appropriately; do not infer an intake
+default or a learner capability transition. Intake depth is the interaction cost
+of learning relevant unknown context, not learning depth, capability, diagnostic
+frequency or a mandatory placement test.
+
+A new conversation is not a new Topic. Resume known Goal/Plan/Progress and
+preferences rather than restarting intake. Even `thorough` can require zero
+questions when relevant context is already sufficient. A persistent preference
+change alone does not rewrite the existing Plan, Progress, Knowledge or Evidence.
+
+Only the bound existing Topic Goal may receive a Topic preference. Explicit global
+`minimal`/`thorough` can first-create the minimal lazy Learner Execution owner;
+absent-global `balanced` or reset leaves it absent. An existing owner may store an
+explicit `balanced`. Reset removes only the scoped key to restore inheritance,
+never the owner or unrelated fields. All actions, including no-ops, retain the
+existing role/capability, deployment/generation, fresh-read and CAS requirements.
+
 High-value fields, when unknown and relevant:
 
 - purpose / desired outcome;

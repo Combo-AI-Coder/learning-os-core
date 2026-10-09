@@ -1,0 +1,275 @@
+{
+  "response_sha256": "81884fe265f04667b48d6e7e0fca10efcb2c9cbc86ca64cd41911a4afb159caf",
+  "cases": [
+    {
+      "id": "i01",
+      "host_results": [],
+      "changed_paths": [],
+      "durable_context": {
+        "documents": [
+          {
+            "path": "topics/synthetic/goal.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_goal\nrevision: 2\ntopic: synthetic\ngoal:\n  purpose: Explain fractions with visual examples\n  include:\n  - fractions\n  avoid:\n  - unrelated survey\n  preferences:\n    explanation_style: examples\n    intake_depth: thorough\n",
+            "version_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          {
+            "path": "topics/synthetic/plan.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_plan\ntopic: synthetic\nrevision: 1\nplan:\n  status: active\n  description: Compare 1/2 and 2/4 with equal-area bars; resume at drawing the bars\n",
+            "version_token": "cccccccccccccccccccccccccccccccccccccccc"
+          },
+          {
+            "path": "topics/synthetic/progress.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_progress\ntopic: synthetic\nrevision: 1\nplan_revision: 1\nlifecycle: active\nmilestones: {}\n",
+            "version_token": "cccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "missing_optional": [
+          "learner/execution.yaml"
+        ]
+      }
+    },
+    {
+      "id": "i02",
+      "host_results": [],
+      "changed_paths": [],
+      "durable_context": {
+        "documents": [
+          {
+            "path": "topics/synthetic/goal.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_goal\nrevision: 2\ntopic: synthetic\ngoal:\n  purpose: Explain fractions with visual examples\n  include:\n  - fractions\n  avoid:\n  - unrelated survey\n  preferences:\n    explanation_style: examples\n    intake_depth: thorough\n",
+            "version_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          {
+            "path": "topics/synthetic/plan.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_plan\ntopic: synthetic\nrevision: 1\nplan:\n  status: active\n  description: Compare 1/2 and 2/4 with equal-area bars; resume at drawing the bars\n",
+            "version_token": "cccccccccccccccccccccccccccccccccccccccc"
+          },
+          {
+            "path": "topics/synthetic/progress.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_progress\ntopic: synthetic\nrevision: 1\nplan_revision: 1\nlifecycle: active\nmilestones: {}\n",
+            "version_token": "cccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "missing_optional": [
+          "learner/execution.yaml"
+        ]
+      }
+    },
+    {
+      "id": "i03",
+      "host_results": [
+        {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "set_intake_preference",
+          "result": {
+            "applied": true
+          }
+        }
+      ],
+      "changed_paths": [
+        "topics/synthetic/goal.yaml"
+      ],
+      "durable_context": {
+        "documents": [
+          {
+            "path": "topics/synthetic/goal.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_goal\nrevision: 3\ntopic: synthetic\ngoal:\n  purpose: Explain fractions with visual examples\n  include:\n  - fractions\n  avoid:\n  - unrelated survey\n  preferences:\n    explanation_style: examples\n    intake_depth: minimal\nupdated_at: '2026-10-08T04:00:00Z'\n",
+            "version_token": "9999999999999999999999999999999999999999"
+          },
+          {
+            "path": "topics/synthetic/plan.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_plan\ntopic: synthetic\nrevision: 1\nplan:\n  status: active\n  description: Compare 1/2 and 2/4 with equal-area bars; resume at drawing the bars\n",
+            "version_token": "cccccccccccccccccccccccccccccccccccccccc"
+          },
+          {
+            "path": "topics/synthetic/progress.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_progress\ntopic: synthetic\nrevision: 1\nplan_revision: 1\nlifecycle: active\nmilestones: {}\n",
+            "version_token": "cccccccccccccccccccccccccccccccccccccccc"
+          },
+          {
+            "path": "learner/execution.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: learner_execution\nrevision: 1\npreferences:\n  intake_depth: thorough\nweekly_budget:\n  hours: 3\n",
+            "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        ],
+        "missing_optional": []
+      }
+    },
+    {
+      "id": "i04",
+      "host_results": [
+        {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "set_intake_preference",
+          "result": {
+            "applied": true
+          }
+        }
+      ],
+      "changed_paths": [
+        "learner/execution.yaml"
+      ],
+      "durable_context": {
+        "documents": [
+          {
+            "path": "topics/synthetic/goal.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_goal\nrevision: 2\ntopic: synthetic\ngoal:\n  purpose: Explain fractions with visual examples\n  include:\n  - fractions\n  avoid:\n  - unrelated survey\n  preferences:\n    explanation_style: examples\n",
+            "version_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          {
+            "path": "topics/synthetic/plan.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_plan\ntopic: synthetic\nrevision: 1\nplan:\n  status: active\n  description: Compare 1/2 and 2/4 with equal-area bars; resume at drawing the bars\n",
+            "version_token": "cccccccccccccccccccccccccccccccccccccccc"
+          },
+          {
+            "path": "topics/synthetic/progress.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_progress\ntopic: synthetic\nrevision: 1\nplan_revision: 1\nlifecycle: active\nmilestones: {}\n",
+            "version_token": "cccccccccccccccccccccccccccccccccccccccc"
+          },
+          {
+            "path": "learner/execution.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: learner_execution\nrevision: 1\npreferences:\n  intake_depth: thorough\nupdated_at: '2026-10-08T04:00:00Z'\n",
+            "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        ],
+        "missing_optional": []
+      }
+    },
+    {
+      "id": "i05",
+      "host_results": [
+        {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "reset_intake_preference",
+          "result": {
+            "applied": true
+          }
+        }
+      ],
+      "changed_paths": [
+        "topics/synthetic/goal.yaml"
+      ],
+      "durable_context": {
+        "documents": [
+          {
+            "path": "topics/synthetic/goal.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_goal\nrevision: 3\ntopic: synthetic\ngoal:\n  purpose: Explain fractions with visual examples\n  include:\n  - fractions\n  avoid:\n  - unrelated survey\n  preferences:\n    explanation_style: examples\nupdated_at: '2026-10-08T04:00:00Z'\n",
+            "version_token": "9999999999999999999999999999999999999999"
+          },
+          {
+            "path": "topics/synthetic/plan.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_plan\ntopic: synthetic\nrevision: 1\nplan:\n  status: active\n  description: Compare 1/2 and 2/4 with equal-area bars; resume at drawing the bars\n",
+            "version_token": "cccccccccccccccccccccccccccccccccccccccc"
+          },
+          {
+            "path": "topics/synthetic/progress.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_progress\ntopic: synthetic\nrevision: 1\nplan_revision: 1\nlifecycle: active\nmilestones: {}\n",
+            "version_token": "cccccccccccccccccccccccccccccccccccccccc"
+          },
+          {
+            "path": "learner/execution.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: learner_execution\nrevision: 1\npreferences:\n  intake_depth: thorough\nweekly_budget:\n  hours: 3\n",
+            "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        ],
+        "missing_optional": []
+      }
+    },
+    {
+      "id": "i06",
+      "host_results": [],
+      "changed_paths": [],
+      "durable_context": {
+        "documents": [
+          {
+            "path": "topics/synthetic/goal.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_goal\nrevision: 2\ntopic: synthetic\ngoal:\n  purpose: Explain fractions with visual examples\n  include:\n  - fractions\n  avoid:\n  - unrelated survey\n  preferences:\n    explanation_style: examples\n    intake_depth: thorough\n",
+            "version_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          {
+            "path": "topics/synthetic/plan.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_plan\ntopic: synthetic\nrevision: 1\nplan:\n  status: active\n  description: Compare 1/2 and 2/4 with equal-area bars; resume at drawing the bars\n",
+            "version_token": "cccccccccccccccccccccccccccccccccccccccc"
+          },
+          {
+            "path": "topics/synthetic/progress.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_progress\ntopic: synthetic\nrevision: 1\nplan_revision: 1\nlifecycle: active\nmilestones: {}\n",
+            "version_token": "cccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "missing_optional": [
+          "learner/execution.yaml"
+        ]
+      }
+    },
+    {
+      "id": "i07",
+      "host_results": [],
+      "changed_paths": [],
+      "durable_context": {
+        "documents": [
+          {
+            "path": "topics/synthetic/goal.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_goal\nrevision: 2\ntopic: synthetic\ngoal:\n  purpose: Explain fractions with visual examples\n  include:\n  - fractions\n  avoid:\n  - unrelated survey\n  preferences:\n    explanation_style: examples\n",
+            "version_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          {
+            "path": "topics/synthetic/plan.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_plan\ntopic: synthetic\nrevision: 1\nplan:\n  status: active\n  description: Compare 1/2 and 2/4 with equal-area bars; resume at drawing the bars\n",
+            "version_token": "cccccccccccccccccccccccccccccccccccccccc"
+          },
+          {
+            "path": "topics/synthetic/progress.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_progress\ntopic: synthetic\nrevision: 1\nplan_revision: 1\nlifecycle: active\nmilestones: {}\n",
+            "version_token": "cccccccccccccccccccccccccccccccccccccccc"
+          },
+          {
+            "path": "learner/execution.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: learner_execution\nrevision: 1\npreferences:\n  intake_depth: thorough\nweekly_budget:\n  hours: 3\n",
+            "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        ],
+        "missing_optional": []
+      }
+    },
+    {
+      "id": "i08",
+      "host_results": [
+        {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "set_intake_preference",
+          "result": {
+            "applied": false
+          }
+        }
+      ],
+      "changed_paths": [],
+      "durable_context": {
+        "documents": [
+          {
+            "path": "topics/synthetic/goal.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_goal\nrevision: 2\ntopic: synthetic\ngoal:\n  purpose: Explain fractions with visual examples\n  include:\n  - fractions\n  avoid:\n  - unrelated survey\n  preferences:\n    explanation_style: examples\n",
+            "version_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          {
+            "path": "topics/synthetic/plan.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_plan\ntopic: synthetic\nrevision: 1\nplan:\n  status: active\n  description: Compare 1/2 and 2/4 with equal-area bars; resume at drawing the bars\n",
+            "version_token": "cccccccccccccccccccccccccccccccccccccccc"
+          },
+          {
+            "path": "topics/synthetic/progress.yaml",
+            "content": "schema_version: '0.3'\ndocument_type: topic_progress\ntopic: synthetic\nrevision: 1\nplan_revision: 1\nlifecycle: active\nmilestones: {}\n",
+            "version_token": "cccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "missing_optional": [
+          "learner/execution.yaml"
+        ]
+      }
+    }
+  ]
+}

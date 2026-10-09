@@ -7,8 +7,6 @@ from unittest import mock
 
 import yaml
 
-from tests.host_replay_compatibility import assert_v3_replay
-
 from tests.correction_propagation_fixture import (
     CorrectionJourney, PERFORMANCE_ID, PERFORMANCE_PATH, REPORT_ID, REPORT_PATH,
     ROOT, READ_PATH, digest, initial_knowledge, packet, performance, report,
@@ -123,7 +121,7 @@ class CorrectionPropagationTests(unittest.TestCase):
                 self.assertEqual(row["response_bytes_sha256"], hashlib.sha256(raw).hexdigest())
                 response = json.loads(raw)
                 results = [journey.apply(request) for request in response["host_requests"]]
-                assert_v3_replay(self, row["host_results"], results)
+                self.assertEqual(row["host_results"], results)
                 self.assertTrue(all(result["ok"] for result in results))
                 self.assertEqual(row["result_documents"], journey.recover())
                 self.assertEqual(journey.before[PERFORMANCE_PATH], journey.provider.docs[PERFORMANCE_PATH])

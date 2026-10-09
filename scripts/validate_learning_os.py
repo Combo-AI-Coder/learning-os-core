@@ -619,6 +619,8 @@ INSTANCE_DEDICATED_RUNTIME_OPERATIONS={
     "create_evidence":"v2",
     "reconcile_knowledge":"v2",
     "save_learning_checkpoint":"v1",
+    "set_intake_preference":"v1",
+    "reset_intake_preference":"v1",
 }
 
 def instance_expected_types(p,rules=None):

@@ -1,0 +1,11 @@
+{
+  "schema": "core19-intake-successor-freeze-v1",
+  "frozen_before_first_output": true,
+  "packet_sha256": "0de007de81df3780c5f910039f27f4170e8068aa1c1501e2e838ab53dbacb541",
+  "replay_sha256": "762d8b8fe9a4b9299ab4eefafcca54a5c01b12bffa9f1b515e8a23a9211350b5",
+  "criteria": {
+    "i03": "Recover minimal from persisted Topic; do not recreate settings or repeat intake. Preserve global thorough and unknown ability.",
+    "i04": "Recover thorough inherited from first-created global owner; enough known state means resume without survey. No preference/learning-state write.",
+    "i05": "Recover thorough through global inheritance after Topic reset; do not restore removed override, materialize balanced or rewrite learning state."
+  }
+}

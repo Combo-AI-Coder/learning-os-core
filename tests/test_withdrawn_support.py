@@ -8,6 +8,8 @@ from unittest import mock
 
 import yaml
 
+from tests.host_replay_compatibility import assert_v3_replay, historical_source_path
+
 from tests.withdrawn_support_fixture import (
     FIXTURES, ROOT, CASES, WithdrawalJourney, packet, inputs, digest,
     READ_PATH, PERFORMANCE_PATH, REPORT_PATH, PERFORMANCE_ID, REPORT_ID, remediation_packet,
@@ -28,7 +30,7 @@ class WithdrawnSupportTests(unittest.TestCase):
             raw = (FIXTURES / (row['id'] + '-packet.json')).read_bytes()
             self.assertEqual(row['packet_bytes_sha256'], hashlib.sha256(raw).hexdigest())
             self.assertEqual(row['packet_hash'], digest(json.loads(raw)))
-            self.assertEqual(json.loads(raw), packet(row['id']))
+            assert_v3_replay(self, json.loads(raw), packet(row['id']))
             self.assertNotIn('criteria', json.loads(raw))
             self.assertNotIn('expected', json.loads(raw))
 
@@ -47,7 +49,7 @@ class WithdrawnSupportTests(unittest.TestCase):
         # those reads must not rewrite the historical model-policy input.
         with mock.patch.object(Path, 'read_text', revised_live_policy):
             for kind in ('structured', 'summary', 'boundaries'):
-                self.assertEqual(read(kind + '-packet.json'), packet(kind))
+                assert_v3_replay(self, read(kind + '-packet.json'), packet(kind))
         self.assertTrue(live_reads)
 
     def test_remediation_packet_preserves_all_prior_artifacts(self):
@@ -77,7 +79,7 @@ class WithdrawnSupportTests(unittest.TestCase):
             answer = next(x for x in answers if x['case_id'] == row['case_id'])
             with WithdrawalJourney('sole' if row['case_id'] == 'sole' else 'no_report') as journey:
                 results = [journey.apply(request) for request in answer['host_requests']]
-                self.assertEqual(row['host_results'], results)
+                assert_v3_replay(self, row['host_results'], results)
                 self.assertEqual(row['result_documents'], journey.recover())
                 before = {p: b for p, b in journey.before.items() if p.startswith('evidence/')}
                 after = {p: b for p, b in journey.provider.docs.items() if p.startswith('evidence/')}
@@ -103,7 +105,7 @@ class WithdrawnSupportTests(unittest.TestCase):
     def test_original_experiment_bytes_remain_unchanged(self):
         for path, expected in read('prospective-manifest.json')['historical_files'].items():
             with self.subTest(path=path):
-                self.assertEqual(expected, hashlib.sha256((ROOT / path).read_bytes()).hexdigest())
+                self.assertEqual(expected, hashlib.sha256(historical_source_path(ROOT, path).read_bytes()).hexdigest())
 
     def test_complete_boundary_inventory_without_new_product_fields(self):
         rows = read('boundaries-packet.json')['cases']
@@ -159,7 +161,7 @@ class WithdrawnSupportTests(unittest.TestCase):
             answer = next(c for c in response['cases'] if c['case_id'] == row['case_id']) if 'cases' in response else response
             with self.subTest(consumer=row['consumer_id'], case=row['case_id']), WithdrawalJourney(row['case_id']) as journey:
                 results = [journey.apply(r) for r in answer['host_requests']]
-                self.assertEqual(row['host_results'], results)
+                assert_v3_replay(self, row['host_results'], results)
                 self.assertEqual(row['result_documents'], journey.recover())
                 before = {p: b for p, b in journey.before.items() if p.startswith('evidence/')}
                 after = {p: b for p, b in journey.provider.docs.items() if p.startswith('evidence/')}

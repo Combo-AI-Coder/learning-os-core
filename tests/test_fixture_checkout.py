@@ -7,6 +7,8 @@ import subprocess
 import tempfile
 import unittest
 
+from tests.host_replay_compatibility import HISTORICAL_SOURCE_ARCHIVES
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -54,7 +56,7 @@ class FrozenFixtureCheckoutTests(unittest.TestCase):
             # frozen fixture data; never weaken byte hashes by normalizing reads.
             history_manifest = ROOT / "tests/fixtures/core34-withdrawn-support/prospective-manifest.json"
             history_paths = json.loads(history_manifest.read_text(encoding="utf-8"))["historical_files"]
-            fixture_paths += tuple(history_paths)
+            fixture_paths += tuple(history_paths) + tuple(HISTORICAL_SOURCE_ARCHIVES.values())
             expected = {path: (ROOT / path).read_bytes() for path in fixture_paths}
             expected["tests/fixtures/synthetic-crlf.txt"] = b"frozen\r\nbytes\r\n"
             sentinel = "tests/unprotected-sentinel.txt"

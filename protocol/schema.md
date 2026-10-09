@@ -279,7 +279,9 @@ engagement:
 learner explicitly chooses a global default. Missing key means inheritance, not
 an automatically persisted `balanced`; remove it to reset. Explicit null, booleans
 and unknown labels are invalid. Other existing preference keys remain unchanged.
-See `new-topic-start.md` for scope, precedence and immediate-start behavior.
+The narrow set/reset operations may first-create this owner only for explicit
+non-default global intake preferences; missing-global balanced/reset remain
+no-ops. See `new-topic-start.md` for scope, precedence and immediate-start behavior.
 
 `last_meaningful_learning_at` is a recoverable convenience projection; execution records are stronger factual sources.
 
