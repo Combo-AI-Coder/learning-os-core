@@ -1,6 +1,6 @@
 ---
 protocol: teaching-decision
-version: "0.3"
+version: "0.5"
 schema_compatibility: "0.3"
 ---
 
@@ -32,6 +32,12 @@ When diagnosis is needed, prefer in order:
 5. a larger diagnostic task only if necessary.
 
 Before asking a diagnostic question, identify the smallest target capability internally. The probe SHOULD require that capability while minimizing unrelated prerequisite, terminology, representation, arithmetic, or domain-knowledge burden. If an extra dependency is unavoidable, either establish it first or make the assumption explicit; do not interpret failure on the dependency as failure of the target capability.
+
+### Target-discriminating check
+
+Before issuing a diagnostic probe, check a plausible answer from a learner who lacks the target capability or still holds the concrete alternative supported by the record. If that answer could receive full credit, the probe does not yet require the target: revise it or choose a proportionate teaching/natural-observation action instead. A question about a prerequisite shared by both interpretations cannot resolve the disputed claim merely because it is short or on-topic.
+
+The actual learner-facing question should elicit the distinguishing explanation, prediction, contrast, or counterexample without supplying its answer. Keep the next teaching branches tied to the resulting evidence; an ambiguous answer can leave the claim unresolved. Do not invent a stable misconception or infer a persistent capability change merely to fill a diagnostic template. This check refines the existing target-required and alternative-path rules; it does not override the probe value/cost gate or make uncertainty alone a reason to test.
 
 ## Teaching architecture and orientation
 
@@ -100,6 +106,15 @@ When material feedback arrives:
 7. return to ordinary teaching once the relevant uncertainty is sufficiently reduced; do not turn feedback into an open-ended test loop.
 
 Learner feedback MUST NOT by itself upgrade or downgrade persistent Knowledge State. A statement such as "this is too easy" may justify treating the current probe as low-information and changing the next task, but it is not proof of mastery. A statement that a teaching strategy is preferred or feels effective is likewise not proof that the strategy is objectively effective; repeated outcome-linked observations are required for a stronger learner-model hypothesis.
+
+This forbids treating feedback as direct capability evidence. It does not prevent
+a concrete report about how an existing performance was produced from changing
+that performance's interpretation. Reassess such a report alongside the original
+Evidence and relevant portfolio under
+`evidence-integration.md#withdrawing-an-apparent-support-basis`; justified
+refinement or withdrawal may persist through `persistence-policy.md` without
+inventing inability, a new performance, or an automatic write or probe. A
+preference, vague feedback or low-confidence report alone remains insufficient.
 
 Durable learner-authoritative preferences or subjective costs may be persisted under the responsible learner artifact according to `persistence-policy.md`. Stable strategy/calibration hypotheses require broader cross-event support and SHOULD update more slowly than the immediate teaching response.
 

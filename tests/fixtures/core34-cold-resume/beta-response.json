@@ -1,0 +1,5 @@
+{
+  "reply": "We were connecting a token’s fixed vocabulary identity with the information a model uses to predict what comes next. Let’s continue with a concrete example.\n\n1. She spread the toast with …\n2. He tightened the screw with …\n\nAssume the final “with” is the same vocabulary token in both. What’s a plausible next word for each sentence, and what information would the model need to distinguish the two predictions?",
+  "basis": "Saved Progress marks foundation completed and resumes a conceptual sentence-prefix comparison, with no formal derivation target. Knowledge provisionally supports explanation and label recall from one recorded response. The current request supplies no new capability evidence or durable update, so no Knowledge change is proposed.",
+  "host_requests": []
+}

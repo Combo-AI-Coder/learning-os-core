@@ -1,0 +1,78 @@
+{
+  "candidate": "diagnostic-repair-v3-1",
+  "model_alias": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "seed_and_temperature": "not exposed",
+  "runs": [
+    {
+      "run_id": "r01",
+      "response": {
+        "action": "continue_with_caution",
+        "next_step": "A token ID labels a vocabulary entry. Treat the model as a black box that uses token representations and context to predict what follows. Compare “He poured tea into the cup” and “She won the gold cup”, assuming both end with the same vocabulary token. Suggest a plausible next word for each. Explain what stays the same about “cup” and which information could support different predictions.",
+        "diagnostic_gate": false,
+        "scaffold": "brief_bridge",
+        "target": "token-identity",
+        "basis": "The record contains unresolved support and challenge for independent explanation, without details identifying a specific error. A brief bridge supports the agreed application while the learner’s explanation provides natural evidence; no separate prerequisite test or mastery claim is warranted.",
+        "sources": [
+          "policy",
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml"
+        ],
+        "claim": "no_new_claim",
+        "diagnostic_design": null
+      },
+      "response_sha256": "444c9d4c8c942d4b6822a10eb8e20e0990124e7d15a4ba4e65dc086992e726e2",
+      "declared_code_errors": [
+        "action_outside_acceptable_set"
+      ],
+      "behavioral_acceptance": "not_established",
+      "review_disposition": "Fails frozen mandatory-probe oracle; alternative natural observation can still be policy-conformant. Oracle-policy boundary unresolved."
+    },
+    {
+      "run_id": "r02",
+      "response": {
+        "action": "continue",
+        "next_step": "Two prefixes end with the same vocabulary token, “bank”: (A) “She deposited her paycheck at the bank” and (B) “The fisherman sat on the river bank”. Suggest two plausible next words for each, then explain how the model could predict differently despite the shared final token. What information can it use to distinguish these contexts? Treat its prediction machinery as a black box.",
+        "diagnostic_gate": false,
+        "scaffold": "none",
+        "target": "token-identity",
+        "basis": "The supplied record supports your explanation at this conceptual level through two varied examples answered without hints. That supports moving directly to the agreed application without a prerequisite retest; it does not establish formal derivation ability or unrestricted mastery.",
+        "sources": [
+          "topics/synthetic/subtopics/unit/progress.yaml",
+          "learner/knowledge/synthetic.yaml",
+          "policy"
+        ],
+        "claim": "bounded_current_support",
+        "diagnostic_design": null
+      },
+      "response_sha256": "c4694b525e63f321db4a9883024d17b9e3dd21678b85ea4dd4d78f6918675a2d",
+      "declared_code_errors": [],
+      "behavioral_acceptance": "not_established",
+      "review_disposition": "Candidate1 no-probe control preserved; final repair evaluation incomplete."
+    },
+    {
+      "run_id": "r03",
+      "response": {
+        "action": "continue",
+        "next_step": "Compare these prefixes, which end with the same vocabulary token, “the”:\nA. “The baker slid the bread into the”\nB. “The mechanic returned the wrench to the”\nSuggest two plausible next words for each. Explain what information the model can use to make different predictions despite the identical final token. Treat the model’s internal machinery as a black box.",
+        "diagnostic_gate": false,
+        "scaffold": "none",
+        "target": "token-identity",
+        "basis": "The saved record supports explaining token identity versus contextual representation across two varied examples without hints. That supports continuing the agreed conceptual application without a prerequisite retest; it does not establish derivation ability or unqualified mastery.",
+        "sources": [
+          "learner/knowledge/synthetic.yaml",
+          "policy"
+        ],
+        "claim": "bounded_current_support",
+        "diagnostic_design": null
+      },
+      "response_sha256": "6ea94a9e66faa3542f693ef0abf7109efb1df7001485e264608fb0f609d4d835",
+      "declared_code_errors": [],
+      "behavioral_acceptance": "not_established",
+      "review_disposition": "Candidate1 no-probe control preserved; final repair evaluation incomplete."
+    }
+  ],
+  "heldout_runs": "not_executed",
+  "scope_boundary": "The frozen mandatory-probe oracle is not uniquely entailed by canonical probe value/cost and natural-observation rules. Do not relabel failed runs or force probing solely to obtain a pass.",
+  "learner_benefit": "not_measured"
+}

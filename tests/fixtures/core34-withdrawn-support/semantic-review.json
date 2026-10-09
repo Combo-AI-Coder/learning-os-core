@@ -1,0 +1,284 @@
+{
+  "classification": "same-model complementary semantic adjudication of frozen first outputs, not independent audit",
+  "manifest_sha256": "beb088c87d7bcd5c7abc983612ec31e116c8660c85bb3030e272978a50ad50e6",
+  "protocol_sha256": "7326202ac4e0e72b4a65eb91be504192f2fca611cd70e69645c021de8fe95304",
+  "counts": {
+    "outputs_reviewed": 4,
+    "primary_cases_reviewed": 13,
+    "successor_cases_reviewed": 1,
+    "cases_accepted": 14,
+    "cases_rejected": 0,
+    "cases_inconclusive": 0,
+    "supported_findings": 0,
+    "primary_host_requests_admitted": 7,
+    "primary_no_write_decisions": 6,
+    "successor_host_requests": 0
+  },
+  "judgments": [
+    {
+      "consumer_id": "structured",
+      "case_id": "sole",
+      "response_sha256": "f6b4429135ca6952c6fda7bef5916c1c8d18b24eb0984f849e499d020318aa55",
+      "semantic_grade": "accepted",
+      "supported_findings": [],
+      "criteria_results": [
+        {
+          "criterion": "Independent explanation unknown/absent rather than unsupported",
+          "result": "pass",
+          "evidence": "Returned complete Knowledge contains only label_recall; no explanation state remains"
+        },
+        {
+          "criterion": "Unaffected label recall and original Evidence preserved",
+          "result": "pass",
+          "evidence": "Every original label_recall field retained; all Evidence content unchanged after exact replay"
+        },
+        {
+          "criterion": "Justified admitted reconciliation without relabeling neutral context",
+          "result": "pass",
+          "evidence": "One exact reconcile_knowledge request admitted; neutral report not added to either reference side"
+        },
+        {
+          "criterion": "Proportionate teaching and no invented performance",
+          "result": "pass",
+          "evidence": "Continues planned sentence-prefix comparison and natural observation; no separate diagnostic or inferred capability gain"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "consumer_id": "summary",
+      "case_id": "sole",
+      "response_sha256": "62473fd24f0bb1487eda059b4f6bef3f3b2ce3e327d205d6bccaa174b6ab2103",
+      "semantic_grade": "accepted",
+      "supported_findings": [],
+      "criteria_results": [
+        {
+          "criterion": "Independent explanation unknown/absent rather than unsupported",
+          "result": "pass",
+          "evidence": "Returned complete Knowledge contains only label_recall; no explanation state remains"
+        },
+        {
+          "criterion": "Unaffected label recall and original Evidence preserved",
+          "result": "pass",
+          "evidence": "Every original label_recall field retained; all Evidence content unchanged after exact replay"
+        },
+        {
+          "criterion": "Justified admitted reconciliation without relabeling neutral context",
+          "result": "pass",
+          "evidence": "One exact reconcile_knowledge request admitted; neutral report not added to either reference side"
+        },
+        {
+          "criterion": "Proportionate teaching and no invented performance",
+          "result": "pass",
+          "evidence": "Continues planned sentence-prefix comparison and natural observation; no separate diagnostic or inferred capability gain"
+        }
+      ],
+      "notes": [
+        "Adds a label_recall updated_at marker while retaining every existing semantic field; no capability transition is asserted"
+      ]
+    },
+    {
+      "consumer_id": "boundaries",
+      "case_id": "independent",
+      "response_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+      "semantic_grade": "accepted",
+      "supported_findings": [],
+      "criteria_results": [
+        {
+          "criterion": "Preserve valid separate independent support; no automatic erase/downgrade from the other assisted occurrence",
+          "result": "pass",
+          "evidence": "Retains provisional independent explanation with only evi-independent-003 as independent support; records the hint correction in prose and preserves label recall"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "consumer_id": "boundaries",
+      "case_id": "negative",
+      "response_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+      "semantic_grade": "accepted",
+      "supported_findings": [],
+      "criteria_results": [
+        {
+          "criterion": "Consider substantive controlled independent failures in scope; unsupported is justified when no valid independent support remains; do not map negative evidence to unknown merely because original support was withdrawn",
+          "result": "pass",
+          "evidence": "Persists scoped unsupported from evi-negative-004/005, not from neutral hint report; original assisted performance is not recast as failure; teaching targets the recorded distinction"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "consumer_id": "boundaries",
+      "case_id": "assisted",
+      "response_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+      "semantic_grade": "accepted",
+      "supported_findings": [],
+      "criteria_results": [
+        {
+          "criterion": "Preserve already justified explanation_with_hint claim and label recall; remove unsupported independence inference without erasing assisted performance",
+          "result": "pass",
+          "evidence": "Removes only independent explanation and preserves explanation_with_hint plus label_recall unchanged"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "consumer_id": "boundaries",
+      "case_id": "ambiguous",
+      "response_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+      "semantic_grade": "accepted",
+      "supported_findings": [],
+      "criteria_results": [
+        {
+          "criterion": "Do not settle withdrawal or persist downgrade from this ambiguous low-confidence report alone",
+          "result": "pass",
+          "evidence": "No host request; explicitly treats low-confidence neutral report as insufficient for withdrawal and continues natural observation"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "consumer_id": "boundaries",
+      "case_id": "no_report",
+      "response_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+      "semantic_grade": "accepted",
+      "supported_findings": [],
+      "criteria_results": [
+        {
+          "criterion": "Do not invent hint use, a correction or inability; no corrective write required",
+          "result": "pass",
+          "evidence": "No host request; does not import correction from other cases or invent assistance, inability or mastery"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "consumer_id": "boundaries",
+      "case_id": "repeated",
+      "response_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+      "semantic_grade": "accepted",
+      "supported_findings": [],
+      "criteria_results": [
+        {
+          "criterion": "Same occurrence reports do not multiply evidence; independent explanation remains unknown, not negative",
+          "result": "pass",
+          "evidence": "Removes stale independent claim without multiplying reports into performances or negative evidence; retains label recall and history"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "consumer_id": "boundaries",
+      "case_id": "contradictory",
+      "response_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+      "semantic_grade": "accepted",
+      "supported_findings": [],
+      "criteria_results": [
+        {
+          "criterion": "Do not latest-wins or invent resolution; reassess uncertainty and preserve history without settled withdrawal/downgrade",
+          "result": "pass",
+          "evidence": "No host request; preserves unresolved assistance history without latest-wins, invented resolution, automatic conflicted capability state or challenge reference"
+        },
+        {
+          "criterion": "Conflict between neutral reports does not by itself require conflicted capability state or a fabricated challenge reference",
+          "result": "pass",
+          "evidence": "No host request; preserves unresolved assistance history without latest-wins, invented resolution, automatic conflicted capability state or challenge reference"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "consumer_id": "boundaries",
+      "case_id": "mixed",
+      "response_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+      "semantic_grade": "accepted",
+      "supported_findings": [],
+      "criteria_results": [
+        {
+          "criterion": "Preserve valid independent support plus substantive negative evidence; conflict/refinement remains justified rather than automatic unknown or unsupported",
+          "result": "pass",
+          "evidence": "Persists conflicted with independent support and both genuine challenge references; does not count votes or invent a scope distinction; proposed check discriminates the recorded fixed-ID claim"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "consumer_id": "boundaries",
+      "case_id": "denied",
+      "response_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+      "semantic_grade": "accepted",
+      "supported_findings": [],
+      "criteria_results": [
+        {
+          "criterion": "Incomplete relevant context produces no dependent persistent withdrawal/downgrade",
+          "result": "pass",
+          "evidence": "No host request; explicitly recognizes incomplete relevant Evidence and does not infer absence, inability or successful inspection"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "consumer_id": "boundaries",
+      "case_id": "missing",
+      "response_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+      "semantic_grade": "accepted",
+      "supported_findings": [],
+      "criteria_results": [
+        {
+          "criterion": "Unavailable relevant context is not absence evidence; no dependent write",
+          "result": "pass",
+          "evidence": "No host request; does not infer support absence from unavailable relevant context or invent an error cause from the case label"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "consumer_id": "boundaries",
+      "case_id": "over_budget",
+      "response_sha256": "294a6d11fa12a9b49e1c5a241e4a77bf615a427cfab4eadd88dd88caba1966e9",
+      "semantic_grade": "accepted",
+      "supported_findings": [],
+      "criteria_results": [
+        {
+          "criterion": "Over-budget context is not absence evidence; no dependent write",
+          "result": "pass",
+          "evidence": "No host request; recognizes coverage gap and avoids dependent withdrawal/downgrade"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "consumer_id": "successor",
+      "case_id": "sole",
+      "response_sha256": "7a55bec3d7351c33a8d940995ce9dba748d46de53fde597b8eb385f322264053",
+      "semantic_grade": "accepted",
+      "supported_findings": [],
+      "criteria_results": [
+        {
+          "criterion": "Recover durable semantics using complete Evidence plus Knowledge; no resurrection, inability or duplicate correction",
+          "result": "pass",
+          "evidence": "Explains that independence remains unknown/absent, preserves provisional label recall, treats neutral report as neither challenge nor another performance, and emits no request"
+        },
+        {
+          "criterion": "Proportionate learner-facing continuation",
+          "result": "pass",
+          "evidence": "Continues planned sentence-prefix contrast with explanation rather than separate prerequisite testing; does not assert a new learner performance"
+        }
+      ],
+      "notes": [
+        "Full-context recovery only; this does not establish Knowledge-only recovery"
+      ]
+    }
+  ],
+  "limits": [
+    "Semantic grading by complementary same-model reviewer, not independent audit",
+    "Exact local host replay checks admission and durable effects, not semantic enforcement",
+    "No learner benefit, general reliability, structured superiority, deployment or project acceptance conclusion",
+    "The 11 boundary cases share one model context; 14 accepted decisions are not 14 independent model trials",
+    "Context-gap packets use shared unrestricted fixture recovery followed by withholding and separate actual failed reads, not one end-to-end permission-constrained recovery",
+    "Shared-filesystem consumer isolation was instructional",
+    "Full aggregate test run and final candidate diff review are separate and were not represented as completed by this artifact"
+  ],
+  "token_usage": null,
+  "compute_cost": null
+}

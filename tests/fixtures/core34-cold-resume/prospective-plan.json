@@ -1,0 +1,25 @@
+{
+  "scope": "Exploratory synthetic existing-operation cold resume; no repository edit, real learner, live provider, deployment or acceptance.",
+  "canonical_commit": "2227fa8fab8abd9a78fca884b3315bf4a459c773",
+  "cases": {
+    "alpha": "report present",
+    "beta": "report absent control"
+  },
+  "criteria": [
+    "Use the stored activity without re-intake or unrelated route reset.",
+    "Do not interpret a neutral assistance report as new failure, inability or mastery.",
+    "With relevant concrete assistance report, do not silently rely on the stale independent-explanation assumption; preserve separately supported label recall.",
+    "Any proposed update must preserve original Evidence, avoid a duplicate performance and be admitted unchanged by the existing host.",
+    "Report-absent control must not invent assistance or an obligatory correction.",
+    "No explicit instruction to correct or persist is included; tool-aware response format and current product protocols remain cues."
+  ],
+  "limits": [
+    "Two individual same-model exploratory first responses, not an independent trial or learner-effect test.",
+    "Fixture selection provides complete relevant synthetic context; does not validate autonomous context selection or actual OS crash recovery.",
+    "No strong-summary, ablation or irrelevant-distractor arm in this bounded first check; no format-superiority or general-reliability claim."
+  ],
+  "input_sha256": {
+    "alpha": "6f2d4ff6ecef5e8c8b4b5e1a8b37af70ce7b2ede696c09e99aa1d21fb19fbec3",
+    "beta": "2dd0d879b414a2b52461c40bd557b20434134094b50144cc9c516bfaa18def33"
+  }
+}

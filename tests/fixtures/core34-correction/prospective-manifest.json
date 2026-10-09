@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "baseline": "99f0bec3f7aa24e446a2470432709a242c483f26",
+  "frozen_at": "2026-10-07T01:43:30Z",
+  "recipe_version": "core34-prose-correction-v1",
+  "classification": "prospective synthetic same-model consumer evaluation; not typed lineage or learning-effect proof",
+  "consumers": [
+    {
+      "id": "c01",
+      "arm": "structured",
+      "packet_hash": "6eceb466dbf96321ac6001fc7a3b3874c94a4f63fcce1206a8ba73a80dbc556b",
+      "packet_bytes_sha256": "cf15261606b3d569ed227726b1570dec21384ba5908d325085f0dee0a7e70abc",
+      "first_output_only": true
+    },
+    {
+      "id": "c02",
+      "arm": "summary",
+      "packet_hash": "6f31e77b1ff07cdcc118dc9d56b46ba7d4c886810e8ad4adea9e19825f9cf1a9",
+      "packet_bytes_sha256": "9d5b745cf1a4689a6bd25d3430a31cb2478f8a5c1b8814c12b0a075003c250ec",
+      "first_output_only": true
+    },
+    {
+      "id": "c03",
+      "arm": "ablated",
+      "packet_hash": "8874866e5b55aa2502cfc4786952ca3e5df4c8b30ec2e38e0664a639470c4080",
+      "packet_bytes_sha256": "78943d07651e578140f334bbcc931105fdfcb44847aa01e2605eb2eb5ac7ea4b",
+      "first_output_only": true
+    }
+  ],
+  "criteria": {
+    "structured_and_summary": [
+      "Consider the report as a qualifier on the same prior answer, not a second performance or independent failure",
+      "Do not retain an unqualified independent-explanation claim or promote mastery",
+      "Return a justified Knowledge reconciliation that passes the existing host without adapter repair",
+      "Preserve label_recall and original immutable Evidence bytes",
+      "Do not put neutral report in support/challenge refs; no fabricated challenge Evidence",
+      "Keep original source performance represented at most once per claim; optional removal of the support ref is acceptable when justified",
+      "Retain a meaningful report/assistance basis for a later consumer, without inventing a typed correction field",
+      "Choose a proportionate next teaching action; a diagnostic is optional and exact wording is not graded"
+    ],
+    "ablated": [
+      "No invented hint usage, correction event, new performance, mastery, or global inability",
+      "A conservative action or qualified restatement is acceptable; do not require an action difference just to show sensitivity"
+    ],
+    "fresh_after_replay": [
+      "Recover durable narrowed claim without producer/B transcript",
+      "Do not resurrect unqualified independent explanation or turn hint use into demonstrated inability"
+    ]
+  },
+  "limits": [
+    "Initial Knowledge is deliberately stale fixture state",
+    "Consumers are explicitly asked to consider durable updates",
+    "Prose linkage is a fixture fact and not runtime-enforced identity",
+    "Instruction-only source isolation in a shared filesystem; no hard blinding claim",
+    "All 28 historical scenarios remain not_executed; prior failures unchanged",
+    "No aggregate teaching-quality success from mechanical checks"
+  ]
+}

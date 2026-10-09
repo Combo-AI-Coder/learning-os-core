@@ -1,0 +1,159 @@
+{
+  "case_id": "hd02",
+  "synthetic": true,
+  "title": "Repeated chance events",
+  "current_task": {
+    "goal": "Reason about the chances of the next outcome after observing earlier coin tosses.",
+    "current_material": "The coin is stipulated to be fair. Each toss uses the same unchanged procedure, and the setup states that tosses do not physically influence later tosses. Only the next single toss is in scope; probabilities of complete multi-toss sequences are not needed.",
+    "session_context": "All historical responses concern this stipulated procedure. There is no suggestion that the coin is biased or that the tossing procedure changed, and no later explanation of the conflicting responses."
+  },
+  "knowledge": {
+    "schema_version": "0.3",
+    "document_type": "learner_knowledge",
+    "revision": 1,
+    "updated_at": "2026-10-06T10:40:00Z",
+    "domain": "synthetic",
+    "concepts": {
+      "repeated_coin_tosses": {
+        "capabilities": {
+          "interpret_a_fair_coin": {
+            "state": "supported",
+            "confidence": "high",
+            "updated_at": "2026-10-06T10:40:00Z",
+            "evidence_refs": {
+              "support": [
+                "evi_20261006_hd02_01"
+              ],
+              "challenge": []
+            },
+            "basis_summary": "Identified the two equally likely outcomes of an isolated fair-coin toss across examples."
+          },
+          "predict_next_independent_toss_after_history": {
+            "state": "conflicted",
+            "confidence": "high",
+            "updated_at": "2026-10-06T10:40:00Z",
+            "evidence_refs": {
+              "support": [
+                "evi_20261006_hd02_02"
+              ],
+              "challenge": [
+                "evi_20261006_hd02_03"
+              ]
+            },
+            "basis_summary": "Used a fresh-toss explanation after a mixed history but a balancing explanation after a run of heads."
+          }
+        }
+      }
+    }
+  },
+  "evidence": [
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd02_01",
+      "observed_at": "2026-10-05T09:01:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "On two examples the learner said that a fair coin has two possible outcomes, heads and tails, and that either outcome has probability one half on a single toss."
+      },
+      "interpretation": {
+        "direction": "support",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "repeated_coin_tosses",
+          "capability": "interpret_a_fair_coin"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd02",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    },
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd02_02",
+      "observed_at": "2026-10-05T09:02:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "For a fair coin tossed using the same independent procedure, after the observed history heads, tails, heads, the learner gave probability one half for tails next and said each new toss is separate from the earlier outcomes."
+      },
+      "interpretation": {
+        "direction": "support",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "repeated_coin_tosses",
+          "capability": "predict_next_independent_toss_after_history"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd02",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    },
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd02_03",
+      "observed_at": "2026-10-05T09:03:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "For the same stated fair, independent procedure, after four consecutive heads the learner said tails is more likely than heads on the next toss because the results need to become balanced."
+      },
+      "interpretation": {
+        "direction": "challenge",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "repeated_coin_tosses",
+          "capability": "predict_next_independent_toss_after_history"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd02",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    }
+  ]
+}

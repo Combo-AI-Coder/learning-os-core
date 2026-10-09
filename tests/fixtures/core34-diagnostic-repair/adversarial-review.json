@@ -1,0 +1,507 @@
+{
+  "review_type": "independent-context adversarial semantic adjudication",
+  "inputs": [
+    "prospective-observations.json",
+    "prospective-manifest.json",
+    "heldout-oracles.json"
+  ],
+  "scope": "Frozen first-output artifact review; same-model family, separate fresh context. No independent learner study or independent audit is claimed.",
+  "method": "Judge each learner-facing next_step by what an answer must actually do, attempt a concrete rival or bypass, then compare with the exact input evidence, canonical teaching policy, and sealed oracle. Self-declared action names or diagnostic-design validity are not success evidence. The conditional probes are question-design tasks; the three controls are ordinary next-action tasks.",
+  "overall_verdict": "pass",
+  "counts": {
+    "pass": 7,
+    "fail": 0,
+    "inconclusive": 0
+  },
+  "summary": "All four probes put the disputed relationship in the actual learner-facing question. No concrete answer preserving the recorded rival interpretation can earn full credit when the requested explanation is evaluated. All three controls make proportionate progress under the frozen oracle, including an explicitly worked example and a local negative-sign bridge.",
+  "failure_preservation": "No semantic failure was identified in these seven outputs. This does not erase failures in other runs or establish implementation-wide success.",
+  "gate_interpretation": "diagnostic_gate means a prerequisite/placement gate under the supplied contracts, not a synonym for minimal_probe. q00 and q01 can coherently gate a downstream conceptual/ratio step. q02 and q03 address the immediate target as planned participation. Because q00–q03 are conditional design tasks, this review does not infer a policy requiring ordinary teaching to pause.",
+  "global_limitations": [
+    "This is artifact-level question-quality and control-selection evaluation, not a study of actual learners or causal evidence that an implementation repair works broadly.",
+    "q01 and q02 revisit the challenge condition; they do not establish novel transfer.",
+    "The design records constrain how ambiguous answers should be interpreted, but no downstream grading or branching execution was supplied or evaluated.",
+    "Correct answers cannot by themselves justify persistent mastery transitions. No such transition is claimed by these outputs."
+  ],
+  "reviews": [
+    {
+      "run_id": "q00",
+      "oracle_case": "parent-specified token-identity target",
+      "verdict": "pass",
+      "actual_question_analysis": "The learner must suggest completions for two prefixes, explicitly decide whether the shared token ID forces identical post-processing representations of bank, and explain what information the model can use. The representation question, rather than the completion task, supplies the discriminating demand.",
+      "rival_attempt": {
+        "answer": "Bank could be followed by manager in the first sentence and gently in the second. Its representation is nevertheless identical because its token ID is identical; the model separately uses the other words when predicting.",
+        "could_earn_full_credit": false,
+        "reason": "This answers the next-word portion plausibly but affirms exactly the disputed representation claim. The explicit post-processing question makes that error observable."
+      },
+      "other_bypass_check": "Saying only that bank has different meanings, or that the two continuations differ, does not answer whether the processed representation is forced to be identical. A full answer may correctly say that the same ID does not force identity, without claiming every possible model must produce numerically different states.",
+      "answer_leakage": {
+        "verdict": "pass",
+        "rationale": "The question supplies same-ID status as a premise and asks an open yes/no question about its consequence. It does not state that representations differ or that preceding tokens change the representation."
+      },
+      "target_and_burden": {
+        "verdict": "pass",
+        "rationale": "The exact recorded conflation is tested. Ordinary sentence meanings support the comparison. The internal model machinery is explicitly a black box, so attention equations, embeddings mathematics, or a Transformer derivation are not prerequisites."
+      },
+      "design_record_check": {
+        "verdict": "pass",
+        "rationale": "The target, rival, and distinguishing feature match the actual question. The question asks for both the representation judgment and the explanatory information, so the design is not relying on an absent demand. The branches distinguish continuation, a local clarification, and unresolved ambiguity without declaring mastery."
+      },
+      "basis_check": {
+        "verdict": "pass",
+        "rationale": "The supplied records independently report one correct distinction and one unassisted conflicting same-ID claim. The basis preserves that conflict and does not invent a resolving conversation or a stable misconception."
+      },
+      "gate_check": {
+        "verdict": "pass_with_scope_limit",
+        "reported_value": true,
+        "rationale": "A short diagnostic can govern whether the next conceptual application continues or receives local clarification. The packet itself records that this distinction would change the next explanation. This conditional design task does not establish that ordinary teaching must always be paused, and the true value must not be generalized into such a policy."
+      },
+      "unsupported_capability_claims": null,
+      "limitations": [
+        "One successful response would only be bounded current support; it would not validate unqualified independent mastery.",
+        "The two plausible completions are auxiliary. Scoring only those would invalidate the probe, but the actual question and design do not do that."
+      ],
+      "actual_next_step": "Assume the final 'bank' has the same token ID in 'The customer asked the bank' and 'The canoe scraped the bank'. Suggest one plausible next word for each. Does the shared ID force the model's representation of 'bank' after processing each prefix to be identical? Explain what information the model could use and why. Treat its internal machinery as a black box.",
+      "contract_check": {
+        "verdict": "pass",
+        "next_step_characters": 361,
+        "basis_characters": 295,
+        "source_labels_present_in_packet": true,
+        "diagnostic_record_present_iff_probe": true
+      }
+    },
+    {
+      "run_id": "q01",
+      "oracle_case": "hd01",
+      "verdict": "pass",
+      "actual_question_analysis": "The question changes both rectangle dimensions and asks for the resulting count of covered unit squares, explained through both row count and squares per row. It cannot be completed merely by reporting the length scale factor.",
+      "rival_attempt": {
+        "answer": "Three times as many squares: the new rectangle is three times as large. It has three times as many rows, and each row is also three times as long, but the enlargement factor is still three.",
+        "could_earn_full_credit": false,
+        "reason": "The answer fails to combine the two dimension contributions and conflicts with the requested row-based accounting. Mentioning both dimensions without correctly relating them to the total is insufficient."
+      },
+      "other_bypass_check": "An unexplained nine, or the slogan area scales by the square of the factor, does not satisfy the requested rows-and-squares explanation. Conversely, a concrete tiling account of three groups in each direction genuinely demonstrates the local target even without general algebra.",
+      "answer_leakage": {
+        "verdict": "pass",
+        "rationale": "The prompt cues an already established representation, rows and squares per row, but does not give either changed row count or the product nine. This is light representation cueing, not supplying the tested relationship."
+      },
+      "target_and_burden": {
+        "verdict": "pass",
+        "rationale": "Matches the oracle demand to integrate both perpendicular dimension changes. The factor three is small and the row representation is explicitly supported by prior evidence; no new formal similarity language or algebra is imposed."
+      },
+      "design_record_check": {
+        "verdict": "pass",
+        "rationale": "The stated target and distinguishing feature are required by the actual question. The rival represents the documented transfer of length factor to area. A correct explanation supports moving to area ratio; an error or ambiguous numeric answer leads to a small local construction while preserving uncertainty."
+      },
+      "basis_check": {
+        "verdict": "pass",
+        "rationale": "The support record explicitly gives four times the area when both dimensions double, and the challenge gives three times when both dimensions triple. The basis describes separate examples accurately and does not invent a causal diagnosis."
+      },
+      "gate_check": {
+        "verdict": "pass_with_scope_limit",
+        "reported_value": true,
+        "rationale": "Area scaling is being checked before the stated downstream area-ratio step, making a local prerequisite diagnostic interpretation coherent. This is not evidence that all ordinary practice, or every conflicted capability, should be gated."
+      },
+      "unsupported_capability_claims": null,
+      "limitations": [
+        "The factor-three condition repeats the numerical enlargement factor in the challenge record. This is sufficient to distinguish the recorded alternatives now, but weak evidence of novel transfer or durable resolution.",
+        "The scaffold label none should not be read as a claim that the prompt contains no cue at all: it supplies the familiar row representation. That cue does not defeat the diagnostic."
+      ],
+      "actual_next_step": "A rectangle has both side lengths tripled. How many times as many unit squares will it cover? Explain how the number of rows and the number of squares in each row account for your answer.",
+      "contract_check": {
+        "verdict": "pass",
+        "next_step_characters": 187,
+        "basis_characters": 220,
+        "source_labels_present_in_packet": true,
+        "diagnostic_record_present_iff_probe": true
+      }
+    },
+    {
+      "run_id": "q02",
+      "oracle_case": "hd02",
+      "verdict": "pass",
+      "actual_question_analysis": "The question asks for next-toss tails probability after the specific four-head streak and explicitly asks whether that history changes the probability and why. It does not stop at an isolated fair-toss question.",
+      "rival_attempt": {
+        "answer": "More than one half, because tails has to become more common after four heads so the results can balance.",
+        "could_earn_full_credit": false,
+        "reason": "This directly exposes the compensation alternative. An answer of one half followed by balancing reasoning would also remain internally inconsistent and fail the required explanation."
+      },
+      "other_bypass_check": "A bare one half can be recalled from the isolated-coin prerequisite, but cannot receive full credit because the prompt also requires a judgment and explanation about the streak. A correct explanation using the unchanged independent procedure provides the local evidence required, even if expressed without the term independence.",
+      "answer_leakage": {
+        "verdict": "pass",
+        "rationale": "The wording invokes the unchanged procedure already stipulated in the input. It neither gives the numeric answer nor asserts in the question that the streak has no effect. Holding the procedure fixed is essential to isolate the intended issue."
+      },
+      "target_and_burden": {
+        "verdict": "pass",
+        "rationale": "The actual task tests the precise history-sensitive conflict with one next toss, avoiding sequence probability calculations, unknown-bias inference, or conditional-probability notation."
+      },
+      "design_record_check": {
+        "verdict": "pass",
+        "rationale": "The stated rival and distinction match what the learner must address. The design correctly refuses to treat an unexplained numeric answer as sufficient and provides local, uncertainty-preserving branches."
+      },
+      "basis_check": {
+        "verdict": "pass",
+        "rationale": "The records contain separate-toss reasoning after heads, tails, heads and balancing reasoning after four heads, under the same stipulated procedure. The basis accurately contrasts them without attributing a general probability deficit."
+      },
+      "gate_check": {
+        "verdict": "pass",
+        "reported_value": false,
+        "rationale": "The exact contract defines a prerequisite/placement gate, not every diagnostic question. This question is about the current lesson goal itself; false is compatible with using its answer to select the next explanatory move."
+      },
+      "unsupported_capability_claims": null,
+      "limitations": [
+        "The streak length repeats the challenging example. A changed current answer can be informative, but is not independent evidence of transfer to different histories or durable conceptual change.",
+        "No finite short explanation can exclude memorized wording. The relevant check is whether a concrete compensation answer can pass; it cannot."
+      ],
+      "actual_next_step": "After four heads in a row with this fair coin and the stated unchanged procedure, what is the probability of tails on the next toss? Explain whether the run of heads changes that probability and why.",
+      "contract_check": {
+        "verdict": "pass",
+        "next_step_characters": 199,
+        "basis_characters": 232,
+        "source_labels_present_in_packet": true,
+        "diagnostic_record_present_iff_probe": true
+      }
+    },
+    {
+      "run_id": "q03",
+      "oracle_case": "hd03",
+      "verdict": "pass",
+      "actual_question_analysis": "Starting from every triangular piece being green, the question proposes a green square and asks whether it is permitted by that description. This is a second-group member outside the first, rather than another forward inference.",
+      "rival_attempt": {
+        "answer": "No. If all triangular pieces are green, a green piece must be triangular, so a green square would break the description.",
+        "could_earn_full_credit": false,
+        "reason": "The answer asserts the unsupported converse. The requested explanation of consistency with the original description makes the reversal directly visible."
+      },
+      "other_bypass_check": "Yes, squares can be painted green does not by itself explain compatibility with the stated constraint. Yes, the description restricts triangles and says nothing requiring green pieces to be triangles is a valid full-credit answer, and actually demonstrates the local one-way relation rather than bypassing it.",
+      "answer_leakage": {
+        "verdict": "pass",
+        "rationale": "The candidate green square is presented as a possibility to assess, not as a confirmed allowed example. The yes/no judgment and consistency explanation remain for the learner."
+      },
+      "target_and_burden": {
+        "verdict": "pass",
+        "rationale": "Matches the frozen oracle permissible-counterexample criterion. It uses familiar colors and shapes already allowed by the packet, without formal implication or necessary/sufficient vocabulary. Recognizing that a square is not a triangle is a minor familiar-category dependency, not a substantial new geometry task."
+      },
+      "design_record_check": {
+        "verdict": "pass",
+        "rationale": "The design describes exactly the converse inference tested in the question. Its demand for an explanation follows the actual wording. The next steps preserve the distinction between local clarification and a stable misconception claim."
+      },
+      "basis_check": {
+        "verdict": "pass",
+        "rationale": "The evidence supports applying the first-to-second relationship and records different answers when starting from the second property. The basis accurately summarizes that local conflict."
+      },
+      "gate_check": {
+        "verdict": "pass",
+        "reported_value": false,
+        "rationale": "The question directly participates in the current inference lesson rather than placing the learner through a separate readiness prerequisite. The packet definition therefore does not require true merely because the action is a probe."
+      },
+      "unsupported_capability_claims": null,
+      "limitations": [
+        "The prompt offers the potential counterexample instead of requiring the learner to invent one. That reduces burden but still requires judging the target relationship.",
+        "It supports a local response judgment, not broad logical-reasoning mastery."
+      ],
+      "actual_next_step": "A tray is described only by “Every triangular piece in this tray is green.” Could a selected green piece from this tray be square? Explain whether that would break the description.",
+      "contract_check": {
+        "verdict": "pass",
+        "next_step_characters": 180,
+        "basis_characters": 212,
+        "source_labels_present_in_packet": true,
+        "diagnostic_record_present_iff_probe": true
+      }
+    },
+    {
+      "run_id": "h04",
+      "oracle_case": "hd04",
+      "verdict": "pass",
+      "actual_question_analysis": "The next step works the planned one-third plus one-sixth example by splitting thirds into sixths, preserving the amount, then adding the sixth counts. The final strip instruction is a concrete follow-through on the example, not a readiness quiz.",
+      "rival_attempt": {
+        "answer": "I marked two sixths and one more sixth because you told me to.",
+        "could_earn_full_credit": null,
+        "reason": "A learner could follow the worked instructions without independently reconstructing the method, but this is not advertised as a diagnostic or a new mastery demonstration. That possibility does not invalidate the requested worked teaching step."
+      },
+      "answer_leakage": {
+        "verdict": "not_applicable",
+        "rationale": "Giving 1/3 = 2/6 and the total 3/6 is appropriate in the explicitly requested first worked example. Applying the conditional probes no-answer-leakage restriction to this control would misread its packet."
+      },
+      "target_and_burden": {
+        "verdict": "pass",
+        "rationale": "The connection uses supported equivalent-fraction partitions and equal-unit addition, with one low-cost strip representation. It neither restarts the unit nor introduces an unnecessary prerequisite test."
+      },
+      "design_record_check": {
+        "verdict": "pass",
+        "rationale": "No diagnostic design is supplied or needed. Continue, brief_bridge, and the actual worked connection are compatible with the packet and frozen oracle; continuation need not be unscaffolded."
+      },
+      "basis_check": {
+        "verdict": "pass",
+        "rationale": "The exact examples 2/3 = 4/6 and 3/4 = 9/12 and the equal-size-unit addition explanation appear in the supplied records. The claim of support for this connection stays within those capabilities."
+      },
+      "gate_check": {
+        "verdict": "pass",
+        "reported_value": false,
+        "rationale": "The example proceeds immediately. Marking the strip is ordinary learning activity, with no conditional readiness barrier."
+      },
+      "unsupported_capability_claims": null,
+      "limitations": [
+        "Successful imitation of this worked example must not be used as evidence of independent different-denominator addition mastery; the output makes no such claim.",
+        "The example leaves the result as three sixths, which is sufficient for the equal-unit connection and does not require an unrequested simplification step."
+      ],
+      "actual_next_step": "Let's connect the two ideas. For 1/3 + 1/6 of the same whole, split each third into two equal pieces: 1/3 = 2/6. The amount stays the same, and now both fractions count sixths. Add the counts: 2/6 + 1/6 = 3/6. Check this on a strip divided into six equal parts: mark two parts for the third, then one more for the sixth.",
+      "contract_check": {
+        "verdict": "pass",
+        "next_step_characters": 320,
+        "basis_characters": 221,
+        "source_labels_present_in_packet": true,
+        "diagnostic_record_present_iff_probe": true
+      }
+    },
+    {
+      "run_id": "h05",
+      "oracle_case": "hd05",
+      "verdict": "pass",
+      "actual_question_analysis": "The next step asks the learner to combine the three supplied category counts and explain why each object is counted once. This is the stated category-total lesson activity, not a test of absent advanced chart knowledge.",
+      "rival_attempt": {
+        "answer": "2 + 5 + 3 = 10, because these three categories include all the objects and do not overlap.",
+        "could_earn_full_credit": true,
+        "reason": "This can earn full credit without any knowledge of logarithmic axes. That is the intended behavior: the absent advanced capability is irrelevant to the current material, not a target the question should secretly require."
+      },
+      "answer_leakage": {
+        "verdict": "pass",
+        "rationale": "Supplying the displayed counts is appropriate because the planned connection is combining them, and those heights are explicitly labeled in the input. The total and required no-overlap explanation are not supplied in next_step."
+      },
+      "target_and_burden": {
+        "verdict": "pass",
+        "rationale": "Stays within supported uniform-axis reading and category addition. No logarithmic-axis probe, generic graph inventory, or needless detour is introduced."
+      },
+      "design_record_check": {
+        "verdict": "pass",
+        "rationale": "The ordinary continuation action, no diagnostic design, and bounded support are consistent with the actual learning activity. Asking for an equation and explanation does not itself make the activity a diagnostic prerequisite."
+      },
+      "basis_check": {
+        "verdict": "pass",
+        "rationale": "Both prior chart-reading success and repeated category summation are in the supplied evidence. The current axis structure, disjointness, and exhaustiveness are explicit current-material premises. No new or advanced capability is inferred."
+      },
+      "gate_check": {
+        "verdict": "pass",
+        "reported_value": false,
+        "rationale": "The learner proceeds directly into the current category-total connection; no unrelated unknown capability is made a blocker."
+      },
+      "unsupported_capability_claims": null,
+      "limitations": [
+        "This textual continuation does not prove any actual persistent knowledge payload was preserved, but it neither adds an advanced-capability placeholder nor makes a judgment about the absent capability."
+      ],
+      "actual_next_step": "Use the red, blue, and green counts of 2, 5, and 3 to write an addition equation for the total number of objects. Explain why adding these three counts includes every object exactly once.",
+      "contract_check": {
+        "verdict": "pass",
+        "next_step_characters": 187,
+        "basis_characters": 231,
+        "source_labels_present_in_packet": true,
+        "diagnostic_record_present_iff_probe": true
+      }
+    },
+    {
+      "run_id": "h06",
+      "oracle_case": "hd06",
+      "verdict": "pass",
+      "actual_question_analysis": "The next step directly introduces how division by a negative number reverses order using number-line halving and reflection, obtains x > -3, defines the new greater-than symbol, and checks allowed, excluded, and boundary values. It addresses the new negative condition rather than repeating a positive-factor exercise.",
+      "rival_attempt": {
+        "answer": "Dividing by -2 gives x < -3, so -4 is allowed and 0 is excluded.",
+        "could_earn_full_credit": false,
+        "reason": "For x = -4 the original becomes 8 < 6, which is false, while x = 0 gives 0 < 6, which is true. The actual worked bridge and chosen check values directly contradict the unchanged-order rival."
+      },
+      "other_bypass_check": "A learner could repeat the supplied x > -3 without independent understanding, but the output is a local explanation with natural observation, not a claim that the learner has demonstrated the negative-factor capability. The two test points expose a reversed-side error; excluding -3 preserves strictness.",
+      "answer_leakage": {
+        "verdict": "not_applicable",
+        "rationale": "The frozen oracle expressly accepts a short sign-sensitive explanation working the current example. Supplying the sign reversal and solution is appropriate teaching here, rather than leakage from a purported independent diagnostic."
+      },
+      "target_and_burden": {
+        "verdict": "pass",
+        "rationale": "The bridge uses established signed multiplication and number-line order. Reflection is explained as swapping left and right instead of requiring formal transformation vocabulary. Greater-than notation is explicitly introduced. Checks require only small products."
+      },
+      "design_record_check": {
+        "verdict": "pass",
+        "rationale": "Continue with caution and a brief bridge describe the actual behavior. No diagnostic design is needed. The original positive-factor evidence remains valid, while the negative-factor condition receives a local explanation."
+      },
+      "basis_check": {
+        "verdict": "pass",
+        "rationale": "All recorded transformations use positive factors, and the supplied records support signed-number comparison and multiplication. The basis states those limits and gives mathematically correct current-example checks; it does not describe the checks as learner observations."
+      },
+      "gate_check": {
+        "verdict": "pass",
+        "reported_value": false,
+        "rationale": "The sign-sensitive teaching proceeds immediately, and the checks are natural participation after the explanation rather than a prerequisite gate."
+      },
+      "unsupported_capability_claims": null,
+      "limitations": [
+        "The brief number-line account is an intuitive explanation rather than a formal proof; that matches the current teaching scope.",
+        "These finite value checks illustrate and help detect the wrong inequality direction. By themselves they do not prove full solution-set equivalence; the preceding order-reversal explanation supplies the general rationale."
+      ],
+      "actual_next_step": "We still want exactly the same allowed values. Dividing both sides by -2 halves distances on the number line and reflects left and right, so it reverses order. Thus -2x < 6 becomes x > -3, where > means 'is greater than.' Check x = 0 and x = -4 in both inequalities: which is allowed? At x = -3, the original becomes 6 < 6, which is false, so that value stays excluded.",
+      "contract_check": {
+        "verdict": "pass",
+        "next_step_characters": 369,
+        "basis_characters": 259,
+        "source_labels_present_in_packet": true,
+        "diagnostic_record_present_iff_probe": true
+      }
+    }
+  ],
+  "supplemental_review": {
+    "scope": "Two already-frozen no-probe/invariance controls, added without changing the original seven findings.",
+    "inputs": [
+      "observations.json:r02,r03",
+      "manifest.json"
+    ],
+    "policy_check": "Both exact packets contain the same policy as the original seven reviewed packets (SHA256 056200f37971287e9cc6f8a52055c85cde02ffa4075f40dd366dd58409e88d0f).",
+    "counts": {
+      "pass": 2,
+      "fail": 0,
+      "inconclusive": 0
+    },
+    "pairwise_invariance_verdict": "pass",
+    "pairwise_invariance_rationale": "Both outputs continue the same planned conceptual application with no gate, no extra scaffolding, the same token-identity target, bounded current support, and no diagnostic record. The changed lexical example and source-list detail do not indicate a semantic detour. Irrelevant stored material in r03 produces no unsupported instructional or capability change.",
+    "supported_issues": [],
+    "limitation": "These ordinary applications are not discriminating tests of whether a shared token ID forces identical contextual representations, nor do they claim to be. They must not be used as independent evidence that the diagnostic repair works; their value is preserving proportionate continuation and resistance to irrelevant distractors.",
+    "reviews": [
+      {
+        "run_id": "r02",
+        "verdict": "pass",
+        "control_role": "supported no-probe continuation",
+        "actual_task_demand": "The learner compares two bank-ending prefixes, generates plausible continuations, and explains which contextual information supports different predictions. This is the exact agreed conceptual application, without a preliminary tokenization quiz or answer supplied in advance.",
+        "scaffolding_and_burden": "The question supplies example prefixes but leaves the completions and explanation to the learner. It explicitly treats prediction machinery as a black box; there is no demand for formal derivation or unestablished architecture knowledge. Asking for two plausible words per prefix is modest ordinary application work.",
+        "gate_check": {
+          "reported_value": false,
+          "verdict": "pass",
+          "reason": "Participation in the planned application is not a prerequisite/placement gate under the exact contract. Nothing in the actual instruction conditions access to teaching on passing a readiness test."
+        },
+        "basis_and_claim_limits": "The supplied Knowledge basis explicitly reports two varied independent explanations without hints and limits support to the present conceptual step. The output repeats that bounded evidence accurately and expressly excludes derivation ability and unrestricted mastery. It does not pretend to have read the absent producer transcript or underlying evidence files.",
+        "rival_answer_check": {
+          "answer": "The representations of bank could stay identical while the model uses paycheck versus river from the rest of the prefix to predict different next words.",
+          "could_satisfy_application": true,
+          "significance": "The ordinary application does not itself force an explicit post-processing representation distinction. That is not a failure here: there is no recorded unresolved conflict, no diagnostic design claim, and no new mastery inference. It would be insufficient if repurposed as the q00 diagnostic, but that is not this packet."
+        },
+        "distractor_detour_check": "No unrelated detour, broad reteaching, or unwarranted capability change is present.",
+        "supported_issue": null,
+        "actual_next_step": "Two prefixes end with the same vocabulary token, “bank”: (A) “She deposited her paycheck at the bank” and (B) “The fisherman sat on the river bank”. Suggest two plausible next words for each, then explain how the model could predict differently despite the shared final token. What information can it use to distinguish these contexts? Treat its prediction machinery as a black box.",
+        "contract_check": {
+          "verdict": "pass",
+          "next_step_characters": 382,
+          "basis_characters": 282,
+          "source_labels_present_in_packet": true,
+          "diagnostic_design": null
+        },
+        "verified_packet_sha256": "b419a9de26823207d550a89368802b333732c24788396e081b4c7987e361a788",
+        "verified_response_sha256": "c4694b525e63f321db4a9883024d17b9e3dd21678b85ea4dd4d78f6918675a2d",
+        "binding_note": "Hash references appended after the manual review and exact-text identity check. This is a later binding of the preserved review, not a retroactive machine assessment or a change to the historical candidate1 record."
+      },
+      {
+        "run_id": "r03",
+        "verdict": "pass",
+        "control_role": "supported no-probe continuation with irrelevant distractors",
+        "actual_task_demand": "The learner compares two prefixes ending in the, predicts plausible continuations for bread placement and wrench placement, and explains which contextual information supports different predictions. Replacing bank with the changes surface content while preserving the agreed same-token/different-context application.",
+        "scaffolding_and_burden": "Example prefixes establish the task without providing the completions. The black-box statement prevents formal model internals from becoming an unnecessary prerequisite. Familiar bread, baker, mechanic, and wrench contexts impose no material new domain burden.",
+        "gate_check": {
+          "reported_value": false,
+          "verdict": "pass",
+          "reason": "The output immediately begins the planned application. It adds no diagnostic prerequisite and does not turn unrelated old difficulties into a readiness barrier."
+        },
+        "basis_and_claim_limits": "The basis accurately relies on the same bounded supported Knowledge record as r02. It does not infer inability from the old geometry note or promote current conceptual support into derivation competence or unqualified mastery.",
+        "rival_answer_check": {
+          "answer": "Oven or toaster could follow the first prefix, and drawer or toolbox the second. The model can use the earlier words even if the final token itself has a fixed representation.",
+          "could_satisfy_application": true,
+          "significance": "This illustrates why the ordinary activity should not be treated as proof of the exact representation distinction. The response makes only a bounded claim based on prior supplied support, so it remains valid as continuation."
+        },
+        "distractor_detour_check": "The unvalidated visual-learner label, unrelated postcard hobby, old low-confidence boredom inference with a personality-quiz suggestion, and unrelated angle-proof difficulty do not alter the task, gate, support claim, or scaffolding. No distractor appears in the question or its cited basis.",
+        "supported_issue": null,
+        "actual_next_step": "Compare these prefixes, which end with the same vocabulary token, “the”:\nA. “The baker slid the bread into the”\nB. “The mechanic returned the wrench to the”\nSuggest two plausible next words for each. Explain what information the model can use to make different predictions despite the identical final token. Treat the model’s internal machinery as a black box.",
+        "contract_check": {
+          "verdict": "pass",
+          "next_step_characters": 360,
+          "basis_characters": 281,
+          "source_labels_present_in_packet": true,
+          "diagnostic_design": null
+        },
+        "verified_packet_sha256": "71dfe2e4c104b0548d7e1847010aeeb495a06d729517559db48d6476f989211c",
+        "verified_response_sha256": "6ea94a9e66faa3542f693ef0abf7109efb1df7001485e264608fb0f609d4d835",
+        "binding_note": "Hash references appended after the manual review and exact-text identity check. This is a later binding of the preserved review, not a retroactive machine assessment or a change to the historical candidate1 record."
+      }
+    ]
+  },
+  "clean_fixture_review": {
+    "scope": "A separate review of q10; prior findings and their wording are retained unchanged.",
+    "q00_qualification": "Parent reports, and comparison with the already reviewed q00 input confirms, that q00 Knowledge included a sentence saying the claim would change the next explanation and a same-token/different-context question had low burden. q00 remains a preserved artifact-quality result, but is excluded from the clean final conditional set. No retroactive replacement or relabeling of q00 is made.",
+    "clean_final_conditional_set": [
+      "q10",
+      "q01",
+      "q02",
+      "q03"
+    ],
+    "clean_final_conditional_verdict": "4 of 4 pass at artifact-level diagnostic quality",
+    "reviews": [
+      {
+        "run_id": "q10",
+        "verdict": "pass",
+        "review_role": "Fresh conditional token-identity diagnostic from the cleaned Knowledge fixture; distinct from preserved q00.",
+        "inputs": [
+          "prospective-observations.json:q10",
+          "prospective-manifest.json:q10"
+        ],
+        "actual_next_step": "Compare “She spread butter on the” and “He sailed across the”; assume the final “the” has the same token ID. Give one plausible next word for each. Must the model’s context-processed representation of “the” (its internal description after reading the prefix) be identical in both cases? Explain what the ID fixes and what information the model could use to distinguish the contexts. Its internal machinery can remain a black box.",
+        "actual_question_analysis": "The question asks for plausible continuations, then directly asks whether a shared ID requires identical representations after prefix processing. It also asks what token ID fixes and which information can distinguish the contexts. The explicit representation judgment, not the next-word guesses, makes the disputed relationship observable.",
+        "rival_answer_attempt": {
+          "answer": "Bread and ocean are plausible continuations. The final the has an identical context-processed representation in both prefixes because its token ID is identical. The model can use butter and sailed separately elsewhere to make different predictions.",
+          "could_earn_full_credit": false,
+          "rationale": "This can satisfy the continuation task and identify informative context, yet answers the explicit representation question incorrectly. It therefore cannot pass the actual question merely by exploiting the shared next-word prerequisite."
+        },
+        "additional_bypass_checks": [
+          {
+            "attempt": "The same ID fixes the same vocabulary token, and butter versus sailed explains the different next words.",
+            "result": "Insufficient for full credit: it omits the explicit question about identity of the context-processed representation."
+          },
+          {
+            "attempt": "No, the representations need not match because the final token occupies a different position in these prefixes; the ID still fixes vocabulary identity.",
+            "result": "This rejects the precise recorded claim that token ID alone forces identical representations and is therefore not a surviving instance of that rival. However, an answer relying only on position would not by itself establish a stronger claim about sensitivity to preceding word content at a fixed position. Do not silently award that stronger claim."
+          },
+          {
+            "attempt": "No, they need not be identical, because the prefix information can be incorporated into the internal representation while the vocabulary identity remains the same.",
+            "result": "This is genuine bounded target evidence, not an alternative route that preserves the recorded conflation."
+          }
+        ],
+        "answer_leakage": {
+          "verdict": "pass",
+          "rationale": "The parenthetical defines context-processed representation as the internal description after reading the prefix. That makes the requested object intelligible but does not assert that two such descriptions differ. The same-ID assumption and black-box boundary establish scope, not the answer. No completion or correct representation judgment is supplied."
+        },
+        "target_relevance_and_burden": {
+          "verdict": "pass",
+          "rationale": "The probe directly tests the referenced fixed-ID/identical-representation challenge. Familiar butter and sailing contexts support low-cost predictions. It requires no formal architecture, vector arithmetic, attention mechanism, or derivation. The explanatory parenthetical supports the brief_bridge scaffold label."
+        },
+        "basis_grounding": {
+          "verdict": "pass",
+          "rationale": "The cleaned Knowledge basis states only unresolved support and challenge under the same unassisted conditions, with no surviving producer transcript or resolving self-report. The two supplied evidence observations explicitly support the distinction and contradict it, respectively. The output accurately names this disagreement without inventing a historical intervention, answer, or stable misconception."
+        },
+        "design_binding": {
+          "verdict": "pass",
+          "rationale": "The design target and rival refer to the representation question actually asked, not merely to different predictions. The stated explanation about what ID fixes and what context contributes is elicited by the learner-facing wording. Continuation is bounded to current support; a repeated conflation leads to a local explanation; ambiguity is preserved rather than converted into mastery or inability.",
+          "scoring_caution": "The semantic target is non-necessity of identical contextual representations under shared ID. Do not require proof that every possible model produces unequal numerical representations. If only positional reasoning is given, credit the rejection of the exact fixed-ID implication while retaining uncertainty about the stronger content-sensitivity claim."
+        },
+        "gate_check": {
+          "verdict": "pass",
+          "reported_value": false,
+          "rationale": "The exact contract defines a prerequisite/placement gate. This diagnostic is embedded in the agreed comparison activity and need not create a separate readiness gate. The request explicitly conditions on designing a diagnostic, so the run cannot establish whether an unconstrained teacher would decide that probing is worth an interruption."
+        },
+        "unsupported_capability_claims": null,
+        "supported_failure": null,
+        "limitations": [
+          "The examples have different prefix lengths. They test the exact same-ID-implies-identical claim, but are not a controlled isolation of lexical context from token position.",
+          "One answer is only bounded current evidence and does not establish durable understanding, unqualified mastery, or implementation-wide repair effectiveness.",
+          "The clean caller still explicitly requests a diagnostic design. Removing the Knowledge intervention cue does not turn this into an unprompted probe-selection evaluation."
+        ],
+        "contract_check": {
+          "verdict": "pass",
+          "next_step_characters": 429,
+          "basis_characters": 273,
+          "all_source_labels_present": true,
+          "all_design_fields_within_bounds": true
+        }
+      }
+    ]
+  },
+  "q00_limitation": "Historical intervention/value cue was accidentally present in q00 Knowledge basis. Preserve its question-quality finding, but exclude it from the clean controlled set. q10 is separately reviewed on corrected factual context."
+}

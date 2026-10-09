@@ -1,0 +1,36 @@
+{
+  "classification": "supplemental same-model first-output semantic review after independent-review remediation",
+  "manifest_bytes_sha256": "18f6fc6cbeacbaa9800add4cc9f543a36208b88f8a0e74789c0f75c4e0b1bc52",
+  "policy_bytes_sha256": "af79b5f2975ee220a87f860a98d8b79c914f75059b97f0b5e4afa939bd631227",
+  "response_bytes_sha256": "7b5c6edebe8aeb41bfcbf5a6939973082e97852a0e5f50727d59e006b45288b4",
+  "replay_bytes_sha256": "2e172b499bf5d3b3949b5c7b03e6e59e75da5cefb19eb9c7117dbe177425e98d",
+  "findings": [],
+  "cases": [
+    {
+      "case_id": "sole",
+      "disposition": "accepted",
+      "basis": "Concrete production report is integrated with original performance/full portfolio; independence becomes unknown/absent, label recall and neutral history preserved; exact request admitted"
+    },
+    {
+      "case_id": "preference_only",
+      "disposition": "accepted",
+      "basis": "No new performance or production-context correction; no persistent Knowledge update or invented capability gain"
+    }
+  ],
+  "counts": {
+    "fresh_outputs": 1,
+    "case_decisions": 2,
+    "admitted_requests": 1,
+    "no_write_decisions": 1,
+    "supported_output_findings": 0,
+    "earlier_ci_preflight_misses": 1,
+    "earlier_independent_review_preflight_misses": 2
+  },
+  "limits": [
+    "Two cases share one context",
+    "Prompted synthetic compliance, not independent audit, unprompted adoption or learner benefit",
+    "Same learner-facing action is appropriate; semantic disposition differs",
+    "Earlier snapshots/outputs/reports remain unchanged"
+  ],
+  "costs": null
+}

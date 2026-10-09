@@ -1,0 +1,2 @@
+# Preserve observed JSON bytes across Windows and Linux checkouts.
+*.json -text

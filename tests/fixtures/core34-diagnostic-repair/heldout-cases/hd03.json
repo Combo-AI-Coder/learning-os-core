@@ -1,0 +1,159 @@
+{
+  "case_id": "hd03",
+  "synthetic": true,
+  "title": "Descriptions of groups",
+  "current_task": {
+    "goal": "Decide what conclusions about a selected piece follow from one sentence of the form Every X is Y.",
+    "current_material": "The examples describe trays of pieces using familiar colors and shapes. A selected piece exists in the stated tray. Each conclusion must use only the stated description; other properties of the tray are not supplied. Formal symbols and technical logic vocabulary are not part of this step.",
+    "session_context": "The records are from different tray examples. There is no additional statement that equates the two groups, and no later clarification of the differing responses."
+  },
+  "knowledge": {
+    "schema_version": "0.3",
+    "document_type": "learner_knowledge",
+    "revision": 1,
+    "updated_at": "2026-10-06T10:40:00Z",
+    "domain": "synthetic",
+    "concepts": {
+      "category_statements": {
+        "capabilities": {
+          "apply_the_stated_forward_relationship": {
+            "state": "supported",
+            "confidence": "high",
+            "updated_at": "2026-10-06T10:40:00Z",
+            "evidence_refs": {
+              "support": [
+                "evi_20261006_hd03_01"
+              ],
+              "challenge": []
+            },
+            "basis_summary": "Correctly applied the stated relationship when the selected piece was known to belong to the first named group."
+          },
+          "respect_the_direction_of_an_every_statement": {
+            "state": "conflicted",
+            "confidence": "high",
+            "updated_at": "2026-10-06T10:40:00Z",
+            "evidence_refs": {
+              "support": [
+                "evi_20261006_hd03_02"
+              ],
+              "challenge": [
+                "evi_20261006_hd03_03"
+              ]
+            },
+            "basis_summary": "Left the first property undetermined in one example but inferred it from the second property in another."
+          }
+        }
+      }
+    }
+  },
+  "evidence": [
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd03_01",
+      "observed_at": "2026-10-05T09:01:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "Given the sentence Every blue piece in this tray is round, the learner said a blue piece from that tray must be round. On another tray, given Every striped piece is yellow, the learner said a striped piece must be yellow."
+      },
+      "interpretation": {
+        "direction": "support",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "category_statements",
+          "capability": "apply_the_stated_forward_relationship"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd03",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    },
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd03_02",
+      "observed_at": "2026-10-05T09:02:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "Given Every yellow piece in this tray is round and told that a selected piece is round, the learner said its color is not determined: the tray could also contain round pieces of other colors."
+      },
+      "interpretation": {
+        "direction": "support",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "category_statements",
+          "capability": "respect_the_direction_of_an_every_statement"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd03",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    },
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd03_03",
+      "observed_at": "2026-10-05T09:03:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "Given only Every star-shaped piece in this tray is red and told that a selected piece is red, the learner said it must be star-shaped, because the sentence connects red and star-shaped pieces."
+      },
+      "interpretation": {
+        "direction": "challenge",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "category_statements",
+          "capability": "respect_the_direction_of_an_every_statement"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd03",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    }
+  ]
+}

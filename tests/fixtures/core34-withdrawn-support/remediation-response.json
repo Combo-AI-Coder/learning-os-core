@@ -1,0 +1,24 @@
+{
+  "cases": [
+    {
+      "case_id": "sole",
+      "next_action": "Let’s connect token identity to next-word prediction. Compare these prefixes: (A) ‘After the flood, the bank’ and (B) ‘After reviewing the loan application, the bank’. Treat ‘bank’ as the same vocabulary token in both. Suggest one plausible next word for each, then explain what information distinguishes the two contexts and whether the final token’s vocabulary ID alone contains enough information to make those different predictions.",
+      "basis": "The concrete report in evi-synthetic-report-002 identifies the hint as the source of the earlier explanation while preserving independent label recall. With complete relevant coverage, no valid independent-explanation support or substantive negative evidence remains, so remove that stale claim rather than mark it unsupported; retain label_recall and both immutable Evidence records. The planned comparison provides natural observation without an extra diagnostic detour or a claimed new performance.",
+      "host_requests": [
+        {
+          "operation": "reconcile_knowledge",
+          "arguments": {
+            "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\nupdated_at: '2026-10-07T03:37:30Z'\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+            "expected_version_token": "9999999999999999999999999999999999999999"
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "preference_only",
+      "next_action": "Let’s connect token identity to next-word prediction. Compare these prefixes: (A) ‘After the flood, the bank’ and (B) ‘After reviewing the loan application, the bank’. Treat ‘bank’ as the same vocabulary token in both. Suggest one plausible next word for each, then explain what information distinguishes the two contexts and whether the final token’s vocabulary ID alone contains enough information to make those different predictions.",
+      "basis": "The existing answer remains provisional support for explanation and label recall. Current feedback reports a helpful experience and greater felt confidence, with no new performance or concrete alternative explanation for the earlier answer. Continue in the same clear style and observe the planned application naturally; this local feedback justifies no durable Knowledge change.",
+      "host_requests": []
+    }
+  ]
+}

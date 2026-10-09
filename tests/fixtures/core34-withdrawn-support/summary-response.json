@@ -1,0 +1,14 @@
+{
+  "case_id": "sole",
+  "next_action": "Let's apply the distinction to next-word prediction. Compare these prefixes: (A) 'She deposited her paycheck at the bank' and (B) 'The ducks rested along the river bank'. Suggest one plausible next word for each, then explain what information lets a model treat different next words as more or less plausible even though both prefixes end in the same vocabulary token. Distinguish the token ID from the representation used for prediction, and identify which earlier words matter.",
+  "basis": "Coverage is complete. In evi-synthetic-report-002, the learner reports that a hint supplied the explanation in the sole supporting performance, evi-synthetic-answer-001, while the two labels were recalled independently. Independent explanation therefore becomes unknown and its stale claim should be removed, not marked unsupported or conflicted. Preserve provisional label recall and both immutable Evidence records; the neutral report is not challenge evidence. The planned comparison provides natural observation without a separate diagnostic detour. No new learner performance has occurred.",
+  "host_requests": [
+    {
+      "operation": "reconcile_knowledge",
+      "arguments": {
+        "content": "schema_version: \"0.3\"\ndocument_type: learner_knowledge\nrevision: 3\nupdated_at: \"2026-10-07T02:43:52Z\"\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      label_recall:\n        state: provisional\n        confidence: medium\n        updated_at: \"2026-10-07T02:43:52Z\"\n        evidence_refs:\n          support:\n            - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: \"One observed correct naming of token ID and contextual representation provisionally supports recalling these two labels. No broader vocabulary claim is made.\"\n",
+        "expected_version_token": "9999999999999999999999999999999999999999"
+      }
+    }
+  ]
+}

@@ -1,0 +1,207 @@
+{
+  "case_id": "hd01",
+  "synthetic": true,
+  "title": "Rectangular diagrams",
+  "current_task": {
+    "goal": "Understand area changes in rectangular diagrams that are enlarged equally along both dimensions, before using an area ratio.",
+    "current_material": "A rectangle is described by its two side lengths in units. Area counts the unit squares it covers. This step concerns small whole-number enlargement factors.",
+    "session_context": "The preceding records are the available conversation evidence. The two area-scaling responses occurred on separate examples; there is no later clarification."
+  },
+  "knowledge": {
+    "schema_version": "0.3",
+    "document_type": "learner_knowledge",
+    "revision": 1,
+    "updated_at": "2026-10-06T10:40:00Z",
+    "domain": "synthetic",
+    "concepts": {
+      "rectangle_measurement": {
+        "capabilities": {
+          "use_rectangle_measurements": {
+            "state": "supported",
+            "confidence": "high",
+            "updated_at": "2026-10-06T10:40:00Z",
+            "evidence_refs": {
+              "support": [
+                "evi_20261006_hd01_01"
+              ],
+              "challenge": []
+            },
+            "basis_summary": "Repeatedly computed rectangle area from unit-square rows and side lengths."
+          },
+          "identify_length_scale_factor": {
+            "state": "supported",
+            "confidence": "high",
+            "updated_at": "2026-10-06T10:40:00Z",
+            "evidence_refs": {
+              "support": [
+                "evi_20261006_hd01_02"
+              ],
+              "challenge": []
+            },
+            "basis_summary": "Identified small integer multiplicative changes in individual side lengths."
+          },
+          "relate_two_dimension_scaling_to_area": {
+            "state": "conflicted",
+            "confidence": "high",
+            "updated_at": "2026-10-06T10:40:00Z",
+            "evidence_refs": {
+              "support": [
+                "evi_20261006_hd01_03"
+              ],
+              "challenge": [
+                "evi_20261006_hd01_04"
+              ]
+            },
+            "basis_summary": "Explained one two-dimension enlargement using both changing dimensions, then gave a different area relationship on another enlargement."
+          }
+        }
+      }
+    }
+  },
+  "evidence": [
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd01_01",
+      "observed_at": "2026-10-05T09:01:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "For a 2-unit by 3-unit rectangle, the learner independently counted two rows of three unit squares and reported area 6. For a 3-unit by 4-unit rectangle, they reported area 12."
+      },
+      "interpretation": {
+        "direction": "support",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "rectangle_measurement",
+          "capability": "use_rectangle_measurements"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd01",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    },
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd01_02",
+      "observed_at": "2026-10-05T09:02:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "The learner said that changing a side from 3 units to 9 units multiplies its length by 3, and that changing a side from 4 units to 8 units multiplies its length by 2."
+      },
+      "interpretation": {
+        "direction": "support",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "rectangle_measurement",
+          "capability": "identify_length_scale_factor"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd01",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    },
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd01_03",
+      "observed_at": "2026-10-05T09:03:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "Shown a 2-by-3 rectangle and a 4-by-6 enlargement, the learner answered that the area is four times as large: there are twice as many rows and each row contains twice as many unit squares."
+      },
+      "interpretation": {
+        "direction": "support",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "rectangle_measurement",
+          "capability": "relate_two_dimension_scaling_to_area"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd01",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    },
+    {
+      "schema_version": "0.3",
+      "document_type": "evidence",
+      "id": "evi_20261006_hd01_04",
+      "observed_at": "2026-10-05T09:04:00Z",
+      "observation": {
+        "kind": "synthetic_task_response",
+        "summary": "Shown a 3-by-4 rectangle and a 9-by-12 enlargement, the learner answered that the area is three times as large, explaining that the enlargement is three times as large. No time pressure, unfamiliar notation, or arithmetic mistake was recorded."
+      },
+      "interpretation": {
+        "direction": "challenge",
+        "diagnosticity": "high",
+        "novelty": "medium",
+        "confidence": "high"
+      },
+      "targets": [
+        {
+          "type": "capability",
+          "domain": "synthetic",
+          "concept": "rectangle_measurement",
+          "capability": "relate_two_dimension_scaling_to_area"
+        }
+      ],
+      "context": {
+        "topic": "topic_hd01",
+        "subtopic": null,
+        "execution": {
+          "session": null,
+          "daily_window": null,
+          "objective": null
+        }
+      },
+      "source": {
+        "round_id": null
+      }
+    }
+  ]
+}

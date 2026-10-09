@@ -1,0 +1,105 @@
+{
+  "baseline": "c2856e94e97190f402cbfec2734e5186993424c5",
+  "recipe_version": "core34-withdrawn-support-v1",
+  "frozen_at": "2026-10-07T02:42:45Z",
+  "classification": "prospective prompted synthetic semantic compliance; same-model native consumers",
+  "policy_bytes_sha256": "4fadea4ee409fb8590c441c978b11936577fb2c2a7db43458c04e19dd69fc74a",
+  "consumers": [
+    {
+      "id": "structured",
+      "packet_hash": "84ea4dea2237b7f71668eaf9f961909a4cb92630b51dd9498744d047ed1bda41",
+      "packet_bytes_sha256": "055f3b030454b5b0c38f4486a3764e7ab37da4651bfe394a8d61484852f88635",
+      "first_output_only": true
+    },
+    {
+      "id": "summary",
+      "packet_hash": "7bd2c450480ca2fb51e21da5fca2ac33cfffa5952d6911f355ac86b63540cba1",
+      "packet_bytes_sha256": "25e805845c2c71811e5bd90d52e7af28b15d8167c0bdedec6935889b3549aed5",
+      "first_output_only": true
+    },
+    {
+      "id": "boundaries",
+      "packet_hash": "72472e21e379be51d50624ac00f997bec084745465bb567d42082ad65f1bbecd",
+      "packet_bytes_sha256": "72a53a0a2e54b4150541e6f97eb2e36ea11549eacbdd559cef1da338fb409da0",
+      "first_output_only": true
+    }
+  ],
+  "criteria": {
+    "sole": [
+      "Independent explanation is unknown/absent, not unsupported solely because the hint removed support",
+      "Preserve unaffected label recall and immutable source/report; assisted refinement is optional if clearly scoped",
+      "Return a justified admitted reconciliation without adding neutral reports as support/challenge",
+      "Judge semantic scope, not one YAML shape: a clearly assisted-only refinement under the existing capability key can leave independent ability unknown; a separate assisted key is not required"
+    ],
+    "independent": [
+      "Preserve valid separate independent support; no automatic erase/downgrade from the other assisted occurrence"
+    ],
+    "negative": [
+      "Consider substantive controlled independent failures in scope; unsupported is justified when no valid independent support remains; do not map negative evidence to unknown merely because original support was withdrawn"
+    ],
+    "assisted": [
+      "Preserve already justified explanation_with_hint claim and label recall; remove unsupported independence inference without erasing assisted performance"
+    ],
+    "ambiguous": [
+      "Do not settle withdrawal or persist downgrade from this ambiguous low-confidence report alone"
+    ],
+    "no_report": [
+      "Do not invent hint use, a correction or inability; no corrective write required"
+    ],
+    "repeated": [
+      "Same occurrence reports do not multiply evidence; independent explanation remains unknown, not negative"
+    ],
+    "contradictory": [
+      "Do not latest-wins or invent resolution; reassess uncertainty and preserve history without settled withdrawal/downgrade",
+      "Conflict between neutral reports does not by itself require conflicted capability state or a fabricated challenge reference"
+    ],
+    "mixed": [
+      "Preserve valid independent support plus substantive negative evidence; conflict/refinement remains justified rather than automatic unknown or unsupported"
+    ],
+    "denied": [
+      "Incomplete relevant context produces no dependent persistent withdrawal/downgrade"
+    ],
+    "missing": [
+      "Unavailable relevant context is not absence evidence; no dependent write"
+    ],
+    "over_budget": [
+      "Over-budget context is not absence evidence; no dependent write"
+    ],
+    "successor": [
+      "Recover durable semantics and report using complete Evidence plus Knowledge; no resurrection of independence, invented inability or duplicate correction"
+    ]
+  },
+  "all_cases": [
+    "sole",
+    "independent",
+    "negative",
+    "assisted",
+    "ambiguous",
+    "no_report",
+    "repeated",
+    "contradictory",
+    "mixed",
+    "denied",
+    "missing",
+    "over_budget"
+  ],
+  "historical_files": {
+    "tests/fixtures/core34-correction/c01-packet.json": "cf15261606b3d569ed227726b1570dec21384ba5908d325085f0dee0a7e70abc",
+    "tests/fixtures/core34-correction/c01-response.json": "251ffb516c4f3196475e514869d2c1e6b0c2163c59914fd228cf0ea7b898109d",
+    "tests/fixtures/core34-correction/c02-packet.json": "9d5b745cf1a4689a6bd25d3430a31cb2478f8a5c1b8814c12b0a075003c250ec",
+    "tests/fixtures/core34-correction/c02-response.json": "1c65be3e3482fab7af0379bf45767271621a41e61df94d8c7b83952ada11caed",
+    "tests/fixtures/core34-correction/c03-packet.json": "78943d07651e578140f334bbcc931105fdfcb44847aa01e2605eb2eb5ac7ea4b",
+    "tests/fixtures/core34-correction/c03-response.json": "8dc40b4bc34a30c96367cf565e7da8b7ea60adfcdd478b8677c9034b0cbdf288",
+    "tests/fixtures/core34-correction/c04-packet.json": "09dffcf9518dfa804a5e7d5098e7db3ae82819abb09464843a8c44c9be3201fc",
+    "tests/fixtures/core34-correction/c04-response.json": "12fae5fcef62f90b61dcd7b3e6e09be29fdfaf3274fffcdd612f0bcc59f5a61b",
+    "tests/fixtures/core34-correction/mechanical-replay.json": "e5eec4fbb54adc08ee3e56aa2a7e9b33187725af61731df3e83d8d47d47097b7",
+    "tests/fixtures/core34-correction/policy-snapshot.json": "05143348d19608003da00d203b14a12c47dad2288f5352e5c868281b0c5e24e1",
+    "tests/fixtures/core34-correction/prospective-manifest.json": "cafc86f7b714f9389f8317c20daedc3ac65a86745e40a65f84866626c3510131",
+    "tests/fixtures/core34-correction/semantic-review.json": "1cfe38af933a82a2f0906b2e56623b54e73eef098b1542f2cec7d8504ddaa414",
+    "tests/fixtures/core34-correction/successor-receipt.json": "ca3248e0417fe778212de3532061daea311759c0e432ad6f0456a7c7c6920860",
+    "docs/evaluations/core34-correction-propagation-plan.md": "5863a0a5c5ab87671344ccc20601a5b6d875ba6779f6dcaa49e6ee19df76a2ae",
+    "docs/evaluations/core34-correction-propagation-results.md": "e964eb5cb1c6e907afbc3242fbfb6dadff48f3419590515a1fdf0e888138dce7",
+    "tests/correction_propagation_fixture.py": "5cdf6c9a47fa5855de58964873494f505f9eea72da103b2635549a69a1a884a7",
+    "tests/test_correction_propagation.py": "016c297a997034cb4f5ebcac2c9d410d70028516678d7c0490e247513dd07332"
+  }
+}
