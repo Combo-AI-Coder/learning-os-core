@@ -1,0 +1,6 @@
+{
+  "trusted_clock_observed_utc": "2026-10-09T11:59:17Z",
+  "phase": "After all fixed recipe arms prepared and before any fresh consumer dispatch",
+  "manifest_sha256": "9f897e79b6fefec0057c3492b6d2b6ea1d2a6c918b4116ddb66f8b2179d50b78",
+  "note": "Executor wall clock in preconsumer manifest differs by about seven hours from clock.curr_time; treat it as executor-observed timestamp only. Synthetic checkpoint time was prospectively fixed and is not execution wall time. This receipt binds bytes and observed order, not provider-side generation attestation."
+}

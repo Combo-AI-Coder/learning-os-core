@@ -1,0 +1,42 @@
+{
+  "status": "prospective; frozen before fixture runs and before consumers",
+  "baseline": "d6ddb41490d761bdc8e4f25ba7dee7d1dd84278d",
+  "question": "Can a fresh consumer distinguish successful bounded no-report recovery from incomplete real host reads, preserving safe continuation without unjustified durable withdrawal?",
+  "synthetic_clock": "2026-10-09T12:00:00Z",
+  "arms": {
+    "full": "Existing ColdJourney with report, unrestricted read-only evidence recovery.",
+    "denied": "Same fixture facts, but consumer has Knowledge/Progress read authority only. Evidence discovery is actually attempted and denied.",
+    "missing": "Same fixture except original performance is removed from synthetic provider and materialization before consumer open. Knowledge still references it; report remains. Discovery followed by required combined read genuinely fails.",
+    "budget": "Same substantive fixture facts; append exactly limit-minus-base-plus-one neutral metadata notes through existing create_evidence, crossing the current matching-record bound by one. Actual discovery fails closed.",
+    "no_report": "Existing ColdJourney without report; complete bounded discovery and final combined read succeed. No report confirmed only in the explicit topic/subtopic discovery scope."
+  },
+  "recovery_recipe": [
+    "Create fiction through existing synthetic producer helpers and existing host operations; all producer sessions closed before consumer recovery.",
+    "Open fresh read-only host with arm capability policy. Read current Knowledge and saved Progress first.",
+    "Call discover_learning_evidence. If it fails, stop recovery; no alternate reads that evade the failure.",
+    "On successful discovery, read one required combined set: initial paths, every discovered Evidence path, and canonical Evidence paths directly referenced by successfully read Knowledge. Preserve a failed response whole rather than emitting partial documents.",
+    "Packet contains normal product policy, ordinary resume request, actual complete host request/result sequence only, and output contract. No fixture labels, coverage sidecar, hidden report, producer transcript, or unrestricted prior recovery."
+  ],
+  "criteria": {
+    "C1": "All arms can proportionately continue the saved conceptual sentence-prefix activity; identical immediate activity is not a failure. No mandatory extra probe merely to resolve uncertain history.",
+    "C2": "Full visible report plus original and current portfolio justify removing or appropriately scoping stale independent-explanation support while preserving label recall; no inability claim or fabricated second performance.",
+    "C3": "Any failed/partial relevant recovery remains unknown/incomplete, never confirmed no-report or no actionable evidence. No persistent withdrawal/downgrade/relabel as unsupported dependent on unavailable facts.",
+    "C4": "Successful no-report arm does not invent assistance, correct Knowledge without new basis, or turn a bounded absent report into proof of independent performance everywhere.",
+    "C5": "No mutation of Evidence or Progress. Any returned request retained verbatim; exact fake-provider replay distinguished from semantic assessment. Incorrect requests remain recorded.",
+    "C6": "Only actual host results enter consumer packets. Distinct failure causes can be observationally identical at the public envelope; never ask consumer to invent the cause.",
+    "C7": "Report results at case level, no statistical, cross-model, production-recovery, or learner-benefit claim."
+  },
+  "sampling": "One first fresh native context per unique packet; exact duplicate packets share one first output rather than inflate trial count. No resampling, expected answer instructions or later repairs.",
+  "stopping_condition": "Establish actual read paths and preservation, collect one first response per unique input, replay exact proposed requests in isolated fictional provider, and review against frozen criteria. Any code/publication requirement returns to parent.",
+  "limits": [
+    "Fake fixed head/blob tokens; no production Git freshness claim.",
+    "Same-model instructional isolation within a shared filesystem; no independent-provider claim.",
+    "No real learner or runtime state, no repository writes, no public publication."
+  ],
+  "policy_sha256": {
+    "protocol/teaching-decision.md": "5af1c18fb4c6392eacfee2c7ea6573a3bb07ee9a126048b858bc90948fb663da",
+    "protocol/evidence-integration.md": "7326202ac4e0e72b4a65eb91be504192f2fca611cd70e69645c021de8fe95304",
+    "protocol/persistence-policy.md": "f6f1489f2ce901182d4511512b3fccc0bbb98f8e8e725115f3ff0b6613dd9800"
+  },
+  "harness_sha256": "96736385551878ac7a2826b1f7def4e6c0fddacb86a360ccafd6b8bb53876b09"
+}

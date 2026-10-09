@@ -1,0 +1,8 @@
+{
+  "status": "preserved preparation failure before any consumers; not a model failure",
+  "original_log_sha256": "9740fd5d6d2fc2825c94ed9d7c6f10d22c273cdcc3d7b6557c1a389fd5e37415",
+  "exception_type": "scripts.runtime_adapter.ResolutionError",
+  "observed_error": "deployment validation failed: reference.evidence_missing for token-identity.explanation and token-identity.label_recall -> evi-synthetic-answer-001",
+  "stage": "ReferenceLearningHost.open after removing referenced Evidence before bootstrap",
+  "public_safe_record": "Derived synopsis preserves the failure without publishing machine-specific traceback paths. Original log and first plan remain unchanged in the local artifact. Revised plan separately moves retrieval-loss injection after valid bootstrap."
+}

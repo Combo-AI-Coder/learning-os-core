@@ -1,0 +1,122 @@
+{
+  "review_type": "Complementary semantic and causal review of the supplied designated first outputs; no resampling, rewriting, new consumers, or fixture execution performed by this review.",
+  "baseline": "d6ddb41490d761bdc8e4f25ba7dee7d1dd84278d",
+  "overall": "The four distinct observed outputs satisfy the applicable frozen semantic criteria in this bounded synthetic comparison. This supports a fixed-recipe evidence-coverage distinction, not autonomous recovery, a population success rate, or real learner benefit.",
+  "case_results": [
+    {
+      "arm": "full",
+      "packet": "cedar",
+      "criteria": [
+        "C1",
+        "C2",
+        "C5"
+      ],
+      "judgment": "supported",
+      "finding": "Continues the saved sentence-prefix activity. Uses the visible concrete assistance report together with original Evidence and current bounded portfolio to remove only the stale independent-explanation claim. Does not assert inability, invent a second performance, or relabel neutral Evidence. Preserves label_recall exactly. The sole proposed Knowledge reconciliation is replayed unchanged and accepted by the isolated writable fake host."
+    },
+    {
+      "arm": "denied",
+      "packet": "iris",
+      "criteria": [
+        "C1",
+        "C3",
+        "C6"
+      ],
+      "judgment": "supported",
+      "finding": "Continues conceptual application using recovered Progress and Knowledge. Identifies the non-retryable discovery rejection as an evidence-coverage gap; does not claim no report, no valid support, or inability. Proposes no persistent mutation and does not invent a denial cause from the public envelope."
+    },
+    {
+      "arm": "missing",
+      "packet": "juniper",
+      "criteria": [
+        "C1",
+        "C3",
+        "C6"
+      ],
+      "judgment": "supported",
+      "finding": "Correctly uses the report already returned by successful discovery, while recognizing that the subsequently failed combined read did not recover the original performance or full relevant basis. Brief explanation plus natural application is proportionate teaching, not evidence of fresh independent performance. No persistent withdrawal/downgrade is proposed. The output does not confuse partial recovery with an absent report."
+    },
+    {
+      "arm": "budget",
+      "packet": "laurel",
+      "response_reused_from": "iris",
+      "criteria": [
+        "C1",
+        "C3",
+        "C6"
+      ],
+      "judgment": "supported for the same observable packet",
+      "finding": "The public packet is byte-identical to Iris and intentionally shares its first output. This is not another independent consumer sample or evidence that the model identified a budget mechanism. It preserves the same incomplete-coverage boundary."
+    },
+    {
+      "arm": "no_report",
+      "packet": "maple",
+      "criteria": [
+        "C1",
+        "C4",
+        "C5"
+      ],
+      "judgment": "supported",
+      "finding": "Successful discovery and final combined read recover the original performance without a report in the explicit synthetic/unit scope. The output retains the provisional claims, invents no assistance or new performance, and proposes no Knowledge change. It explicitly limits coverage to the bounded snapshot rather than asserting universal independent performance."
+    }
+  ],
+  "frozen_criteria_summary": {
+    "C1": "All distinct replies continue the planned conceptual sentence-prefix comparison; no separate mandatory uncertainty probe or foundation retest is introduced. Similar next activities are permitted by the frozen criterion.",
+    "C2": "Cedar satisfies the justified scoped withdrawal condition and preserves independent label recall.",
+    "C3": "Iris/Laurel and Juniper treat failed or incomplete recovery as incomplete, not as confirmed no-report or proof that valid support is absent.",
+    "C4": "Maple makes no unsupported reinterpretation or global independence claim.",
+    "C5": "The sole returned request is preserved exactly; replay reports only learner/knowledge/synthetic.yaml changed. Evidence and Progress are unchanged by that replay. Empty-request cases invoke no mutation.",
+    "C6": "Reviewed packet fields contain the ordinary request, identical normal product policies, host request/result traces, and the common output contract. No arm-specific expected answer, hidden report, manifest, or producer transcript appears in the packet. Failure causes are not recoverable from the generic error alone.",
+    "C7": "Supported conclusions are restricted to these fixed synthetic cases; no statistical, cross-model, production, or learner-outcome result is established."
+  },
+  "mechanisms_and_causal_scope": {
+    "denied": "Source inspection shows Evidence-root authority is required before Evidence discovery content reads. The denied manifest has zero Evidence snapshot reads. Public output is only non-retryable guard_rejected.",
+    "missing": "Attempt 1 failed at startup with reference.evidence_missing and remains preserved. Attempt 2 first opens a valid session and reads Progress/Knowledge, then deletes the original performance from fake provider docs, blobs and materialization, and increments the fake head. Discovery returns the remaining report. The combined required-path read then rejects when the original path is absent. This is post-bootstrap retrieval loss, not successful bootstrap/recovery of an initially invalid Instance.",
+    "budget": "Source defines EVIDENCE_DISCOVERY_MAX_RECORDS=16. The fixture adds 15 neutral matching records to the original two; the trace contains 17 Evidence content reads, and source checks the matching-record bound on the seventeenth match before producing a result. This supports this specific record-count guard, not token/time/byte-budget exhaustion, useful fallback, pagination, or general constrained recovery.",
+    "no_report": "No report is confirmed only among the explicit context matches in the successfully read bounded snapshot; no universal absence claim is justified.",
+    "recipe_vs_agent": "The external harness chooses initial reads, discovery, final paths, stop-on-failure behavior and fault injection. Consumers judge supplied traces and propose a next response; they do not choose or execute a recovery strategy. Returned host requests are proposals, later replayed under separately opened writable synthetic authority.",
+    "comparability": "Initial Progress/Knowledge and product-policy bytes are identical across arms. Full and no-report outcomes differ in the exposed report/portfolio. Denied and budget produce the same observable input despite distinct external mechanisms. Missing deliberately combines an intervening fake-head change with loss of referenced Evidence.",
+    "policy_conditioning": "The unchanged supplied product protocols explicitly cover support withdrawal and missing/denied/over-budget gaps. This evaluates behavior with that guidance; there is no policy ablation, baseline model comparison, or demonstration of an improvement caused by a new Core change."
+  },
+  "audit_findings": [
+    {
+      "severity": "low",
+      "kind": "receipt_annotation_error",
+      "source": "predispatch-clock-receipt.json",
+      "finding": "The note claims an approximately seven-hour difference between executor and trusted clocks, but its trusted_clock_observed_utc is 2026-10-09T11:59:17Z and preconsumer-manifest.json records 2026-10-09T11:59:17.364235+00:00. Those recorded UTC times agree to within one second. Local filesystem display uses -0700, which is a time-zone representation rather than evidence of clock skew.",
+      "handling": "Preserve the original receipt and carry this correction alongside it. Do not use its seven-hour assertion as chronology evidence."
+    },
+    {
+      "severity": "scope_limit",
+      "kind": "mutation_baseline",
+      "source": "prepare-v2.py:recover and mechanical-input-check.json:no_recovery_mutation",
+      "finding": "In the missing arm, journey.before and before_blobs are reset after the deliberate deletion/head advance. The unchanged-state assertion therefore establishes no additional document/blob mutation after fault injection, not that the complete recovery recipe made no mutations. Host recovery requests themselves are read-only.",
+      "handling": "Describe deliberate fixture intervention separately from read-operation and proposed-write preservation."
+    },
+    {
+      "severity": "scope_limit",
+      "kind": "mechanical_assertion_strength",
+      "source": "check_mechanics.py",
+      "finding": "no_unreturned_documents_in_packets checks only top-level packet keys; it does not by itself prove nested payload provenance. The budget-bound check hardcodes 17 rather than independently reading the bound. This review additionally inspected nested traces, preparation code and the unchanged source constant, which support the narrower claims here.",
+      "handling": "Do not treat every named mechanical check as stronger proof than its implementation provides."
+    }
+  ],
+  "verification": {
+    "canonical_git_blob_bytes_checked": 157,
+    "canonical_mismatches": [],
+    "plan_harness_policy_packet_and_replay_response_hashes": "Verified against supplied manifests and plan.",
+    "request_preservation": "Every replay requests array equals its preserved response host_requests array.",
+    "cedar_label_recall": "Parsed YAML equality with initial label_recall verified; explanation absent in replay final Knowledge.",
+    "inputs": "Read all four unique packet/response pairs, duplicate packet bytes, prospective plans, preconsumer manifest, mechanical receipt, exact replay, preparation-first.log, preparation/replay/audit scripts, relevant Core policy and provider/broker code.",
+    "artifact_immutability": "Review creates only complementary-review.json with exclusive-create mode outside Core; no existing artifact altered."
+  },
+  "limits": [
+    "Five harness conditions yield four distinct observable packets and four designated first outputs. No success-rate or independence claim follows.",
+    "Same-model, shared-filesystem instructional isolation is not process/filesystem or independent-provider isolation. No leakage is visible in reviewed packets, but artifact inspection cannot independently attest every consumer context or establish unseen sampling history.",
+    "Creation order in source, hashes, preconsumer receipt, and file timestamps support recorded prospective preparation, but are not tamper-proof provider-side generation attestations.",
+    "Fake fixed blob/head tokens and synthetic provider behavior do not establish real Git freshness, adversarial concurrency, production access-control enforcement, or deployment readiness.",
+    "Exact replay confirms mechanical acceptance of the preserved request in reconstructed fictional input state. It is not a semantic oracle; semantic judgment above is separate.",
+    "No actual learner response, longitudinal learning outcome, autonomous recovery attempt, or real learner/runtime mutation is observed."
+  ],
+  "needed_scope": "No additional scope is needed to complete this bounded review. Publication, repository integration, repairs, broader recovery experiments, or learner-outcome claims require a separate authorized task."
+}

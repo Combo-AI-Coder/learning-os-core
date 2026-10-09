@@ -1,0 +1,7 @@
+{
+  "missing_arm": "The fixture deliberately deletes original synthetic Evidence and advances fake Instance head after bootstrap and initial Knowledge/Progress read. It resets comparison baseline after injection. read_only_state_unchanged and mechanical no_recovery_mutation mean no ADDITIONAL mutation caused by subsequent read operations, not that the entire setup/recovery recipe is mutation-free.",
+  "budget_arm": "Exactly seventeen matching Evidence records cross the existing sixteen-record discovery capacity limit. This does not test token, elapsed-time, per-document-byte or aggregate-byte exhaustion.",
+  "same_observation": "Denied and record-limit failures produce byte-identical public packets, sharing one consumer output. Their distinct causes are established by fixture/source/provider-call evidence; consumers cannot distinguish them.",
+  "initial_missing": "The initial fixture with a dangling Knowledge reference is rejected during bootstrap. No claim of successful initial missing-state recovery is made.",
+  "scope": "All mutations are confined to the explicitly fictional fake provider. All 157 canonical Core source blobs remain unchanged."
+}

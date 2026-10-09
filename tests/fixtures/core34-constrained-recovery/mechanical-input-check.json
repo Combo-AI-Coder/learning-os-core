@@ -1,0 +1,59 @@
+{
+  "checks": {
+    "canonical_source_bytes_unchanged": true,
+    "all_input_hashes_match": true,
+    "initial_progress_and_knowledge_identical": true,
+    "normal_protocols_identical": true,
+    "failure_packets_identical": true,
+    "no_unreturned_documents_in_packets": true,
+    "operations_read_only": true,
+    "no_recovery_mutation": true,
+    "full_all_reads_success": true,
+    "denied_discovery_failed_closed": true,
+    "budget_crosses_existing_match_bound_by_one": true,
+    "budget_discovery_failed_closed": true,
+    "missing_final_read_failed_closed": true,
+    "missing_requested_original_from_current_knowledge": true,
+    "no_report_success_has_only_original": true,
+    "denied_has_zero_evidence_content_reads": true,
+    "budget_performs_real_bounded_content_scan": true
+  },
+  "source_mismatches": [],
+  "evidence_content_reads": {
+    "full": [
+      "evidence/evi-synthetic-answer-001.yaml",
+      "evidence/evi-synthetic-report-002.yaml",
+      "evidence/evi-synthetic-answer-001.yaml",
+      "evidence/evi-synthetic-report-002.yaml"
+    ],
+    "denied": [],
+    "missing": [
+      "evidence/evi-synthetic-report-002.yaml",
+      "evidence/evi-synthetic-report-002.yaml"
+    ],
+    "budget": [
+      "evidence/evi-neutral-padding-000.yaml",
+      "evidence/evi-neutral-padding-001.yaml",
+      "evidence/evi-neutral-padding-002.yaml",
+      "evidence/evi-neutral-padding-003.yaml",
+      "evidence/evi-neutral-padding-004.yaml",
+      "evidence/evi-neutral-padding-005.yaml",
+      "evidence/evi-neutral-padding-006.yaml",
+      "evidence/evi-neutral-padding-007.yaml",
+      "evidence/evi-neutral-padding-008.yaml",
+      "evidence/evi-neutral-padding-009.yaml",
+      "evidence/evi-neutral-padding-010.yaml",
+      "evidence/evi-neutral-padding-011.yaml",
+      "evidence/evi-neutral-padding-012.yaml",
+      "evidence/evi-neutral-padding-013.yaml",
+      "evidence/evi-neutral-padding-014.yaml",
+      "evidence/evi-synthetic-answer-001.yaml",
+      "evidence/evi-synthetic-report-002.yaml"
+    ],
+    "no_report": [
+      "evidence/evi-synthetic-answer-001.yaml",
+      "evidence/evi-synthetic-answer-001.yaml"
+    ]
+  },
+  "scope": "Mechanical byte/path facts only; not semantic model assessment or real provider authority proof."
+}

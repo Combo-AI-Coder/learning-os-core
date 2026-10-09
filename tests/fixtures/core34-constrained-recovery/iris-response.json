@@ -1,0 +1,6 @@
+{
+  "reply": "We’re continuing with the conceptual application: how a shared final token can lead to different next-word predictions.\n\nAssume “with” is a single vocabulary token in both prefixes:\n1. “She spread the toast with …”\n2. “She fastened the board with …”\n\nThe token ID, the number identifying the vocabulary entry “with,” is the same in both. Give one plausible next word for each. What information from the earlier words would the model need to carry forward to favor those different continuations?",
+  "basis": "Recovered Progress identifies this comparison as the return point, marks foundation completed, and says to avoid retesting it. Knowledge records provisional explanation and label recall. This continues the planned conceptual application without a formal derivation or a capability-state change.",
+  "coverage": "Progress and current Knowledge were recovered. Evidence discovery was rejected as non-retryable, so the referenced observation and relevant evidence portfolio were not recovered. That gap does not establish absent support or inability; no withdrawal, downgrade, or reconciliation is requested.",
+  "host_requests": []
+}

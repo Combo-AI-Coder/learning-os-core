@@ -1,0 +1,12 @@
+{
+  "finding": "The seven-hour executor UTC clock-skew annotation is unsupported and incorrect. It was inferred from file-listing display time rather than the recorded UTC timestamp.",
+  "affected_artifacts": [
+    "predispatch-clock-receipt.json note",
+    "result-summary.json first_artifact_integrity final sentence"
+  ],
+  "observed_manifest_created_at": "2026-10-09T11:59:17.364235+00:00",
+  "observed_clock_tool_utc": "2026-10-09T11:59:17Z",
+  "correction": "The two UTC records agree to the displayed second; no seven-hour UTC skew is established. The file-listing display used a different local display time. The exact subsecond ordering of the clock read and manifest write is not established. All packet/manifest bytes existed and were hashed before the first consumer dispatch, as recorded by tool sequence.",
+  "preservation": "Original receipts, inputs and first outputs remain unchanged. This erratum supersedes only the inaccurate clock-skew annotation.",
+  "impact": "Documentation/provenance annotation defect only; no changed fixture facts, consumer input, first output, or replay result. Internal hash/order records are not independent provider-side generation attestation."
+}
