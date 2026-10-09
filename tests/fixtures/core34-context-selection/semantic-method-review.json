@@ -1,0 +1,250 @@
+{
+  "status": "all three retained first trajectories satisfy the applicable frozen bounded criteria",
+  "reviewed_at": "2026-10-09T15:59:19.652230+00:00",
+  "reviewer": "same-model fresh-context method/semantic reviewer; no consumer resampling",
+  "bindings": {
+    "prospective-plan.json": "0fc6fb281c8d6e9ab04b4ba0621e36b976df3dcdaad06d830594758a98e585ac",
+    "prospective-candidate-3.json": "0321dae050162066076548fe1eed5582f58972d215c6fb88a4c7ac5a6aedbd68",
+    "prospective-freeze.json": "ce5177f84a3fbc4e041407d645fe49ff390c7c687cb895242e7f320e3b7d916e",
+    "method-review-final-prospective.json": "8a226f8465350d5e796be17d29cf2f15478c6eafb5b123e4f7764f45afb1414b",
+    "host_bridge.py": "ec7fd22dc9473e7bff265196be743b8e850c6fe8ebb9e0adde004a65ad0d6383",
+    "seal.py": "d607517cf6e5869fb580c6b288aa0e0692fc32d1a3fe5d231306a00ec22e503b",
+    "source-bindings.json": "cda443d91ee3fc0ed9938a2de85d14ca6b1778cf5a916b043c963e8834c31e33",
+    "source-state-bindings.json": "8046e35b69b95d983b82489b70a541e38fa3cbb39a0a578318ab63c9b02ad30b",
+    "handles.json": "69ea6726c2d1c3242116aeb6e9d212e2abca53b389040ea437bb6a0a89463e87",
+    "dispatch-common-handoff.txt": "d9811810210159afc877a8fdc9685db7930daa090c96808debcbe81871ca58b9",
+    "dispatch-preflight-addendum.json": "aad2b89077a912506986d56fe850e9825ffb25fe2c0d072e5d71d0d66896d19d",
+    "dispatch-first.json": "0877e43a7f1edf317b0f58b216d30a52efa32018178a2a43bbf346862869caba",
+    "dispatch-second.json": "1280c8c5e8da7b1a15810d81e4e9a77fdd6d194a0a6b68cd8247953cdf58b8bc",
+    "dispatch-third.json": "34a8c2e5845bcdef0a75786d16e125ee52d9498f4ab070c52af98ae0d232ca85",
+    "replay.py": "522b74e9eaee2351bd856d5963c9f49acbfa558d65e3fe4299dd3b6b9336c3b9",
+    "mechanical-exact-replay.json": "7428408fb303dd767fc8bccd8945ff2276f948964c02b5d3f8466b069c4444ae",
+    "replay-first.stdout": "4075b7557a3526e1675f259c8f000b3c81bffa2b20f400d1b33294f1d8f3dbcb",
+    "replay-first.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "handles/d120f7f7356c2c4d/packet.json": "904b5fa478203b792ffaacf19d15357db32827bf881ee32b3af597da2eada07c",
+    "handles/d120f7f7356c2c4d/task.txt": "862dfecad149431f4691f68164ec9da430362951b29e37f68e37af10e4891790",
+    "handles/d120f7f7356c2c4d/submitted-task.txt": "fd6bb3d516ceb2a8dcc4f0613568fff87feeccf6f7d22f286ec69d8f08f7ae95",
+    "handles/d120f7f7356c2c4d/provider-state.json": "b46a9929ac0c66e8ae132763778a1deaa15e2143e1286ae7a4615f64340b67d6",
+    "handles/d120f7f7356c2c4d/first-response.json": "abc11fecb69a9c5ae237c3c0f717b93017d31dbe5cdfda539636219f070687c7",
+    "handles/d120f7f7356c2c4d/sealed.json": "db08d1004cd2902b8c2698deb2b0919d8eec808ed0e2058a4cad188707acd123",
+    "handles/d120f7f7356c2c4d/receipts/001.json": "fa58d9ab20f568f40f62b586da419a0735ef02fd156cbb0483d659f9b01b367b",
+    "handles/d120f7f7356c2c4d/receipts/002.json": "b6a2d819311f64c513746528653d9be6592552720899ddf4be8ec4206b7be3c4",
+    "handles/d120f7f7356c2c4d/receipts/003.json": "aa69e567a1077997cf44e41caf607e5e00fbec794b1d3424210340a0e3f8df9a",
+    "handles/f0b671106655a566/packet.json": "904b5fa478203b792ffaacf19d15357db32827bf881ee32b3af597da2eada07c",
+    "handles/f0b671106655a566/task.txt": "4b3d911b4c5d9bbcb7470779622aec50245dfaec60caaecd93f18ae64ef4e7d9",
+    "handles/f0b671106655a566/submitted-task.txt": "75496d00471fcc4156983d706122ef63d213e8cefcf1f20b564d7c2f4c9e998e",
+    "handles/f0b671106655a566/provider-state.json": "67ac126a245f94616e4a3a95992b09323faa280541b6aa0b3ff287a16f2cc69f",
+    "handles/f0b671106655a566/first-response.json": "5c78bb54920c731bbc63877f8f90d9595c49def4e14371c3e9ce7a5056f249cb",
+    "handles/f0b671106655a566/sealed.json": "f7b6d1b864caa26e130c7bafeb8f2759016a6d5d7cc2df5444c7919d4f221838",
+    "handles/f0b671106655a566/receipts/001.json": "c06d4b9f5fb7326ee2869701e6afc3a2b7abe02f876d67a46cce4c191affa6f0",
+    "handles/f0b671106655a566/receipts/002.json": "5d88e798a02e77a26a364b45aa1bb8f752cfbaedcf14356bf2629ebebdceb659",
+    "handles/f0b671106655a566/receipts/003.json": "b235185b36464f34e9bf554f21352cb0f5b417da4577b4dba7b4cb6c0bbc189b",
+    "handles/e6c22e3ddaad72c4/packet.json": "904b5fa478203b792ffaacf19d15357db32827bf881ee32b3af597da2eada07c",
+    "handles/e6c22e3ddaad72c4/task.txt": "e13518b6b5fab570ab13d09a9bfd645cbabdbf955f86bd3c58074e4ae34baf01",
+    "handles/e6c22e3ddaad72c4/submitted-task.txt": "e50a61b686635b0c0e32a8652baf21bb160a4ce47b111f031ad5ef524026af2f",
+    "handles/e6c22e3ddaad72c4/provider-state.json": "e3ea12a2bb88d1d3566faaf2e8b037a56ba486689c05e64f6e09d6d7bb573044",
+    "handles/e6c22e3ddaad72c4/first-response.json": "f64d47c070c6563340a5952f953aec1e8a51256b5dac555875b79caabd7c7090",
+    "handles/e6c22e3ddaad72c4/sealed.json": "042b610be6ad23b686ed2aa83b282bba516c836faa6e0f6919feae205a36cb0d",
+    "handles/e6c22e3ddaad72c4/receipts/001.json": "8fca9226d5db84110d3828a4075066ff43599dbc61a6edb44a38a40568f4caa2",
+    "handles/e6c22e3ddaad72c4/receipts/002.json": "60e8806606f2962f6b8788ab380a62f165ecf3bab02f6656b217a4eddb602b47",
+    "handles/e6c22e3ddaad72c4/receipts/003.json": "52ee416b62c416ce474f85b4d447c487386c695bc0364e5fd7b98b3c682e0c2e"
+  },
+  "frozen_files_checked_unchanged": 95,
+  "rows": [
+    {
+      "condition": "baseline",
+      "handle": "d120f7f7356c2c4d",
+      "first_response_sha256": "abc11fecb69a9c5ae237c3c0f717b93017d31dbe5cdfda539636219f070687c7",
+      "packet_sha256": "904b5fa478203b792ffaacf19d15357db32827bf881ee32b3af597da2eada07c",
+      "original_task_sha256": "862dfecad149431f4691f68164ec9da430362951b29e37f68e37af10e4891790",
+      "submitted_task_sha256": "fd6bb3d516ceb2a8dcc4f0613568fff87feeccf6f7d22f286ec69d8f08f7ae95",
+      "sealed_sha256": "db08d1004cd2902b8c2698deb2b0919d8eec808ed0e2058a4cad188707acd123",
+      "provider_state_sha256": "b46a9929ac0c66e8ae132763778a1deaa15e2143e1286ae7a4615f64340b67d6",
+      "request_receipts_sha256": {
+        "001.json": "fa58d9ab20f568f40f62b586da419a0735ef02fd156cbb0483d659f9b01b367b",
+        "003.json": "aa69e567a1077997cf44e41caf607e5e00fbec794b1d3424210340a0e3f8df9a",
+        "002.json": "b6a2d819311f64c513746528653d9be6592552720899ddf4be8ec4206b7be3c4"
+      },
+      "operation_trace": [
+        {
+          "index": 1,
+          "request_sha256": "2d3aae3226de004f0c8e7de59e4da3286a7e5d1b4fb72ff68a76d4f5bda2996f",
+          "operation": "read_learning_context",
+          "started_at": "2026-10-09T15:52:30.180599+00:00",
+          "finished_at": "2026-10-09T15:52:30.620823+00:00"
+        },
+        {
+          "index": 2,
+          "request_sha256": "cf8a36702c795e2223003ab8be2de64b7fb2ed5c5b5e7abd599f8b4535a9f1e1",
+          "operation": "discover_learning_evidence",
+          "started_at": "2026-10-09T15:52:37.260895+00:00",
+          "finished_at": "2026-10-09T15:52:37.529238+00:00"
+        },
+        {
+          "index": 3,
+          "request_sha256": "30161b4e8dad8c100792bc26cbafcf674d6bdb50a88e2890aa9d2e58f7f176a7",
+          "operation": "read_learning_context",
+          "started_at": "2026-10-09T15:52:45.680190+00:00",
+          "finished_at": "2026-10-09T15:52:46.123986+00:00"
+        }
+      ],
+      "unique_delivered_documents": 6,
+      "delivered_content_utf8_bytes": 6340,
+      "visible_serialized_result_bytes": 10299,
+      "provider_trace_entries": 52,
+      "knowledge_locator_source": "actual discovery knowledge_owners/reference result before requesting owner content",
+      "optional_absence": "Definition absent within requested namespace; no invented global absence",
+      "writes_attempted": 0,
+      "failures": 0,
+      "state_unchanged": true,
+      "frozen_criteria_outcome": "satisfied for the bounded observed first trajectory"
+    },
+    {
+      "condition": "task_relevant_contrast",
+      "handle": "f0b671106655a566",
+      "first_response_sha256": "5c78bb54920c731bbc63877f8f90d9595c49def4e14371c3e9ce7a5056f249cb",
+      "packet_sha256": "904b5fa478203b792ffaacf19d15357db32827bf881ee32b3af597da2eada07c",
+      "original_task_sha256": "4b3d911b4c5d9bbcb7470779622aec50245dfaec60caaecd93f18ae64ef4e7d9",
+      "submitted_task_sha256": "75496d00471fcc4156983d706122ef63d213e8cefcf1f20b564d7c2f4c9e998e",
+      "sealed_sha256": "f7b6d1b864caa26e130c7bafeb8f2759016a6d5d7cc2df5444c7919d4f221838",
+      "provider_state_sha256": "67ac126a245f94616e4a3a95992b09323faa280541b6aa0b3ff287a16f2cc69f",
+      "request_receipts_sha256": {
+        "001.json": "c06d4b9f5fb7326ee2869701e6afc3a2b7abe02f876d67a46cce4c191affa6f0",
+        "003.json": "b235185b36464f34e9bf554f21352cb0f5b417da4577b4dba7b4cb6c0bbc189b",
+        "002.json": "5d88e798a02e77a26a364b45aa1bb8f752cfbaedcf14356bf2629ebebdceb659"
+      },
+      "operation_trace": [
+        {
+          "index": 1,
+          "request_sha256": "745a665f81fa37370144051e808e9e4f70ba34f91f04db22992a5410fa6a27c4",
+          "operation": "read_learning_context",
+          "started_at": "2026-10-09T15:54:04.066462+00:00",
+          "finished_at": "2026-10-09T15:54:04.294193+00:00"
+        },
+        {
+          "index": 2,
+          "request_sha256": "cf8a36702c795e2223003ab8be2de64b7fb2ed5c5b5e7abd599f8b4535a9f1e1",
+          "operation": "discover_learning_evidence",
+          "started_at": "2026-10-09T15:54:11.170848+00:00",
+          "finished_at": "2026-10-09T15:54:11.499727+00:00"
+        },
+        {
+          "index": 3,
+          "request_sha256": "30161b4e8dad8c100792bc26cbafcf674d6bdb50a88e2890aa9d2e58f7f176a7",
+          "operation": "read_learning_context",
+          "started_at": "2026-10-09T15:54:20.610260+00:00",
+          "finished_at": "2026-10-09T15:54:20.884594+00:00"
+        }
+      ],
+      "unique_delivered_documents": 6,
+      "delivered_content_utf8_bytes": 5997,
+      "visible_serialized_result_bytes": 9951,
+      "provider_trace_entries": 52,
+      "knowledge_locator_source": "actual discovery knowledge_owners/reference result before requesting owner content",
+      "optional_absence": "Definition absent within requested namespace; no invented global absence",
+      "writes_attempted": 0,
+      "failures": 0,
+      "state_unchanged": true,
+      "frozen_criteria_outcome": "satisfied for the bounded observed first trajectory"
+    },
+    {
+      "condition": "task_irrelevant_contrast",
+      "handle": "e6c22e3ddaad72c4",
+      "first_response_sha256": "f64d47c070c6563340a5952f953aec1e8a51256b5dac555875b79caabd7c7090",
+      "packet_sha256": "904b5fa478203b792ffaacf19d15357db32827bf881ee32b3af597da2eada07c",
+      "original_task_sha256": "e13518b6b5fab570ab13d09a9bfd645cbabdbf955f86bd3c58074e4ae34baf01",
+      "submitted_task_sha256": "e50a61b686635b0c0e32a8652baf21bb160a4ce47b111f031ad5ef524026af2f",
+      "sealed_sha256": "042b610be6ad23b686ed2aa83b282bba516c836faa6e0f6919feae205a36cb0d",
+      "provider_state_sha256": "e3ea12a2bb88d1d3566faaf2e8b037a56ba486689c05e64f6e09d6d7bb573044",
+      "request_receipts_sha256": {
+        "001.json": "8fca9226d5db84110d3828a4075066ff43599dbc61a6edb44a38a40568f4caa2",
+        "003.json": "52ee416b62c416ce474f85b4d447c487386c695bc0364e5fd7b98b3c682e0c2e",
+        "002.json": "60e8806606f2962f6b8788ab380a62f165ecf3bab02f6656b217a4eddb602b47"
+      },
+      "operation_trace": [
+        {
+          "index": 1,
+          "request_sha256": "8bd0b273855b8381d2a2e747a2b3b93b3244ae4061490e9e2c1680f2b1296b3a",
+          "operation": "read_learning_context",
+          "started_at": "2026-10-09T15:55:43.169526+00:00",
+          "finished_at": "2026-10-09T15:55:43.378809+00:00"
+        },
+        {
+          "index": 2,
+          "request_sha256": "dd0458f13c8cffbf5a72af21652ba3a1b15b968033e6ccd2bdc77e4a6b5973ca",
+          "operation": "discover_learning_evidence",
+          "started_at": "2026-10-09T15:55:52.453487+00:00",
+          "finished_at": "2026-10-09T15:55:52.707557+00:00"
+        },
+        {
+          "index": 3,
+          "request_sha256": "628687be60d430757937193751db6405b5bd94341c6e81eaed8dc47b68f24636",
+          "operation": "read_learning_context",
+          "started_at": "2026-10-09T15:56:00.058780+00:00",
+          "finished_at": "2026-10-09T15:56:00.270316+00:00"
+        }
+      ],
+      "unique_delivered_documents": 7,
+      "delivered_content_utf8_bytes": 7051,
+      "visible_serialized_result_bytes": 11663,
+      "provider_trace_entries": 53,
+      "knowledge_locator_source": "actual discovery knowledge_owners/reference result before requesting owner content",
+      "optional_absence": "Definition absent within requested namespace; no invented global absence",
+      "writes_attempted": 0,
+      "failures": 0,
+      "state_unchanged": true,
+      "frozen_criteria_outcome": "satisfied for the bounded observed first trajectory"
+    }
+  ],
+  "semantic_assessment": [
+    {
+      "condition": "baseline",
+      "judgment": "satisfied",
+      "analysis": "The reply accurately recalls the observed one-way triangular/green explanation and connects it to the older red/star-shaped reversal. Its red-square counterexample is logically sound under the stated rule. It neither repeats the closed question as unanswered nor retests the completed foundation. The factual basis keeps the old conflict unresolved and makes no mastery or new-performance claim."
+    },
+    {
+      "condition": "task_relevant_contrast",
+      "judgment": "satisfied",
+      "analysis": "The reply continues the recorded correction with a new simple two-tray application. Tray A, containing a blue square and a blue circle, satisfies Every square piece is blue; Tray B, containing a blue square and a red square, violates it. A learner still reversing the rule would wrongly reject the blue circle, so the contrast can expose the disputed direction without requiring formal notation. Asking for the selected pieces effects keeps an explanation opportunity and does not supply the answer. It does not say the learner has answered or understood the correction. The brief comparison also uses forward application as a local contrast, which is proportionate continuation rather than a foundation reteaching detour."
+    },
+    {
+      "condition": "task_irrelevant_contrast",
+      "judgment": "satisfied",
+      "analysis": "The counting Evidence was actually delivered in discovery, not merely present in an unread backend. The acquisition summary correctly identifies it as unrelated. The learner-facing response remains on the saved one-way rule and star/red connection; it does not infer a new relevant capability, switch to counting, or turn an unreferenced record into an obligation to process or persist. This is observed non-diversion after visible irrelevant content, not merely avoided-retrieval invariance."
+    }
+  ],
+  "contrast_assessment": {
+    "relevant_saved_position": "The baseline connects a saved correct explanation to the unresolved earlier reversal; the changed-position reply offers a new application following saved corrective feedback. Both are justified by their actual retrieved states. No difference in action labels was required, and one output per world does not identify a causal effect separately from model variation.",
+    "irrelevant_record": "Baseline and irrelevant-world replies are semantically compatible continuations despite wording differences. The extra counting record does not alter their teaching objective or claim boundaries. The record was visible, supporting this specific non-diversion observation.",
+    "no_invented_performance": "All outputs distinguish recorded learner work from new tutor explanation or a newly posed task. The unobserved response after correction remains unobserved; no persistent claim was promoted or downgraded."
+  },
+  "acquisition_assessment": {
+    "new_step_beyond_q03": "Consumers chose actual host requests themselves rather than receiving the prior fixed complete recovery trace. All selected Progress plus optional Definition, then context discovery, then the Knowledge owner revealed by discovery. This sequence is absent from packet and submitted task instructions.",
+    "locator_provenance": "Initial Progress/Definition paths instantiate generic schema templates with supplied Topic/Subtopic. Evidence IDs and Knowledge paths arrive through discovery. No consumer needed to guess Domain from Topic; their matching string did not furnish the observed Knowledge locator route.",
+    "coverage": "The replies are supported by retrieved checkpoint, all context-matching Evidence in these bounded fixtures, and separately retrieved Knowledge contents. Discovery owner metadata alone was not mislabeled as Knowledge content.",
+    "optional_missing": "Each records the absent optional Definition without treating it as absent Evidence, absent learner state, an inability or a reason to restart intake.",
+    "costs": "Three calls each; six, six and seven unique delivered document contents; no repeated unchanged model-visible contents. Discovery internally reads Knowledge before a later model-visible Knowledge read, so backend work remains distinct. Additional reads were useful cross-checks but the checkpoints were already rich: no minimal-read or efficiency-optimality claim is supported.",
+    "policy_and_state": "Nine total successful existing read operations; no read failures, unsupported operation attempts or owning writes. Receipt state comparisons, frozen source-state hashes and exact replay agree on state invariance."
+  },
+  "method_assessment": {
+    "plan_integrity": "The reviewed candidate substantive criteria and worlds are unchanged in the final plan. Only status/method-review metadata and already-reviewed accounting clarification were added. All 95 freeze-bound files remain identical.",
+    "post_freeze_pre_dispatch_addendum": "The submitted tasks equal their original frozen task bytes plus one newline and the exact same common reporting/authorization handoff. The addendum contains no state, world identity, model gold, expected answer or read sequence. It forbids further delegation and applies the same generic procedural directions to all three consumers. It is a disclosed pre-dispatch addition, not part of the original freeze; its effect was not separately ablated.",
+    "input_identity": "One shared semantic packet and generic handoff; three opaque-handle task texts and three actual interactive result trajectories. Hashes and internal timestamps bind local records, not provider-side complete input/build/seed or generation attestations.",
+    "replay": "The post-freeze helper is correctly labeled postprocessing. Inspected helper and replay records reproduce all nine original request objects/results/provider traces with unchanged state, and cross-check against raw retained request bytes. This is deterministic mechanical evidence, not a new model trial or semantic grader.",
+    "preparation_history": "Original preparation failure, pre-review bridge, fixes and operator-only negative fixtures remain preserved. None is relabeled as a consumer failure or removed from the provenance history.",
+    "classification": "Host admission, identical hashes and response-format flags do not determine teaching quality; the semantic judgments above inspect actual learner-facing content and claim boundaries.",
+    "timing_qualification": "Dispatch receipt recorded_at values are local receipt-creation times, not exact backend dispatch times; some follow the first recorded host read. The addendum timestamp precedes every recorded host read. Complete provider-side invocation history and prompt bytes are not independently attested."
+  },
+  "actionable_conclusion": "Existing read_learning_context plus discover_learning_evidence suffice for these guided, bounded saved-checkpoint continuations, including acquisition of a dynamically returned Knowledge locator. This observation supplies no reason to add a new runtime selector for this slice. It does not settle wider context-selection requirements or Core #34 as a whole.",
+  "limits": [
+    "Rich small synthetic checkpoints, authored historical learner responses and supplied product guidance make this a low-difficulty acquisition test.",
+    "The consumers retrieved all matching Evidence in a tiny bounded scope; this does not establish ranking, retrieval minimization, large/noisy portfolio search, unknown-context discovery, capacity recovery or cross-topic selection.",
+    "One first trajectory per world is not a population reliability estimate, independent repeated sample, statistically identified causal effect or proof the stored context was necessary.",
+    "Same-model instruction isolation shares a filesystem and does not establish hard sandbox isolation or independent-provider validation.",
+    "Fake static heads/blob tokens and reconstructed sessions do not establish production freshness, concurrency, real durable storage or deployment safety.",
+    "No subsequent learner answer, retention, transfer, teaching benefit or real learner outcome was observed.",
+    "This review makes no merge, CI, deployment, promotion or product-acceptance claim.",
+    "The operation receipts demonstrate the acquisition route, but do not independently attest all non-host filesystem reads or the complete native consumer tool history. No hard-sandbox or exhaustive isolation claim is made."
+  ],
+  "remaining_material_blockers": []
+}

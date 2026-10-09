@@ -1,0 +1,140 @@
+{
+  "kind": "derived failure receipt",
+  "failure_stage": "Preparation, before freeze/consumer dispatch",
+  "first_error_type": "ValueError",
+  "first_error": "substring not found",
+  "cause": "The schema excerpt extractor asked for ## 2. Canonical document types, but the source heading was ## 2. Document types.",
+  "preceding_create_evidence": {
+    "at": "2026-10-09T15:42:42.232154+00:00",
+    "request": {
+      "operation": "create_evidence",
+      "arguments": {
+        "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi_20261007_arrangement_01\nobserved_at: '2026-10-07T10:05:00Z'\nobservation:\n  kind: synthetic_task_response\n  summary: In a separate completed counting activity, the learner counted three wooden\n    beads correctly before and after their spacing was changed.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: low\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: small_group_counting\n  capability: preserve_count_when_spacing_changes\ncontext:\n  topic: synthetic\n  subtopic: unit\n  execution:\n    session: null\n    daily_window: null\n    objective: null\nsource:\n  round_id: synthetic-counting-observation-001\n"
+      }
+    },
+    "response": {
+      "surface_version": "v4",
+      "ok": true,
+      "operation": "create_evidence",
+      "result": {
+        "applied": true
+      }
+    },
+    "provider_calls": [
+      [
+        "materialize",
+        9100000101,
+        "main"
+      ],
+      [
+        "read",
+        9100000101,
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "deployment.yaml"
+      ],
+      [
+        "materialize",
+        9100000102,
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      [
+        "materialize",
+        9100000103,
+        "main"
+      ],
+      [
+        "release",
+        9100000103,
+        "8888888888888888888888888888888888888888"
+      ],
+      [
+        "release",
+        9100000102,
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      [
+        "release",
+        9100000101,
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      [
+        "read",
+        9100000103,
+        "main",
+        "topics/synthetic/coordination/branches/main/runtime.yaml"
+      ],
+      [
+        "read",
+        9100000103,
+        "8888888888888888888888888888888888888888",
+        "topics/synthetic/coordination/branches.yaml"
+      ],
+      [
+        "read",
+        9100000101,
+        "main",
+        "deployment.yaml"
+      ],
+      [
+        "resolve",
+        9100000103,
+        "main"
+      ],
+      [
+        "materialize",
+        9100000103,
+        "8888888888888888888888888888888888888888"
+      ],
+      [
+        "materialize",
+        9100000102,
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      [
+        "resolve",
+        9100000103,
+        "main"
+      ],
+      [
+        "resolve",
+        9100000101,
+        "main"
+      ],
+      [
+        "release",
+        9100000103,
+        "8888888888888888888888888888888888888888"
+      ],
+      [
+        "release",
+        9100000102,
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      [
+        "create",
+        9100000103,
+        "main",
+        "evidence/evi_20261007_arrangement_01.yaml",
+        "8888888888888888888888888888888888888888"
+      ]
+    ],
+    "before_state_sha256": "b46a9929ac0c66e8ae132763778a1deaa15e2143e1286ae7a4615f64340b67d6",
+    "after_state_sha256": "e3ea12a2bb88d1d3566faaf2e8b037a56ba486689c05e64f6e09d6d7bb573044",
+    "changed_paths": [
+      "evidence/evi_20261007_arrangement_01.yaml"
+    ]
+  },
+  "second_create_evidence_source": "irrelevant-preparation.json",
+  "first_and_second_derived_state_match": true,
+  "repair": "Correct only the heading and retain the second operation receipt under a new filename. No model output existed.",
+  "source_hashes": {
+    "prepare-first.py.txt": "b03d4279feba2dc23246d4c0366a07e37b949ef137e78d2b730c07bbb862d461",
+    "preparation-first.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "preparation-first.stderr": "4b5563c19d337271e248e3c318ff0e4bc986bcb38a2effeabc95f13c284922b1",
+    "irrelevant-preparation-first.json": "240ff2a264adc3de090be68561052f323f7d3e326112e08181c6538160942cc3",
+    "prepare.py": "21472e69c5fd60d54888d3c9a060c6afe2f4e315a75edd599927b04143f027f8",
+    "preparation-second.stdout": "69ea6726c2d1c3242116aeb6e9d212e2abca53b389040ea437bb6a0a89463e87",
+    "preparation-second.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "omissions": "Machine-local traceback paths and repeated inline source line are summarized, not verbatim. Complete originals remain in the local evidence archive."
+}

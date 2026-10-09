@@ -1,0 +1,98 @@
+{
+  "status": "frozen before any consumer dispatch",
+  "owner": "Core #34; temporary synthetic context-selection study",
+  "research_question": "Can a fresh consumer with only a bound Topic/Subtopic, the ordinary continue request and public existing read-operation contracts obtain enough relevant durable context itself, rather than receiving an operator-selected recovery bundle?",
+  "source_baseline": {
+    "runtime_main": "73d7d37c8492bae800ef3e31239cd190a4423f23",
+    "runtime_tree": "05ee86873e660b16547130ed77337f7425613d5a",
+    "retained_q03_fixture_head": "8fbc5289b53757d094b372ae91c32612e628159b",
+    "fixture_tree": "593090cf68c7e56f5c319602ade9da48a313f5f8",
+    "current_main_after_approved_merge": "0c1611568c9222d1329a6963bd64c93c5c3b5ec7",
+    "current_main_tree": "593090cf68c7e56f5c319602ade9da48a313f5f8"
+  },
+  "why_not_repeat": "Prior q03 C consumers received a complete fixed recovery trace. Here no state content, path inventory, Evidence ID, Knowledge owner, prior question/answer or expected action is preselected for the consumer. Consumer requests determine actual read results.",
+  "quantity_rationale": "Three backend worlds are the minimum shared-baseline design for one relevant-state and one irrelevant-state contrast. They are one first interactive trajectory per condition, not population samples. No consumer resampling; identical initial semantic packets do not make later different host-result trajectories duplicates.",
+  "consumer_surface": {
+    "request": "Continue where we left off.",
+    "bound_topic": "synthetic",
+    "bound_subtopic": "unit",
+    "inputs": "identical public product protocols, operation argument/result contracts and canonical path templates; no concrete inventory/curated state/arm label/oracle",
+    "allowed_operations": [
+      "read_learning_context",
+      "discover_learning_evidence"
+    ],
+    "readonly": "Existing RuntimeCapabilityPolicy; zero write capability; owning operations not advertised. Preserve every attempted operation, failure, and final response.",
+    "fixed_policy": {
+      "readable_roots": [
+        "learner/knowledge",
+        "evidence",
+        "topics/synthetic/subtopics/unit"
+      ],
+      "writable_roots": []
+    },
+    "identity_note": "Topic and Domain differ; retained worlds happen to share the string synthetic. If a consumer guesses the corresponding Knowledge path and succeeds, call it independently chosen host-verified guessed acquisition, not discovered Domain mapping. No rename or extra trial forces discovery.",
+    "contract_provenance": "Complete protocol/schema.md sections 1,2,8,14,21,26 plus complete teaching-decision,evidence-integration,persistence-policy; static identical operation/policy descriptions. All exact source hashes are frozen."
+  },
+  "budget_basis": {
+    "read_learning_context": "Existing LEARNING_CONTEXT_MAX_DOCUMENTS=32 per call; no invented aggregate document/token/call cap. Required/optional semantics unchanged.",
+    "discover_learning_evidence": "Existing envelope: 128 candidates,16 matches,16 owners,8 targets/record,64 total,64 KiB/document,256 KiB scanned Evidence plus read Knowledge. No truncation or pagination.",
+    "efficiency": "Record calls, unique docs/bytes, repeated unchanged reads and stated basis. Repeated reads need a task-related reason, but no arbitrary global experiment runtime or work limit is imposed.",
+    "stopping": "Consumer returns a proportionate learner-facing continuation once its actually obtained facts suffice, or states the exact unresolved limit. No forced discovery call or all-document coverage; sufficient subset may be a genuine checkpoint.",
+    "cost_accounting": "Separate model-visible response bytes/document contents from backend scans and materialization. Discovery returns Evidence content but only Knowledge owner/reference metadata, not Knowledge document content."
+  },
+  "prospective_criteria": [
+    "Input provenance: no durable document content, producer transcript, original q03 question/answer, concrete evidence locator, oracle or arm meaning is supplied before actual operation results.",
+    "Acquisition: consumer chooses valid operation arguments itself and obtains a task-sufficient subset through existing host operations. Canonical paths may be derived from generic templates and bound Topic/Subtopic; this is not unrestricted search or novel schema discovery.",
+    "Task-sufficient means the retrieved material actually supports the response’s claims and present learning position. It does not mean a fixed gold list of paths. If only checkpoint is used, conclusion must remain checkpoint-scoped and cannot claim independent Evidence verification.",
+    "Relevant contrast: baseline continues from the saved correct one-way explanation with unresolved earlier conflict; contrast continues from correction with no observed response to that correction. Both may use explanation or natural application. Do not force mastery transitions or action-label difference.",
+    "Irrelevant contrast: no diversion to the non-target capability, no promotion or new performance claim, no exaggerated personalization. Avoided retrieval counts as selection invariance only.",
+    "No observed read failure/missing optional entry/denial may be rewritten as absence of actionable Evidence. No unsupported learner capability or new answer is fabricated.",
+    "Zero successful or attempted owning persistence is expected for this read-only continuation task; if an unexpected write is attempted preserve and report actual denial, do not silently repair it.",
+    "Each first request/response is retained with raw bytes/hash/time, actual provider call trace/results and state invariance. Same-model instruction isolation is not a sandbox or independent-provider audit.",
+    "Assessment accepts reasonable semantic alternatives; keyword match and host admission cannot determine teaching quality. No post-output change to criteria or source state.",
+    "A transport/resource interruption or inconclusive consumer remains interrupted/inconclusive; no replacement/resampling to obtain a preferred outcome."
+  ],
+  "actionable_decision_rules": {
+    "success": "Existing tools are sufficient for this bounded checkpoint-led acquisition slice, with supplied locator/public path vocabulary; no runtime/selector addition justified. Explicitly list any untested broader selection/search/generalization gaps.",
+    "consumer_failure": "Identify exact chosen request/retrieval or inference failure. Distinguish model policy/interpretation failure from missing host affordance. Do not infer an API gap if existing operations could obtain the necessary facts.",
+    "interface_failure": "If necessary facts cannot be addressed/discovered through the permitted existing contracts, preserve a mechanical witness and propose the smallest interface/recipe deficiency; no runtime edit in this task.",
+    "ambiguous": "Keep unresolved; no repeated consumer until desired result."
+  },
+  "method_review": "method-review-final-prospective.json",
+  "excluded": [
+    "source repository writes",
+    "new runtime/selector/schema/protocol",
+    "new public PR",
+    "real learner or deployment state",
+    "credentials or paid services",
+    "model resampling",
+    "learning-benefit or population-reliability claims"
+  ],
+  "prospective_semantic_contrasts": [
+    {
+      "condition": "baseline",
+      "source": "unchanged retained elm B post-state",
+      "purpose": "autonomous acquisition from ordinary bound locator"
+    },
+    {
+      "condition": "task_relevant_contrast",
+      "source": "unchanged retained pine B post-state",
+      "purpose": "different genuine persisted teaching position should yield a compatible continuation, without requiring a different action enum"
+    },
+    {
+      "condition": "task_irrelevant_contrast",
+      "source": "baseline plus one schema-valid same-context Evidence record about a distinct non-target capability, with no changes to target Knowledge or checkpoint",
+      "purpose": "observe whether extra durable material creates an unwarranted detour; if consumer never fetches it, valid selection-level invariance, not proof of ignoring visible distraction"
+    }
+  ],
+  "inference_limit": "One first trajectory per coherent saved world is a guided bounded acquisition witness, not an identified causal effect separated from model variation, population estimate, autonomous general search or proof of state necessity.",
+  "preserved_preparation_failure": "First packet preparation used a nonexistent heading label (Canonical document types rather than Document types), after the irrelevant-record create had succeeded. First script/stdout/stderr/operation receipt preserved. Only heading lookup and new receipt filename repaired before any freeze/consumer; no model output exists yet.",
+  "pre_dispatch_bridge_repairs": [
+    "Preserved pre-review bridge. Added exclusive per-handle transport lock and non-clobbering receipt reservation; concurrent calls receive separately retained rejection without overwriting any receipt.",
+    "Provider calls and full after-state comparison now recorded on startup/invoke exceptions when a provider exists; explicit not_initialized marker otherwise.",
+    "Clarified canonical current main0c161156/tree593090cf versus local synthetic base HEAD/tree05ee868 source labels."
+  ],
+  "packet_hash": "904b5fa478203b792ffaacf19d15357db32827bf881ee32b3af597da2eada07c",
+  "initial_input_uniqueness": "One identical semantic packet, three task texts differing only opaque handle and assigned paths; interactive host-result trajectories may differ. Do not call these six different initial inputs or independent trials.",
+  "post_review_accounting_refinements": "Known owning writes, unsupported operations and concurrent transport rejections are counted separately; missing raw input bytes are a receipt limitation without discarding first output."
+}

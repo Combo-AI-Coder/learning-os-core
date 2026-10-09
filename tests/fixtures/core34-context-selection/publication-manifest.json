@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "study": "core34-context-selection",
+  "source_main": "0c1611568c9222d1329a6963bd64c93c5c3b5ec7",
+  "source_tree": "593090cf68c7e56f5c319602ade9da48a313f5f8",
+  "original_archive_sha256": "35657b5da214701879717cf5d940d908b796609b68ad550a2e54b6ab7bf00926",
+  "initial_semantic_packets": 1,
+  "first_interactive_trajectories": 3,
+  "model_resamples": 0,
+  "cases": {
+    "baseline": {
+      "original_condition": "baseline",
+      "handle": "d120f7f7356c2c4d",
+      "source_q03_case": "elm",
+      "provider_state_sha256": "b46a9929ac0c66e8ae132763778a1deaa15e2143e1286ae7a4615f64340b67d6",
+      "packet_sha256": "904b5fa478203b792ffaacf19d15357db32827bf881ee32b3af597da2eada07c",
+      "first_response_sha256": "abc11fecb69a9c5ae237c3c0f717b93017d31dbe5cdfda539636219f070687c7",
+      "task_sha256": "862dfecad149431f4691f68164ec9da430362951b29e37f68e37af10e4891790",
+      "submitted_task_sha256": "fd6bb3d516ceb2a8dcc4f0613568fff87feeccf6f7d22f286ec69d8f08f7ae95",
+      "sealed_sha256": "db08d1004cd2902b8c2698deb2b0919d8eec808ed0e2058a4cad188707acd123",
+      "request_count": 3,
+      "evidence_paths": [
+        "evidence/evi_20261006_hd03_01.yaml",
+        "evidence/evi_20261006_hd03_02.yaml",
+        "evidence/evi_20261006_hd03_03.yaml",
+        "evidence/evi_20261009_q03_001.yaml"
+      ],
+      "missing_optional": [
+        "topics/synthetic/subtopics/unit/definition.yaml"
+      ]
+    },
+    "relevant": {
+      "original_condition": "task_relevant_contrast",
+      "handle": "f0b671106655a566",
+      "source_q03_case": "pine",
+      "provider_state_sha256": "67ac126a245f94616e4a3a95992b09323faa280541b6aa0b3ff287a16f2cc69f",
+      "packet_sha256": "904b5fa478203b792ffaacf19d15357db32827bf881ee32b3af597da2eada07c",
+      "first_response_sha256": "5c78bb54920c731bbc63877f8f90d9595c49def4e14371c3e9ce7a5056f249cb",
+      "task_sha256": "4b3d911b4c5d9bbcb7470779622aec50245dfaec60caaecd93f18ae64ef4e7d9",
+      "submitted_task_sha256": "75496d00471fcc4156983d706122ef63d213e8cefcf1f20b564d7c2f4c9e998e",
+      "sealed_sha256": "f7b6d1b864caa26e130c7bafeb8f2759016a6d5d7cc2df5444c7919d4f221838",
+      "request_count": 3,
+      "evidence_paths": [
+        "evidence/evi_20261006_hd03_01.yaml",
+        "evidence/evi_20261006_hd03_02.yaml",
+        "evidence/evi_20261006_hd03_03.yaml",
+        "evidence/evi_20261009_q03_direction_01.yaml"
+      ],
+      "missing_optional": [
+        "topics/synthetic/subtopics/unit/definition.yaml"
+      ]
+    },
+    "irrelevant": {
+      "original_condition": "task_irrelevant_contrast",
+      "handle": "e6c22e3ddaad72c4",
+      "source_q03_case": "elm",
+      "provider_state_sha256": "e3ea12a2bb88d1d3566faaf2e8b037a56ba486689c05e64f6e09d6d7bb573044",
+      "packet_sha256": "904b5fa478203b792ffaacf19d15357db32827bf881ee32b3af597da2eada07c",
+      "first_response_sha256": "f64d47c070c6563340a5952f953aec1e8a51256b5dac555875b79caabd7c7090",
+      "task_sha256": "e13518b6b5fab570ab13d09a9bfd645cbabdbf955f86bd3c58074e4ae34baf01",
+      "submitted_task_sha256": "e50a61b686635b0c0e32a8652baf21bb160a4ce47b111f031ad5ef524026af2f",
+      "sealed_sha256": "042b610be6ad23b686ed2aa83b282bba516c836faa6e0f6919feae205a36cb0d",
+      "request_count": 3,
+      "evidence_paths": [
+        "evidence/evi_20261006_hd03_01.yaml",
+        "evidence/evi_20261006_hd03_02.yaml",
+        "evidence/evi_20261006_hd03_03.yaml",
+        "evidence/evi_20261007_arrangement_01.yaml",
+        "evidence/evi_20261009_q03_001.yaml"
+      ],
+      "missing_optional": [
+        "topics/synthetic/subtopics/unit/definition.yaml"
+      ]
+    }
+  },
+  "dependencies": {
+    "tests/fixtures/core34-answer-closure/elm-post-state.json": "b46a9929ac0c66e8ae132763778a1deaa15e2143e1286ae7a4615f64340b67d6",
+    "tests/fixtures/core34-answer-closure/pine-post-state.json": "67ac126a245f94616e4a3a95992b09323faa280541b6aa0b3ff287a16f2cc69f"
+  },
+  "files": {
+    ".gitattributes": {
+      "sha256": "9e8f041ed812cb5288282cc6b187de804e96b688d56647fdae181c49fec71863",
+      "bytes": 13,
+      "kind": "publication-generated",
+      "purpose": "Preserve exact frozen JSON bytes on all checkout platforms."
+    },
+    "baseline-response.json": {
+      "sha256": "abc11fecb69a9c5ae237c3c0f717b93017d31dbe5cdfda539636219f070687c7",
+      "bytes": 1660,
+      "kind": "verbatim",
+      "source": "handles/d120f7f7356c2c4d/first-response.json",
+      "source_sha256": "abc11fecb69a9c5ae237c3c0f717b93017d31dbe5cdfda539636219f070687c7"
+    },
+    "baseline-trajectory.json": {
+      "sha256": "ca0acdf40fbfc498fe4a3d7e23a5e331a6c23e8ba21d5672262389cece168a37",
+      "bytes": 19570,
+      "kind": "derived",
+      "source": "handles/d120f7f7356c2c4d/receipts/*.json",
+      "transformation": "Omit only machine-specific request_file; append source_log_sha256 and omitted_fields. All request bytes, parsed requests, UTC times, results, provider calls and state comparisons remain unchanged."
+    },
+    "common-packet.json": {
+      "sha256": "904b5fa478203b792ffaacf19d15357db32827bf881ee32b3af597da2eada07c",
+      "bytes": 46533,
+      "kind": "verbatim",
+      "source": "handles/d120f7f7356c2c4d/packet.json",
+      "source_sha256": "904b5fa478203b792ffaacf19d15357db32827bf881ee32b3af597da2eada07c"
+    },
+    "input-provenance.json": {
+      "sha256": "c986b8616644573fe9bd3761bfe83583dffce0a0697319da6bd071f4000a5062",
+      "bytes": 33813,
+      "kind": "derived",
+      "source": "source-bindings, handles, task hashes, pre-dispatch addendum and dispatch receipts",
+      "transformation": "Retain source hashes and provenance metadata; omit task and generic orchestration text. No invocation attestation fabricated."
+    },
+    "irrelevant-preparation.json": {
+      "sha256": "2cbedfb48000033dd4de2edab3b66e823f72cfd75240718cad8f2c04e2bab8c4",
+      "bytes": 3052,
+      "kind": "verbatim",
+      "source": "irrelevant-preparation-second.json",
+      "source_sha256": "2cbedfb48000033dd4de2edab3b66e823f72cfd75240718cad8f2c04e2bab8c4"
+    },
+    "irrelevant-response.json": {
+      "sha256": "f64d47c070c6563340a5952f953aec1e8a51256b5dac555875b79caabd7c7090",
+      "bytes": 1858,
+      "kind": "verbatim",
+      "source": "handles/e6c22e3ddaad72c4/first-response.json",
+      "source_sha256": "f64d47c070c6563340a5952f953aec1e8a51256b5dac555875b79caabd7c7090"
+    },
+    "irrelevant-trajectory.json": {
+      "sha256": "ad062643754828df0b9a03ce0b131c2c04c69b9e72738b95a8de1a0ac6b31ece",
+      "bytes": 21368,
+      "kind": "derived",
+      "source": "handles/e6c22e3ddaad72c4/receipts/*.json",
+      "transformation": "Omit only machine-specific request_file; append source_log_sha256 and omitted_fields. All request bytes, parsed requests, UTC times, results, provider calls and state comparisons remain unchanged."
+    },
+    "mechanical-exact-replay.json": {
+      "sha256": "7428408fb303dd767fc8bccd8945ff2276f948964c02b5d3f8466b069c4444ae",
+      "bytes": 61893,
+      "kind": "verbatim",
+      "source": "mechanical-exact-replay.json",
+      "source_sha256": "7428408fb303dd767fc8bccd8945ff2276f948964c02b5d3f8466b069c4444ae"
+    },
+    "method-change-record.json": {
+      "sha256": "6b343ca9ab8e5f6f06b02eb12adaa7e8a2464b47652948f892e22606926d2928",
+      "bytes": 8279,
+      "kind": "derived",
+      "source": "pre-dispatch method reviews and mechanical receipts",
+      "transformation": "Retain review/negative-result records and source hashes, summarize changes; omit original temporary transport implementation."
+    },
+    "preparation-diagnostics.json": {
+      "sha256": "0de01825575e32bd8d8629ac5a8d7e9660034f82383e6aade2940d7a3754eec1",
+      "bytes": 4765,
+      "kind": "derived",
+      "source": "preparation-first.stderr and both preparation receipts",
+      "transformation": "Explicit error/cause/repair plus original hashes and unchanged first create-Evidence receipt; omit machine-local traceback framing and repeated source-line dump."
+    },
+    "prospective-freeze.json": {
+      "sha256": "ce5177f84a3fbc4e041407d645fe49ff390c7c687cb895242e7f320e3b7d916e",
+      "bytes": 11828,
+      "kind": "verbatim",
+      "source": "prospective-freeze.json",
+      "source_sha256": "ce5177f84a3fbc4e041407d645fe49ff390c7c687cb895242e7f320e3b7d916e"
+    },
+    "prospective-method-review.json": {
+      "sha256": "8a226f8465350d5e796be17d29cf2f15478c6eafb5b123e4f7764f45afb1414b",
+      "bytes": 19713,
+      "kind": "verbatim",
+      "source": "method-review-final-prospective.json",
+      "source_sha256": "8a226f8465350d5e796be17d29cf2f15478c6eafb5b123e4f7764f45afb1414b"
+    },
+    "prospective-plan.json": {
+      "sha256": "0fc6fb281c8d6e9ab04b4ba0621e36b976df3dcdaad06d830594758a98e585ac",
+      "bytes": 9921,
+      "kind": "verbatim",
+      "source": "prospective-plan.json",
+      "source_sha256": "0fc6fb281c8d6e9ab04b4ba0621e36b976df3dcdaad06d830594758a98e585ac"
+    },
+    "relevant-response.json": {
+      "sha256": "5c78bb54920c731bbc63877f8f90d9595c49def4e14371c3e9ce7a5056f249cb",
+      "bytes": 1619,
+      "kind": "verbatim",
+      "source": "handles/f0b671106655a566/first-response.json",
+      "source_sha256": "5c78bb54920c731bbc63877f8f90d9595c49def4e14371c3e9ce7a5056f249cb"
+    },
+    "relevant-trajectory.json": {
+      "sha256": "ca42af12f1c0631becaf759e915a32a4892ed291d23ba205e1752979acba276f",
+      "bytes": 19237,
+      "kind": "derived",
+      "source": "handles/f0b671106655a566/receipts/*.json",
+      "transformation": "Omit only machine-specific request_file; append source_log_sha256 and omitted_fields. All request bytes, parsed requests, UTC times, results, provider calls and state comparisons remain unchanged."
+    },
+    "semantic-method-review.json": {
+      "sha256": "c3114bbcda0ec613cd147cd16f975a4083686a4331423ee3cb70e95f51355e22",
+      "bytes": 21236,
+      "kind": "verbatim",
+      "source": "semantic-method-review-final.json",
+      "source_sha256": "c3114bbcda0ec613cd147cd16f975a4083686a4331423ee3cb70e95f51355e22"
+    },
+    "source-state-bindings.json": {
+      "sha256": "8046e35b69b95d983b82489b70a541e38fa3cbb39a0a578318ab63c9b02ad30b",
+      "bytes": 597,
+      "kind": "verbatim",
+      "source": "source-state-bindings.json",
+      "source_sha256": "8046e35b69b95d983b82489b70a541e38fa3cbb39a0a578318ab63c9b02ad30b"
+    }
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "kind": "derived pre-dispatch method receipt",
+  "changes": [
+    "Narrowed causal/reliability wording to bounded semantic contrasts.",
+    "Added exclusive transport locking/non-clobbering receipt reservation and provider/state evidence on exception paths.",
+    "Separated owning writes, unsupported operations, concurrent rejection evidence and missing-request-byte limitations in the sealer."
+  ],
+  "original_bridge_review": {
+    "status": "preliminary bridge review; packets/world preparation not yet supplied; no consumer dispatch approved",
+    "reviewed_at": "2026-10-09T15:43:30.492848+00:00",
+    "artifacts": {
+      "host_bridge.py": "f28b150b506d3acc24b5e33977ed3295da9cc6885579cbaf6b4f771d6a302b5f",
+      "source-bindings.json": "c098f4c112e01e1fc27ad82fb8457acc8cf16297c639c08a7f59de184456a1fd",
+      "method-review-candidate-1.md": "beb263d4a441cdec04f6d46d1e3bfea8517b3164f8033c7e09b3ca7a045a0cc0"
+    },
+    "verified": [
+      "All 221 bound source files match their recorded SHA-256 values.",
+      "CLI call opens existing host with empty writable roots and unchanged inherited q03 readable roots.",
+      "Request raw bytes/base64/hash are recorded before JSON parsing.",
+      "Existing host successful/error result is returned unchanged for ordinary host operation handling."
+    ],
+    "pre_freeze_fixes": [
+      {
+        "id": "receipt-collision",
+        "finding": "Receipt number is derived from file count. A concurrent new(logpath,row) collision is caught, then final write_bytes can overwrite the receipt owned by another call.",
+        "minimum_change": "Admit only serial per-handle transport, and make index allocation/receipt ownership non-clobbering. Concurrent denial must preserve the existing receipt and the rejected attempt separately."
+      },
+      {
+        "id": "exception-audit",
+        "finding": "A provider initialization/host startup/invoke exception skips provider_calls and after-state recording.",
+        "minimum_change": "Record provider_calls and full after-state/invariance in a finally path whenever provider exists; otherwise record explicitly that provider was not initialized."
+      },
+      {
+        "id": "tree-label",
+        "finding": "source-bindings.json labels one tree as 593090cf68c7e56f5c319602ade9da48a313f5f8, the retained fixture tree; current checkout tree is 05ee86873e660b16547130ed77337f7425613d5a. Per-file hashes match.",
+        "minimum_change": "Label runtime tree and retained fixture tree separately so provenance is not ambiguous."
+      }
+    ],
+    "not_tested": "No bridge operation, model consumer, repository mutation, full suite or provider execution was performed by this reviewer."
+  },
+  "mechanical_world_delta": {
+    "changed_documents": [
+      "evidence/evi_20261007_arrangement_01.yaml"
+    ],
+    "all_original_document_bytes_preserved": true,
+    "target_knowledge_and_checkpoint_preserved": true,
+    "new_blob_keys": [
+      "evidence/evi_20261007_arrangement_01.yaml"
+    ],
+    "new_snapshot_paths": [],
+    "initial_semantic_packet_unique_hashes": [
+      "904b5fa478203b792ffaacf19d15357db32827bf881ee32b3af597da2eada07c"
+    ]
+  },
+  "mechanical_transport": {
+    "calls": 8,
+    "concurrent_rejections": 1,
+    "previous_receipts_preserved": true,
+    "all_state_unchanged_or_not_initialized": true,
+    "results": [
+      {
+        "surface_version": "v4",
+        "ok": true,
+        "operation": "read_learning_context",
+        "result": {
+          "documents": [
+            {
+              "path": "topics/synthetic/subtopics/unit/progress.yaml",
+              "content": "schema_version: '0.3'\ndocument_type: subtopic_progress\nrevision: 3\nupdated_at: '2026-10-09T12:10:00Z'\ntopic: synthetic\nsubtopic: unit\nplan_revision: 1\nmilestones:\n  foundation:\n    status: completed\n  next-step:\n    status: in_progress\ncurrent:\n  milestone:\n  - next-step\nblockers: []\nresume:\n  return_point:\n    kind: teaching_thread\n    focus: 'Descriptions of groups: direction of an Every statement'\n    activity: The triangular/green question has been answered correctly and closed.\n      The learner explained that a green square is permitted because only triangular\n      pieces are required to be green. Stop here; do not present this question again\n      as unanswered.\n    scope: Use only the stated tray description and familiar colors and shapes. A\n      selected piece exists. No formal symbols or technical logic vocabulary are needed.\n    next_action: At the next session, briefly connect this correct one-way explanation\n      to the earlier red/star-shaped reversal. Continue with an explanation or natural\n      application; use a further diagnostic only if it would change the teaching decision.\n    knowledge_context: Forward application remains supported. Direction remains conflicted\n      because the earlier contradictory response is not yet explained or resolved;\n      the current response is new support, not proof of mastery.\n  ready_next:\n  - Reconnect the current direction explanation with the earlier red/star-shaped example\n    without restarting the completed foundation or repeating the just-answered question.\nwatch:\n- kind: node\n  reason: preserve me\navoid_retesting:\n- foundation\n",
+              "version_token": "9999999999999999999999999999999999999999"
+            }
+          ],
+          "missing_optional": []
+        }
+      },
+      {
+        "surface_version": "v4",
+        "ok": true,
+        "operation": "read_learning_context",
+        "result": {
+          "documents": [],
+          "missing_optional": [
+            "topics/synthetic/subtopics/unit/absent.yaml"
+          ]
+        }
+      },
+      {
+        "surface_version": "v4",
+        "ok": false,
+        "operation": "read_learning_context",
+        "error": {
+          "code": "guard_rejected",
+          "retryable": false
+        }
+      },
+      {
+        "surface_version": "v4",
+        "ok": false,
+        "operation": "read_learning_context",
+        "error": {
+          "code": "resolution_failed",
+          "retryable": false
+        }
+      },
+      {
+        "surface_version": "v4",
+        "ok": false,
+        "operation": null,
+        "error": {
+          "code": "resolution_failed",
+          "retryable": false
+        }
+      },
+      {
+        "surface_version": "v4",
+        "ok": false,
+        "operation": "create_evidence",
+        "error": {
+          "code": "guard_rejected",
+          "retryable": false
+        }
+      },
+      {
+        "runner_exception": "JSONDecodeError",
+        "message": "Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+      },
+      {
+        "runner_exception": "RuntimeError",
+        "message": "synthetic preflight startup failure"
+      }
+    ]
+  },
+  "mechanical_sealer": {
+    "operator_only": true,
+    "model_called": false,
+    "copied_receipts_with_intentional_unit_mutations": true,
+    "missing_request_bytes_retained_as_limitations": true,
+    "known_writes_separate_from_unsupported": true,
+    "concurrent_rejection_bytes_and_hashes_bound": true,
+    "raw_first_response_preserved": true,
+    "sealer_sha256": "d607517cf6e5869fb580c6b288aa0e0692fc32d1a3fe5d231306a00ec22e503b"
+  },
+  "source_hashes": {
+    "host_bridge-pre-review.py.txt": "f28b150b506d3acc24b5e33977ed3295da9cc6885579cbaf6b4f771d6a302b5f",
+    "host_bridge.py": "ec7fd22dc9473e7bff265196be743b8e850c6fe8ebb9e0adde004a65ad0d6383",
+    "seal.py": "d607517cf6e5869fb580c6b288aa0e0692fc32d1a3fe5d231306a00ec22e503b",
+    "method-review-candidate-1.md": "beb263d4a441cdec04f6d46d1e3bfea8517b3164f8033c7e09b3ca7a045a0cc0",
+    "method-review-bridge-initial.json": "d5a4b9693a6ab9d20c6998cda79cfee6617ad09f7dcc731849c4b6c59ccbcf32",
+    "mechanical-world-delta.json": "9f6fa283b6f4db32c44cd76ad74868ec41351fdadfed7a00a952a92249103ea9",
+    "mechanical-transport-preflight.json": "d1f2f21054585e2f28ada707aecbe5b082ed073131248f116a3e595fbf4bf5d6",
+    "mechanical-sealer-preflight.json": "0812da9b2da3393e91ffd0de52fd1765528da1838f786c6c27cdc76111519ffc"
+  },
+  "limits": "Pre-dispatch operator-only checks and repairs, not consumer observations; original scripts and full logs remain local. This publication adds no product bridge/selector."
+}
