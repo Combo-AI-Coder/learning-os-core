@@ -1,0 +1,167 @@
+{
+  "decisions": [
+    {
+      "id": "i01",
+      "interpretation": {
+        "interaction_object": "existing_topic_continuation",
+        "scope": "current_interaction",
+        "rationale": "This is a new conversation within the same Topic, not a new Topic. Resume the supplied Goal, Plan and Progress. The stored Topic thorough preference remains effective when intake is relevant, but the known purpose, exposure, time constraint and return point are sufficient, so no intake questions are necessary."
+      },
+      "learner_response": "接着画条形图。画两条同样长、同样宽的长条：第一条平均分成 2 份，涂其中 1 份；第二条平均分成 4 份，涂其中 2 份。两条涂色部分一样大，所以 1/2 = 2/4。分的份数变了，表示的量没变。",
+      "optional_intake_questions": [],
+      "host_requests": [],
+      "preserved_state_notes": [
+        "Keep the existing Topic Goal, Plan, Progress and thorough Topic preference; leave learner/execution.yaml absent.",
+        "Naming remains completed. Independent equivalence understanding remains unknown until there is a relevant learner observation; this explanation alone does not create Evidence, Knowledge or milestone completion.",
+        "Do not restart intake, create a new Topic or Domain, or perform a broad placement test."
+      ]
+    },
+    {
+      "id": "i02",
+      "interpretation": {
+        "interaction_object": "intake_timing",
+        "scope": "current_interaction",
+        "rationale": "The explicit request to start now selects defer_intake and takes precedence over stored thorough depth. Drawing medium is optional and does not block the supplied route. Defer optional background questions without changing any durable preference."
+      },
+      "learner_response": "现在开始。先看两条一样大的长条：一条平分成 2 份，涂 1 份；另一条平分成 4 份，涂 2 份。它们都涂了整个长条的一半，所以 1/2 和 2/4 表示同样的量。",
+      "optional_intake_questions": [],
+      "host_requests": [],
+      "preserved_state_notes": [
+        "Preserve the stored thorough Topic preference and absent global owner; this is only a current immediate-start instruction.",
+        "Continue the existing route without adding a drawing-medium blocker or an untriggered planning gap.",
+        "Do not change Plan, Progress, Knowledge or Evidence, and do not infer mastery from prior exposure or the request to begin."
+      ]
+    },
+    {
+      "id": "i03",
+      "interpretation": {
+        "interaction_object": "intake_depth",
+        "scope": "topic",
+        "rationale": "The learner explicitly chooses a durable preference for this Topic: minimal background intake and prompt starts. Request a narrow minimal Topic override using the supplied existing Goal version token. The global thorough preference is not changed. Existing context supports beginning immediately."
+      },
+      "learner_response": "这个 Topic 以后按最少必要的背景提问来开始；我会请求保存这项设置。现在接着看：两条一样大的长条，分别涂上 2 等份中的 1 份和 4 等份中的 2 份，涂色面积相同，因此 1/2 = 2/4。",
+      "optional_intake_questions": [],
+      "host_requests": [
+        {
+          "operation": "set_intake_preference",
+          "arguments": {
+            "scope": "topic",
+            "depth": "minimal",
+            "expected_version_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      ],
+      "preserved_state_notes": [
+        "Use the supplied owner read and version token; the host must enforce current Main binding, capabilities, deployment/generation guards and exact CAS. On conflict, reread and reconsider rather than reapply stale intent.",
+        "The request may change only goal.preferences.intake_depth in the bound existing Goal and host-managed revision/timestamp. Preserve all unrelated Goal fields and the global thorough preference.",
+        "No write receipt is supplied, so persistence is pending. Do not rewrite Plan, Progress, Knowledge or Evidence; equivalence understanding remains unknown."
+      ]
+    },
+    {
+      "id": "i04",
+      "interpretation": {
+        "interaction_object": "intake_depth",
+        "scope": "global",
+        "rationale": "A default for future new Topics is explicitly learner-global. Request thorough using the supplied absent-owner state and null token; the narrow host operation can first-create the minimal lazy Learner Execution owner. This does not require restarting intake for the existing Topic or asking already answered questions."
+      },
+      "learner_response": "以后开始新 Topic 时，默认先深入了解与路线有关的背景；我会请求保存这个全局偏好。当前内容已经够我们继续：同样大的长条，涂一半和涂四分之二，涂色面积相同，所以 1/2 = 2/4。",
+      "optional_intake_questions": [],
+      "host_requests": [
+        {
+          "operation": "set_intake_preference",
+          "arguments": {
+            "scope": "global",
+            "depth": "thorough",
+            "expected_version_token": null
+          }
+        }
+      ],
+      "preserved_state_notes": [
+        "The supplied global owner is absent. Only the narrow host operation may create the minimal schema-0.3 learner_execution owner for this explicit non-default preference, with host-managed revision and timestamp.",
+        "The host must still validate fresh absence, Main binding, target capabilities, deployment/generation and create-only plus exact-head CAS. On conflict, reread and reconsider.",
+        "Leave the Topic Goal, Plan, Progress, Knowledge and Evidence unchanged. Thorough is relevant intake depth, not a placement test or a mastery claim. Persistence remains unconfirmed until a host receipt."
+      ]
+    },
+    {
+      "id": "i05",
+      "interpretation": {
+        "interaction_object": "intake_preference_reset",
+        "scope": "topic",
+        "rationale": "The learner explicitly requests removal of the Topic override to restore inheritance. Request reset for the bound Goal using its supplied version token. On success, the Topic inherits the existing global thorough preference, rather than an explicitly stored balanced value. Sufficient context means no new questionnaire."
+      },
+      "learner_response": "我会请求清除这个 Topic 的单独设置；成功后它会继承当前全局的深入了解偏好。已有背景够用，我们接着画两条一样大的长条：分别涂 1/2 和 2/4，涂色部分相同，因此这两个分数相等。",
+      "optional_intake_questions": [],
+      "host_requests": [
+        {
+          "operation": "reset_intake_preference",
+          "arguments": {
+            "scope": "topic",
+            "expected_version_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      ],
+      "preserved_state_notes": [
+        "Remove only goal.preferences.intake_depth after successful host admission. Preserve the existing Goal owner, all unrelated fields and the global thorough preference; do not replace the override with balanced or null.",
+        "Use the supplied owner version under all fresh-read, role, capability, deployment/generation and CAS guards. Reread and reconsider any conflict.",
+        "Reset is pending a host receipt. The preference change alone must not rewrite Plan, Progress, Knowledge or Evidence or erase the existing return point."
+      ]
+    },
+    {
+      "id": "i06",
+      "interpretation": {
+        "interaction_object": "teaching_interaction_agency",
+        "scope": "current_interaction",
+        "rationale": "This request occurs during teaching and asks to stop optional questions, explain first and be brief. Honor the current interaction immediately; it is neither a durable intake preference nor evidence of learner ability."
+      },
+      "learner_response": "同样大的长条，涂 2 份中的 1 份，和涂 4 份中的 2 份，面积一样。所以 1/2 = 2/4：分法不同，量相同。",
+      "optional_intake_questions": [],
+      "host_requests": [],
+      "preserved_state_notes": [
+        "Stop or defer optional teaching questions now. Do not turn brevity into a persistent minimal intake setting.",
+        "Preserve the Topic thorough preference, absent global owner, route and progress.",
+        "The learner's request and this explanation supply no new capability Evidence. Independent equivalence understanding stays unknown."
+      ]
+    },
+    {
+      "id": "i07",
+      "interpretation": {
+        "interaction_object": "intake_depth",
+        "scope": "current_interaction",
+        "rationale": "During intake, fewer questions selects minimal for this interaction. No durable Topic or global scope is explicit, so do not persist a guess or delay learning with a scope clarification. Known context has no route-blocking gap. The stored global thorough preference remains unchanged."
+      },
+      "learner_response": "这次只问真正影响开始的问题，目前没有需要补问的。直接看两条一样大的长条：一条涂二分之一，另一条涂四分之二；两块涂色一样大，所以 1/2 = 2/4。",
+      "optional_intake_questions": [],
+      "host_requests": [],
+      "preserved_state_notes": [
+        "The current minimal instruction overrides inherited thorough only for this intake. Preserve the empty Topic preferences and global thorough preference.",
+        "Do not create a durable preference or ask an unnecessary scope question.",
+        "Continue the supplied Plan and return point without changing Progress, Knowledge or Evidence; missing independent equivalence evidence remains unknown."
+      ]
+    },
+    {
+      "id": "i08",
+      "interpretation": {
+        "interaction_object": "intake_depth",
+        "scope": "global",
+        "rationale": "The learner explicitly chooses balanced as the global default for future new Topics. Submit the narrow global set with the supplied absent-owner null token. Absent-global balanced is a guarded no-op: Core already supplies balanced and the lazy global owner must remain absent."
+      },
+      "learner_response": "以后新 Topic 默认采用平衡的背景了解方式，只问会明显影响初始路线的信息。我会请求确认这项设置；当前没有全局设置文件，而系统默认已是平衡模式，因此无需新建文件。现在继续看：同样大的长条涂 1/2 或 2/4，涂色面积相同，所以两个分数相等。",
+      "optional_intake_questions": [],
+      "host_requests": [
+        {
+          "operation": "set_intake_preference",
+          "arguments": {
+            "scope": "global",
+            "depth": "balanced",
+            "expected_version_token": null
+          }
+        }
+      ],
+      "preserved_state_notes": [
+        "The supplied absent global owner must stay absent if the host confirms that same state; expected result is applied:false, not first creation. Do not fabricate or replace the owner to record balanced.",
+        "Even this no-op requires host validation of the fresh owner state, current Main session, target capabilities, deployment/generation and concurrency guards. If state changed, reread and reconsider.",
+        "No host receipt has been received. Keep the Topic Goal, Plan, Progress, Knowledge and Evidence unchanged, and do not infer independent equivalence mastery."
+      ]
+    }
+  ]
+}

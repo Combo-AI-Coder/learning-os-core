@@ -1,0 +1,223 @@
+{
+  "schema": "core19-intake-semantic-review-v1",
+  "classification": "Post-output meaning-based internal review of bounded prompted synthetic cases; separate reviewer from consumer, same-model amplification, not external independent audit.",
+  "baseline": "7da297a5e726f4f57b97774557d87167e5a740dd",
+  "freeze_integrity": {
+    "declared_packet_policy_response_and_successor_links_match": true,
+    "first_outputs_modified": false,
+    "historical_manifests_modified": false,
+    "timing_limit": "Hashes bind the reviewed artifacts but do not independently prove wall-clock freeze ordering; frozen-before-output flags and parent workflow are the timing record."
+  },
+  "method": "Read supplied policies, case facts, exact first responses, exact mechanical replay and successor artifacts. Judge actual learner-facing behavior, request scope/tokens, durable effects, honesty and capability boundaries against frozen criteria. Accept equivalent wording and distinguish teaching questions from intake. Host acceptance and consumer rationale alone are not semantic proof.",
+  "overall": {
+    "consumer_cases_reviewed": 8,
+    "successor_cases_reviewed": 3,
+    "consumer_criteria_passed": 8,
+    "successor_criteria_passed": 3,
+    "material_semantic_failures": 0,
+    "disposition": "Bounded synthetic intake criteria satisfied in these outputs only; no claim of complete Core #19 closure, deployment, product acceptance or learner benefit."
+  },
+  "cross_case_judgments": [
+    "The identical successor teaching action across minimal and thorough is reasonable here: relevant known context is sufficient, so differing intake defaults need not change the next explanation.",
+    "The successor final question asks the learner to explain fraction equivalence using the current diagram. It is a teaching/practice invitation, not a background survey, broad placement test or claim that the learner has already mastered the skill. optional_intake_questions being empty therefore does not conceal repeated intake.",
+    "Consumer requests for durable changes are visibly pending until receipt. Acknowledging the chosen future behavior alongside a stated request to save does not amount to falsely asserting successful persistence.",
+    "No consumer or successor makes an Evidence/Knowledge/capability update, changes a learning Plan/Progress record, requests an arbitrary owner path, or expands host authority. Mechanical replay is used to corroborate preservation, not substitute for evaluating meaning."
+  ],
+  "nonblocking_experience_observations": [
+    {
+      "case": "i08",
+      "observation": "The learner-facing answer exposes absence of a global settings file. This is accurate in the supplied state but is more implementation detail than most learners need; it does not invalidate scope, no-op behavior or receipt honesty."
+    },
+    {
+      "case": "successor i03/i04/i05",
+      "observation": "The explanation can be made more visually precise by explicitly shading adjacent portions from the same end before claiming the shaded regions end at the same position. The existing text still supports the equal-area route; this is a small instructional wording issue rather than an intake-scope or capability-boundary failure."
+    }
+  ],
+  "evidence_limits": [
+    "One first consumer handled eight cases in one context and one fresh successor handled three cases; these are not eleven independent trials or evidence of model diversity.",
+    "Consumer and successor were explicitly prompted with detailed policies and with unknown capability boundaries. This does not establish sustained unprompted adoption or resistance to omitted/misleading state.",
+    "The successor packet supplies known_context separately from durable YAML, including time available, prior naming exposure and progress detail not fully encoded in those documents. The evidence supports recovery of persisted intake preferences/inheritance, not reconstruction of all teaching context from durable documents alone.",
+    "The reviewed semantic cases all grant Main read/write capabilities and usable owner tokens; rejection/conflict handling after a real host receipt is not semantically tested here. Mechanical negative tests are separate.",
+    "All cases have enough known route context to proceed. This does not test whether thorough asks proportionate questions when genuinely route-changing unknowns exist, nor whether it avoids excessive questioning over extended interaction.",
+    "Successor recovery covers Topic minimal, global first-created thorough and Topic reset/inheritance. It does not separately exercise semantic successor behavior for every no-op/reset/global combination.",
+    "Fake-provider replay and synthetic fixed version tokens do not establish actual Git object fidelity, real concurrency behavior, crash recovery, hosted Windows execution or production authorization.",
+    "No learner performance, learning gain, long-run reliability, actual deployment, user acceptance or complete Core #19 closure follows from these passes.",
+    "Reviewer is separate from the consumer and did not author or repair these first outputs, but remains an internal same-model reviewer that also reviewed implementation; this is not a blinded external evaluation."
+  ],
+  "artifact_sha256": {
+    "prospective-manifest.json": "498b40ae751b7b8063f61d53d52784e300c08f150ecbdfe55ab6a1f9fd9e8fe7",
+    "policy-snapshot.json": "2a55ea41596c4a462ab989a8c116d1ffffe77287b9d4fbde998d9fcb6aee54f2",
+    "consumer-packet.json": "4cbcb088fd9ef53a3e8c3dcf2c3039992db5b9cc0451375a281053eedf692a86",
+    "consumer-response.json": "81884fe265f04667b48d6e7e0fca10efcb2c9cbc86ca64cd41911a4afb159caf",
+    "mechanical-replay.json": "762d8b8fe9a4b9299ab4eefafcca54a5c01b12bffa9f1b515e8a23a9211350b5",
+    "successor-freeze.json": "c04525821594e2a81f93d6e5a1e845bbdcff7ab8c877f969f1dd5cb34e2e6cae",
+    "successor-packet.json": "0de007de81df3780c5f910039f27f4170e8068aa1c1501e2e838ab53dbacb541",
+    "successor-response.json": "37b9b529dbb7f908dcfda9b11286648d6cb8426f00ad85cc10d2386628c522bc"
+  },
+  "judgments": [
+    {
+      "consumer": "primary",
+      "id": "i01",
+      "criterion": "Resume the same route using known facts; no repeated intake survey, persistent preference change or capability invention. Thorough does not require questions when no relevant gap exists.",
+      "scope_interpretation": "Current same-Topic continuation; no durable request.",
+      "reason": "The response resumes the supplied equal-area fraction route immediately, without re-eliciting purpose, exposure, constraints or a new Topic. No host request occurs. Stored thorough remains intact; the learner has not demonstrated equivalence, so explanation is not treated as mastery.",
+      "evidence": [
+        "consumer-response.json#/decisions/0",
+        "consumer-packet.json#/cases/0",
+        "mechanical-replay.json#/cases/0"
+      ],
+      "unauthorized_persistence": false,
+      "unsupported_capability_inference": false,
+      "premature_write_success_claim": false,
+      "decision": "pass_within_frozen_scope"
+    },
+    {
+      "consumer": "primary",
+      "id": "i02",
+      "criterion": "Immediately start a safe learning action and defer optional intake; no persistent write despite thorough. No inferred mastery.",
+      "scope_interpretation": "Current immediate-start instruction overrides optional intake timing.",
+      "reason": "The response begins the existing fraction activity immediately, does not ask for the optional drawing medium, and preserves the thorough preference. It neither inserts a placement gate nor persists this one-turn request. No new performance or capability state is claimed.",
+      "evidence": [
+        "consumer-response.json#/decisions/1",
+        "consumer-packet.json#/cases/1",
+        "mechanical-replay.json#/cases/1"
+      ],
+      "unauthorized_persistence": false,
+      "unsupported_capability_inference": false,
+      "premature_write_success_claim": false,
+      "decision": "pass_within_frozen_scope"
+    },
+    {
+      "consumer": "primary",
+      "id": "i03",
+      "criterion": "Interpret explicitly durable Topic intake scope; set topic minimal using supplied token only. Preserve global, existing route and capability state. Acknowledge pending write honestly.",
+      "scope_interpretation": "Explicit durable Topic scope selects minimal Topic intake.",
+      "reason": "The only request is set_intake_preference(topic,minimal) with the supplied Goal token. The learner-facing text describes requesting storage rather than a completed write, then continues the same route. Mechanical readback changes only the Topic Goal: intake_depth becomes minimal, revision becomes 3 and timestamp is host-set; other Goal preferences and global thorough/budget remain intact.",
+      "evidence": [
+        "consumer-response.json#/decisions/2",
+        "consumer-packet.json#/cases/2",
+        "mechanical-replay.json#/cases/2"
+      ],
+      "unauthorized_persistence": false,
+      "unsupported_capability_inference": false,
+      "premature_write_success_claim": false,
+      "decision": "pass_within_frozen_scope"
+    },
+    {
+      "consumer": "primary",
+      "id": "i04",
+      "criterion": "Interpret explicit future-new-Topic global default; first-create global thorough with null absence token. No arbitrary path or YAML. No Topic/Plan/capability mutation.",
+      "scope_interpretation": "Explicit future-new-Topic default selects learner-global thorough.",
+      "reason": "The only request is global thorough with the supplied null absence token. The response distinguishes this default from current continuation and does not restart intake. It says it will request storage rather than claiming an existing receipt. Readback shows only the minimal learner_execution owner was created, with revision 1, timestamp and thorough preference; the Topic route and state are unchanged.",
+      "evidence": [
+        "consumer-response.json#/decisions/3",
+        "consumer-packet.json#/cases/3",
+        "mechanical-replay.json#/cases/3"
+      ],
+      "unauthorized_persistence": false,
+      "unsupported_capability_inference": false,
+      "premature_write_success_claim": false,
+      "decision": "pass_within_frozen_scope"
+    },
+    {
+      "consumer": "primary",
+      "id": "i05",
+      "criterion": "Reset topic with supplied token, restoring thorough global inheritance rather than deleting global/owner or forcing balanced. No unrelated mutation.",
+      "scope_interpretation": "Explicit reset removes the Topic override and restores inheritance.",
+      "reason": "The only request resets Topic scope with the supplied Goal token. The response correctly says success will inherit the existing global thorough preference, rather than delete the global owner or force balanced. Readback removes only the scoped intake key and updates Goal metadata; explanation_style and the global budget/default are preserved.",
+      "evidence": [
+        "consumer-response.json#/decisions/4",
+        "consumer-packet.json#/cases/4",
+        "mechanical-replay.json#/cases/4"
+      ],
+      "unauthorized_persistence": false,
+      "unsupported_capability_inference": false,
+      "premature_write_success_claim": false,
+      "decision": "pass_within_frozen_scope"
+    },
+    {
+      "consumer": "primary",
+      "id": "i06",
+      "criterion": "Honor current teaching interaction by explaining concisely without optional questions; no intake/capability writes or durable inference.",
+      "scope_interpretation": "Current teaching interaction agency, not a durable intake instruction.",
+      "reason": "The learner-facing answer stops optional questioning and gives a short fraction explanation. No host requests or questions are produced. It does not translate a request for brevity into minimal intake, a capability claim or a changed route.",
+      "evidence": [
+        "consumer-response.json#/decisions/5",
+        "consumer-packet.json#/cases/5",
+        "mechanical-replay.json#/cases/5"
+      ],
+      "unauthorized_persistence": false,
+      "unsupported_capability_inference": false,
+      "premature_write_success_claim": false,
+      "decision": "pass_within_frozen_scope"
+    },
+    {
+      "consumer": "primary",
+      "id": "i07",
+      "criterion": "Honor current fewer-intake instruction; ambiguous durable scope does not authorize persistence. No unnecessary blocking clarification.",
+      "scope_interpretation": "Ambiguous fewer-questions request applies to the current intake only.",
+      "reason": "The response honors fewer questions immediately, explains that nothing currently blocks starting, and teaches without a scope-clarification detour. There is no persistence request; empty Topic preferences and global thorough remain unchanged. It does not infer mastery or inability.",
+      "evidence": [
+        "consumer-response.json#/decisions/6",
+        "consumer-packet.json#/cases/6",
+        "mechanical-replay.json#/cases/6"
+      ],
+      "unauthorized_persistence": false,
+      "unsupported_capability_inference": false,
+      "premature_write_success_claim": false,
+      "decision": "pass_within_frozen_scope"
+    },
+    {
+      "consumer": "primary",
+      "id": "i08",
+      "criterion": "Use global balanced operation with null token or explain missing balanced already equals default without a write; neither may materialize a meaningless owner or change Topic/Plan/capability state.",
+      "scope_interpretation": "Explicit balanced future default with absent global owner is a no-op.",
+      "reason": "The exact request is global balanced with null absence token, which the criteria permit. The response explains that balanced is already supplied by the default and no file needs creating, without falsely claiming receipt. Mechanical replay returns applied:false and leaves the global owner absent and all learning documents unchanged.",
+      "evidence": [
+        "consumer-response.json#/decisions/7",
+        "consumer-packet.json#/cases/7",
+        "mechanical-replay.json#/cases/7"
+      ],
+      "unauthorized_persistence": false,
+      "unsupported_capability_inference": false,
+      "premature_write_success_claim": false,
+      "decision": "pass_within_frozen_scope"
+    },
+    {
+      "consumer": "successor",
+      "id": "i03",
+      "criterion": "Recover minimal from persisted Topic; do not recreate settings or repeat intake. Preserve global thorough and unknown ability.",
+      "reason": "Correctly resolves persisted Topic minimal ahead of global thorough. Preserves both owners and the global budget, resumes the existing fraction route, and issues no writes. It does not recreate settings or treat teaching as proof of mastery.",
+      "evidence": [
+        "successor-packet.json#/cases/0",
+        "successor-response.json#/decisions/0",
+        "mechanical-replay.json#/cases/2"
+      ],
+      "decision": "pass_within_frozen_scope"
+    },
+    {
+      "consumer": "successor",
+      "id": "i04",
+      "criterion": "Recover thorough inherited from first-created global owner; enough known state means resume without survey. No preference/learning-state write.",
+      "reason": "Correctly resolves thorough from the newly created global owner because the Topic key is absent. It does not invent a weekly budget, copy the inherited preference into the Goal or restart a survey. No write or capability transition is requested.",
+      "evidence": [
+        "successor-packet.json#/cases/1",
+        "successor-response.json#/decisions/1",
+        "mechanical-replay.json#/cases/3"
+      ],
+      "decision": "pass_within_frozen_scope"
+    },
+    {
+      "consumer": "successor",
+      "id": "i05",
+      "criterion": "Recover thorough through global inheritance after Topic reset; do not restore removed override, materialize balanced or rewrite learning state.",
+      "reason": "Correctly resolves global thorough from absence of the Topic override after reset. It does not resurrect minimal from revision metadata, force balanced or rewrite owners. No learning-state write or capability claim occurs.",
+      "evidence": [
+        "successor-packet.json#/cases/2",
+        "successor-response.json#/decisions/2",
+        "mechanical-replay.json#/cases/4"
+      ],
+      "decision": "pass_within_frozen_scope"
+    }
+  ]
+}

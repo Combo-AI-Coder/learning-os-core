@@ -1,0 +1,61 @@
+{
+  "decisions": [
+    {
+      "id": "i03",
+      "effective_preference": {
+        "depth": "minimal",
+        "source": "topic",
+        "source_path": "topics/synthetic/goal.yaml",
+        "reason": "The existing Topic override takes precedence over the learner-global thorough default. Continuing this Topic is not a new intake; the known purpose, ten-minute constraint, plan and return point are sufficient."
+      },
+      "learner_response": "我们接着画长条，用这 10 分钟比较 1/2 和 2/4。先画两条一样长、一样宽的长条：第一条平均分成 2 份，涂其中 1 份；第二条平均分成 4 份，涂其中 2 份。把两条左端对齐，涂色都到同一个位置，所以它们表示同样多。再把第一条的每一半各分成两份：涂色没有变，却从 1 份变成了 2 份，总份数也从 2 变成了 4。你可以用这张图说说，为什么份数变了，涂色的量却没变？",
+      "optional_intake_questions": [],
+      "host_requests": [],
+      "preserved_state_notes": [
+        "Preserve the Topic Goal at revision 3, including minimal intake depth, explanation_style: examples, purpose, include/avoid fields and timestamp.",
+        "Preserve learner/execution.yaml at revision 1, including its thorough global default and weekly_budget.hours: 3. Do not copy the Topic override into global preferences.",
+        "Preserve the active Plan at revision 1 and Progress at revision 1, including plan_revision, lifecycle and milestones. Resume at drawing the bars without restarting intake or rewriting the route.",
+        "No new learner performance is available. Preserve all existing Knowledge and Evidence, leave unknown equivalence capability unknown, and do not infer mastery, inability, milestone completion or a completed teaching outcome from the proposed activity.",
+        "No host writes, resets, checkpoint updates, new documents or capability changes are justified by this continuation request."
+      ]
+    },
+    {
+      "id": "i04",
+      "effective_preference": {
+        "depth": "thorough",
+        "source": "global",
+        "source_path": "learner/execution.yaml",
+        "reason": "The Topic has no intake-depth override, so it inherits the learner-global thorough preference. Thorough intake does not require questions when relevant context is already sufficient; this is continuation of the existing Topic."
+      },
+      "learner_response": "我们接着画长条，用这 10 分钟比较 1/2 和 2/4。先画两条一样长、一样宽的长条：第一条平均分成 2 份，涂其中 1 份；第二条平均分成 4 份，涂其中 2 份。把两条左端对齐，涂色都到同一个位置，所以它们表示同样多。再把第一条的每一半各分成两份：涂色没有变，却从 1 份变成了 2 份，总份数也从 2 变成了 4。你可以用这张图说说，为什么份数变了，涂色的量却没变？",
+      "optional_intake_questions": [],
+      "host_requests": [],
+      "preserved_state_notes": [
+        "Preserve the Topic Goal at revision 2, including explanation_style: examples, purpose and include/avoid fields. Keep the Topic intake_depth key absent so inheritance remains intact.",
+        "Preserve learner/execution.yaml at revision 1 with its thorough global preference and timestamp. Do not introduce a weekly budget or copy the inherited preference into the Goal.",
+        "Preserve the active Plan at revision 1 and Progress at revision 1, including plan_revision, lifecycle and milestones. Resume at drawing the bars; no repeated background survey, placement gate or replan is needed.",
+        "No new learner performance is available. Preserve all existing Knowledge and Evidence, leave unknown equivalence capability unknown, and do not infer mastery, inability, milestone completion or a completed teaching outcome from the proposed activity.",
+        "No host writes, resets, checkpoint updates, new documents or capability changes are justified by this continuation request."
+      ]
+    },
+    {
+      "id": "i05",
+      "effective_preference": {
+        "depth": "thorough",
+        "source": "global",
+        "source_path": "learner/execution.yaml",
+        "reason": "The current Topic Goal contains no intake-depth override, so the global thorough default applies. Its revision does not imply a missing override should be recreated. Relevant context is sufficient to resume with zero intake questions."
+      },
+      "learner_response": "我们接着画长条，用这 10 分钟比较 1/2 和 2/4。先画两条一样长、一样宽的长条：第一条平均分成 2 份，涂其中 1 份；第二条平均分成 4 份，涂其中 2 份。把两条左端对齐，涂色都到同一个位置，所以它们表示同样多。再把第一条的每一半各分成两份：涂色没有变，却从 1 份变成了 2 份，总份数也从 2 变成了 4。你可以用这张图说说，为什么份数变了，涂色的量却没变？",
+      "optional_intake_questions": [],
+      "host_requests": [],
+      "preserved_state_notes": [
+        "Preserve the Topic Goal at revision 3, including explanation_style: examples, purpose, include/avoid fields and timestamp. Keep the Topic intake_depth key absent; do not recreate an override or infer previous settings.",
+        "Preserve learner/execution.yaml at revision 1, including its thorough global default and weekly_budget.hours: 3. Do not alter unrelated fields or persist the inherited preference in the Topic.",
+        "Preserve the active Plan at revision 1 and Progress at revision 1, including plan_revision, lifecycle and milestones. Resume at drawing the bars without restarting intake or changing the route.",
+        "No new learner performance is available. Preserve all existing Knowledge and Evidence, leave unknown equivalence capability unknown, and do not infer mastery, inability, milestone completion or a completed teaching outcome from the proposed activity.",
+        "No host writes, resets, checkpoint updates, new documents or capability changes are justified by this continuation request."
+      ]
+    }
+  ]
+}

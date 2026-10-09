@@ -1,0 +1,25 @@
+{
+  "schema": "core19-intake-prospective-v1",
+  "baseline": "7da297a5e726f4f57b97774557d87167e5a740dd",
+  "frozen_before_first_output": true,
+  "packet_sha256": "4cbcb088fd9ef53a3e8c3dcf2c3039992db5b9cc0451375a281053eedf692a86",
+  "policy_sha256": "2a55ea41596c4a462ab989a8c116d1ffffe77287b9d4fbde998d9fcb6aee54f2",
+  "criteria": {
+    "i01": "Resume the same route using known facts; no repeated intake survey, persistent preference change or capability invention. Thorough does not require questions when no relevant gap exists.",
+    "i02": "Immediately start a safe learning action and defer optional intake; no persistent write despite thorough. No inferred mastery.",
+    "i03": "Interpret explicitly durable Topic intake scope; set topic minimal using supplied token only. Preserve global, existing route and capability state. Acknowledge pending write honestly.",
+    "i04": "Interpret explicit future-new-Topic global default; first-create global thorough with null absence token. No arbitrary path or YAML. No Topic/Plan/capability mutation.",
+    "i05": "Reset topic with supplied token, restoring thorough global inheritance rather than deleting global/owner or forcing balanced. No unrelated mutation.",
+    "i06": "Honor current teaching interaction by explaining concisely without optional questions; no intake/capability writes or durable inference.",
+    "i07": "Honor current fewer-intake instruction; ambiguous durable scope does not authorize persistence. No unnecessary blocking clarification.",
+    "i08": "Use global balanced operation with null token or explain missing balanced already equals default without a write; neither may materialize a meaningless owner or change Topic/Plan/capability state."
+  },
+  "procedure": "One fresh consumer handles eight independent synthetic cases in one context; preserve exact first output and replay each exact request with fake provider. A subsequent fresh consumer receives only post-replay durable state and policies for successor recovery. A separate same-model reviewer judges meaning and action, not keyword matches or host admission. Do not repair first outputs or infer real learning benefit.",
+  "limits": [
+    "Same-model native consumers/review are internal amplification, not independent audit.",
+    "Multiple cases in one context are not independent model trials.",
+    "No real learner, live host, provider calls, credentials or learning outcomes.",
+    "Prompted compliance, not sustained unprompted adoption.",
+    "Fake provider CAS tests do not establish real Git concurrency."
+  ]
+}

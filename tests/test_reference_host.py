@@ -273,6 +273,8 @@ class ReferenceLearningHostTests(unittest.TestCase):
                 "save_learning_checkpoint",
                 "create_evidence",
                 "reconcile_knowledge",
+                "set_intake_preference",
+                "reset_intake_preference",
             },
             set(REFERENCE_HOST_OPERATIONS),
         )
@@ -306,7 +308,7 @@ class ReferenceLearningHostTests(unittest.TestCase):
         created = self.invoke("create_evidence", content=evidence)
         self.assertEqual(
             {
-                "surface_version": "v3",
+                "surface_version": "v4",
                 "ok": True,
                 "operation": "create_evidence",
                 "result": {"applied": True},
@@ -341,7 +343,7 @@ class ReferenceLearningHostTests(unittest.TestCase):
         )
         self.assertEqual(
             {
-                "surface_version": "v3",
+                "surface_version": "v4",
                 "ok": True,
                 "operation": "save_learning_checkpoint",
                 "result": {"applied": True},
