@@ -72,6 +72,11 @@ class FrozenFixtureCheckoutTests(unittest.TestCase):
             selection_paths = json.loads(selection_manifest.read_text(encoding="utf-8"))["files"]
             fixture_paths += tuple(f"{selection_root}/{name}" for name in selection_paths)
             fixture_paths += (f"{selection_root}/publication-manifest.json",)
+            correction_root = "tests/fixtures/core34-autonomous-correction"
+            correction_manifest = ROOT / correction_root / "publication-manifest.json"
+            correction_paths = json.loads(correction_manifest.read_text(encoding="utf-8"))["files"]
+            fixture_paths += tuple(f"{correction_root}/{name}" for name in correction_paths)
+            fixture_paths += (f"{correction_root}/publication-manifest.json",)
             expected = {path: (ROOT / path).read_bytes() for path in fixture_paths}
             expected["tests/fixtures/synthetic-crlf.txt"] = b"frozen\r\nbytes\r\n"
             sentinel = "tests/unprotected-sentinel.txt"

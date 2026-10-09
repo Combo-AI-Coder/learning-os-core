@@ -1,0 +1,24 @@
+{
+  "docs": {
+    "topics/synthetic/coordination/branches.yaml": "schema_version: '0.3'\ndocument_type: branch_registry\nrevision: 1\ntopic: synthetic\nbranches:\n  main:\n    role: main\n    lifecycle: active\n    subtopic: unit\n",
+    "topics/synthetic/coordination/branches/main/runtime.yaml": "schema_version: '0.3'\ndocument_type: branch_runtime\nrevision: 1\ntopic: synthetic\nbranch_id: main\nlineage_id: synthetic-main-lineage\nactive_generation: 3\npending_successor: null\ngenerations:\n  1:\n    lifecycle: archived\n  2:\n    lifecycle: archived\n  3:\n    lifecycle: active\n",
+    "learner/knowledge/synthetic.yaml": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 2\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      explanation:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One correct explanation appeared unassisted. Independent explanation\n          is provisionally supported for the next conceptual application; this is\n          not mastery or a derivation claim.\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+    "learner/model.yaml": "schema_version: '0.3'\ndocument_type: learner_model\nupdated_at: '2026-09-29T00:00:00Z'\nworking_style: {}\n",
+    "evidence/evi-synthetic-answer-001.yaml": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+    "topics/synthetic/subtopics/unit/progress.yaml": "schema_version: '0.3'\ndocument_type: subtopic_progress\nrevision: 3\nupdated_at: '2026-10-09T16:50:00Z'\ntopic: synthetic\nsubtopic: unit\nplan_revision: 1\nmilestones:\n  foundation:\n    status: completed\n  next-step:\n    status: in_progress\ncurrent:\n  milestone:\n  - next-step\nblockers: []\nresume:\n  return_point:\n    kind: teaching_thread\n    focus: Token identity and contextual representations\n    activity: Compare two sentence prefixes ending in the same vocabulary token.\n    scope: Conceptual application.\n  ready_next: []\nwatch:\n- kind: node\n  reason: preserve me\navoid_retesting:\n- foundation\n",
+    "evidence/evi-synthetic-report-002.yaml": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-report-002\nobserved_at: '2026-10-06T09:15:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner later said about the answer recorded in evi-synthetic-answer-001:\n    \"I recalled the two names myself, but for the explanation I looked at a hint saying\n    the vocabulary ID is fixed and the contextual representation varies with context.\n    I have not attempted another answer since then.\"'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-102\n"
+  },
+  "blobs": {
+    "topics/synthetic/coordination/branches.yaml": "5555555555555555555555555555555555555555",
+    "topics/synthetic/coordination/branches/main/runtime.yaml": "dddddddddddddddddddddddddddddddddddddddd",
+    "learner/knowledge/synthetic.yaml": "9999999999999999999999999999999999999999",
+    "learner/model.yaml": "ffffffffffffffffffffffffffffffffffffffff",
+    "evidence/evi-synthetic-answer-001.yaml": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "topics/synthetic/subtopics/unit/progress.yaml": "9999999999999999999999999999999999999999",
+    "evidence/evi-synthetic-report-002.yaml": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "instance_head": "8888888888888888888888888888888888888888",
+  "snapshot_extra_paths": [
+    "topics/synthetic/subtopics/unit/progress.yaml"
+  ]
+}
