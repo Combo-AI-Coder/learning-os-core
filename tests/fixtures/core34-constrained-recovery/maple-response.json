@@ -1,0 +1,6 @@
+{
+  "reply": "We were connecting token identity to next-word prediction. Assume ‘bank’ is one vocabulary token in both prefixes:\n\n1. After reviewing the loan application, the bank\n2. After days of flooding, the river bank\n\nGive one plausible next word for each. Could a model distinguish these situations using only the final token’s vocabulary ID? Explain what information its contextual representation would need to preserve to favor different continuations.",
+  "basis": "Progress identifies this conceptual application as the return point and marks foundation complete. The sole recovered Evidence event provisionally supports explanation and label recall. There is no new performance or reinterpretation warranting a Knowledge change; continue with natural observation and no persistence.",
+  "coverage": "Recovered current Progress, current Knowledge, and the single Evidence event returned by discovery covering all context matches in the bounded snapshot. No learner answer to the resumed activity is available, and no broader evidence coverage is claimed.",
+  "host_requests": []
+}

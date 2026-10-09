@@ -1,0 +1,2 @@
+# Preserve frozen observation and receipt bytes on every checkout.
+*.json -text

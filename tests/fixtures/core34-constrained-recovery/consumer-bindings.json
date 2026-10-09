@@ -1,0 +1,51 @@
+{
+  "observed_order": "Prospective plan and every input completed before first dispatch. Consumers were instructed to read exactly one packet and preserve first response. No resampling or output repair.",
+  "isolation": "Instructional within shared filesystem; not enforced container/provider isolation.",
+  "rows": [
+    {
+      "input": "cedar-packet.json",
+      "input_sha256": "51753c2fe1005f695423ae071228b8167668e9b180144a751c00f44a38bc1de1",
+      "output": "cedar-response.json",
+      "output_sha256": "61087555b73429ffc2eb70731ff56d09b1858a52a0a3dd76008f7fd86a3e7b95",
+      "fresh_native_context": true,
+      "prompt_included_exact_input_hash": true,
+      "output_create_only_requested": true,
+      "model_provider_diversity": "unknown",
+      "provider_generation_attestation": "unavailable"
+    },
+    {
+      "input": "iris-packet.json",
+      "input_sha256": "cd58fe7167cd17ee4f57e2b1a8b53d93e47040c9a6a647842a2c9138455b1f46",
+      "output": "iris-response.json",
+      "output_sha256": "7a172657c864ea8a0d8e3a601906dee541c6695705f873557774df4d3f38337f",
+      "fresh_native_context": true,
+      "prompt_included_exact_input_hash": true,
+      "output_create_only_requested": true,
+      "model_provider_diversity": "unknown",
+      "provider_generation_attestation": "unavailable"
+    },
+    {
+      "input": "juniper-packet.json",
+      "input_sha256": "1e3e28010508a92af125ec0aecbfb05a5d450089e7d6ba223a5d0fba7784845b",
+      "output": "juniper-response.json",
+      "output_sha256": "0130237086a0e7dcbbc1781ae639a9ac75f247747118340a3c5fd21c1538fe4e",
+      "fresh_native_context": true,
+      "prompt_included_exact_input_hash": true,
+      "output_create_only_requested": true,
+      "model_provider_diversity": "unknown",
+      "provider_generation_attestation": "unavailable"
+    },
+    {
+      "input": "maple-packet.json",
+      "input_sha256": "b92d543b665dd337cc7986449e5cc1b2304ab6f93cdeb82b9a38a0e6eee65c3e",
+      "output": "maple-response.json",
+      "output_sha256": "407b0fe147cd9e17460f470de8b8e70028c24062c1b706fe11883dea1d0bb714",
+      "fresh_native_context": true,
+      "prompt_included_exact_input_hash": true,
+      "output_create_only_requested": true,
+      "model_provider_diversity": "unknown",
+      "provider_generation_attestation": "unavailable"
+    }
+  ],
+  "laurel": "Byte-identical to iris; uses same first output, not counted as an additional consumer trial."
+}

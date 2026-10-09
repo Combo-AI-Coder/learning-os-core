@@ -57,6 +57,11 @@ class FrozenFixtureCheckoutTests(unittest.TestCase):
             history_manifest = ROOT / "tests/fixtures/core34-withdrawn-support/prospective-manifest.json"
             history_paths = json.loads(history_manifest.read_text(encoding="utf-8"))["historical_files"]
             fixture_paths += tuple(history_paths) + tuple(HISTORICAL_SOURCE_ARCHIVES.values())
+            constrained_root = "tests/fixtures/core34-constrained-recovery"
+            constrained_manifest = ROOT / constrained_root / "publication-manifest.json"
+            constrained_paths = json.loads(constrained_manifest.read_text(encoding="utf-8"))["files"]
+            fixture_paths += tuple(f"{constrained_root}/{name}" for name in constrained_paths)
+            fixture_paths += (f"{constrained_root}/publication-manifest.json",)
             expected = {path: (ROOT / path).read_bytes() for path in fixture_paths}
             expected["tests/fixtures/synthetic-crlf.txt"] = b"frozen\r\nbytes\r\n"
             sentinel = "tests/unprotected-sentinel.txt"

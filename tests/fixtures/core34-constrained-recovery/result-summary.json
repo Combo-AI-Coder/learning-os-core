@@ -1,0 +1,55 @@
+{
+  "status": "bounded synthetic observation; wider Core #34 remains partial/open",
+  "baseline": "d6ddb41490d761bdc8e4f25ba7dee7d1dd84278d",
+  "latest_main_readback": {
+    "sha": "d6ddb41490d761bdc8e4f25ba7dee7d1dd84278d",
+    "observed_utc": "2026-10-09T12:03:15Z",
+    "source": "https://api.github.com/repos/Combo-AI-Coder/learning-os-core/branches/main"
+  },
+  "question": "Fresh-consumer judgment after actual permission/availability/bounded-capacity recovery outcomes.",
+  "observations": [
+    {
+      "arm": "full",
+      "outcome": "First response proposes only removal of stale independent explanation; retains label recall. Exact request admitted unchanged; only synthetic Knowledge changed, original Evidence and Progress preserved."
+    },
+    {
+      "arm": "denied",
+      "outcome": "Host denies actual discovery with zero Evidence-content reads. Consumer treats relevant portfolio as unrecovered and continues saved activity without durable withdrawal."
+    },
+    {
+      "arm": "missing_after_bootstrap",
+      "outcome": "Discovery returns neutral report but original referenced performance is unavailable; final required read fails. Consumer uses report cautiously but retains uncertainty and makes no durable change."
+    },
+    {
+      "arm": "matching_record_budget",
+      "outcome": "Host scans 17 matching records, exceeds existing 16-match bound and returns no partial Evidence. Consumer packet is byte-identical to denied; same first response used, not a separate trial."
+    },
+    {
+      "arm": "no_report_in_scope",
+      "outcome": "Successful discovery and combined read contain only original performance. Consumer invents no hint, makes no correction, and limits coverage to the bounded snapshot."
+    }
+  ],
+  "counts": {
+    "causal_arms": 5,
+    "unique_packets_and_first_native_outputs": 4,
+    "mechanical_input_checks_true": 17,
+    "exact_proposed_requests": 1,
+    "admitted_requests": 1,
+    "repository_or_public_writes": 0
+  },
+  "preserved_first_preparation_failure": "Before-bootstrap deletion of referenced Evidence blocks host.open via deployment reference.evidence_missing validation. Original plan and traceback retained; no consumers ran on attempt 1. Revised missing arm was frozen separately and tests post-bootstrap retrieval loss.",
+  "supported_delta": "Actual constrained existing-host read sequence now feeds fresh-consumer input end to end, rather than trimming an unrestricted successful recovery afterward. Unknown coverage is distinguished from successful scoped no-report recovery in these first outputs.",
+  "not_established": [
+    "Autonomous path/context selection; recovery recipe is fixed and externally scripted.",
+    "Operating-system crash or production Git recovery/concurrency/freshness; provider has synthetic fixed tokens and fake heads.",
+    "Valid initially missing referenced Evidence: startup rejects that state.",
+    "Cross-topic/legacy completeness; selector coverage is explicit Topic/Subtopic scope.",
+    "General/model-provider-independent reliability or statistical success rate; model diversity unknown.",
+    "Teaching effectiveness, retention, transfer, real learner benefit or product acceptance.",
+    "Unprompted behavior without policy/output cues: ordinary request includes full product protocols and explicit coverage output field.",
+    "Distinguishing denial from capacity failure through public error envelope: those inputs are identical.",
+    "Protocol/schema/runtime enforcement change, deployment or public publication."
+  ],
+  "first_artifact_integrity": "Input hashes frozen before dispatch and supplied in fresh-context prompts. Each consumer reported matching input hash and create-only first output. Shared filesystem isolation is instructional; there is no independent provider-side generation attestation. Executor clock skew disclosed in separate clock receipt.",
+  "next_decision": "No implementation change is required by this observation. Any repository publication or product change is a separate concrete scope for the parent/user. Broader Core #34 evidence obligations remain open."
+}

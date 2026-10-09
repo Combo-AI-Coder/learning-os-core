@@ -1,0 +1,52 @@
+{
+  "source_bundle_sha256": "bdd6f974efaa5ae8d233791a1547c8842710c841c325bd06108a50c047a2c1ff",
+  "files": {
+    "audit-errata.json": "f856e4a78b9681e3ea11e89235be5213d62ac8e6b889d07ea5aee0642c24b1b3",
+    "cedar-packet.json": "51753c2fe1005f695423ae071228b8167668e9b180144a751c00f44a38bc1de1",
+    "cedar-response.json": "61087555b73429ffc2eb70731ff56d09b1858a52a0a3dd76008f7fd86a3e7b95",
+    "complementary-review.json": "0e03f8224bfbb21cce8def1bac1dd6baa7c79d577fc82e84e0e970b1b1005d58",
+    "consumer-bindings.json": "e16331efa954d4f0c0801502ec15b6cab0ab44501d99fde874442a1e06a3396f",
+    "exact-replay.json": "7358c37211c41850d9b9cbc4a38792c7a36504d0dc1de0903e0bcf4492e71405",
+    "initial-preparation-failure.json": "e426a2d6b47d80b8104575896b8dcbd795da1d842ed1cd8ca738858490bc186d",
+    "initial-prospective-plan.json": "03c0e29096fb2db025fed74bef3a00297a6c8204a85a9665512d72729dede4a1",
+    "iris-packet.json": "cd58fe7167cd17ee4f57e2b1a8b53d93e47040c9a6a647842a2c9138455b1f46",
+    "iris-response.json": "7a172657c864ea8a0d8e3a601906dee541c6695705f873557774df4d3f38337f",
+    "juniper-packet.json": "1e3e28010508a92af125ec0aecbfb05a5d450089e7d6ba223a5d0fba7784845b",
+    "juniper-response.json": "0130237086a0e7dcbbc1781ae639a9ac75f247747118340a3c5fd21c1538fe4e",
+    "laurel-packet.json": "cd58fe7167cd17ee4f57e2b1a8b53d93e47040c9a6a647842a2c9138455b1f46",
+    "maple-packet.json": "b92d543b665dd337cc7986449e5cc1b2304ab6f93cdeb82b9a38a0e6eee65c3e",
+    "maple-response.json": "407b0fe147cd9e17460f470de8b8e70028c24062c1b706fe11883dea1d0bb714",
+    "mechanical-input-check.json": "b9a8f655202d364f5912e3491f846731932120137cdeb3a1c698129ea580bbcd",
+    "preconsumer-manifest.json": "9f897e79b6fefec0057c3492b6d2b6ea1d2a6c918b4116ddb66f8b2179d50b78",
+    "predispatch-clock-receipt.json": "958f884b00ba4cd9bd5cbe7bf484f3dc633a0bc6bc0267ef4f8738338d6ca186",
+    "prospective-plan.json": "d47fdbc5397ce2465948f90de5cd6814f8b7629e7c8c2746d8d2808b9ed1cbfe",
+    "result-summary.json": "85f45dc3bafb393ac8503a3020e4471aabc7fb0c8cab3165f36de70bd9baa07d",
+    "scope-clarifications.json": "e5adde7ac87e29f4cf25e5b350cc5aa49c4233409086c13333f5375e1c685d22"
+  },
+  "byte_copied": [
+    "audit-errata.json",
+    "cedar-packet.json",
+    "cedar-response.json",
+    "complementary-review.json",
+    "consumer-bindings.json",
+    "exact-replay.json",
+    "initial-prospective-plan.json",
+    "iris-packet.json",
+    "iris-response.json",
+    "juniper-packet.json",
+    "juniper-response.json",
+    "laurel-packet.json",
+    "maple-packet.json",
+    "maple-response.json",
+    "mechanical-input-check.json",
+    "preconsumer-manifest.json",
+    "predispatch-clock-receipt.json",
+    "prospective-plan.json",
+    "result-summary.json",
+    "scope-clarifications.json"
+  ],
+  "derived": [
+    "initial-preparation-failure.json"
+  ],
+  "limits": "Original input/output bytes and observed order are preserved, not independent provider-side generation attestations. Read the clock erratum and scope clarifications with the original observations. The portable helper is a later reproduction, not the original generation harness."
+}

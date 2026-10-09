@@ -1,0 +1,68 @@
+[
+  {
+    "arm": "full",
+    "response_artifact": "cedar-response.json",
+    "response_sha256": "61087555b73429ffc2eb70731ff56d09b1858a52a0a3dd76008f7fd86a3e7b95",
+    "requests": [
+      {
+        "operation": "reconcile_knowledge",
+        "arguments": {
+          "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+          "expected_version_token": "9999999999999999999999999999999999999999"
+        }
+      }
+    ],
+    "request_results": [
+      {
+        "surface_version": "v4",
+        "ok": true,
+        "operation": "reconcile_knowledge",
+        "result": {
+          "applied": true
+        }
+      }
+    ],
+    "changed_paths": [
+      "learner/knowledge/synthetic.yaml"
+    ],
+    "evidence_and_progress_unchanged": true,
+    "final_knowledge": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+    "exact_input_reproduced_before_replay": true
+  },
+  {
+    "arm": "denied",
+    "response_artifact": "iris-response.json",
+    "response_sha256": "7a172657c864ea8a0d8e3a601906dee541c6695705f873557774df4d3f38337f",
+    "requests": [],
+    "request_results": [],
+    "changed_paths": [],
+    "replay_status": "No request proposed; no mutation invoked."
+  },
+  {
+    "arm": "missing",
+    "response_artifact": "juniper-response.json",
+    "response_sha256": "0130237086a0e7dcbbc1781ae639a9ac75f247747118340a3c5fd21c1538fe4e",
+    "requests": [],
+    "request_results": [],
+    "changed_paths": [],
+    "replay_status": "No request proposed; no mutation invoked."
+  },
+  {
+    "arm": "budget",
+    "response_artifact": "iris-response.json",
+    "response_sha256": "7a172657c864ea8a0d8e3a601906dee541c6695705f873557774df4d3f38337f",
+    "requests": [],
+    "request_results": [],
+    "changed_paths": [],
+    "replay_status": "No request proposed; no mutation invoked."
+  },
+  {
+    "arm": "no_report",
+    "response_artifact": "maple-response.json",
+    "response_sha256": "407b0fe147cd9e17460f470de8b8e70028c24062c1b706fe11883dea1d0bb714",
+    "requests": [],
+    "request_results": [],
+    "changed_paths": [],
+    "replay_status": "No request proposed; no mutation invoked."
+  }
+]
