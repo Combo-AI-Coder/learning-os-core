@@ -1,0 +1,18 @@
+{
+  "frozen_at_utc": "2026-10-09T14:28:23.865530+00:00",
+  "consumer_calls_at_freeze": 0,
+  "files": {
+    "prospective-plan.json": "4398165d8dd05ab8c5ab276b86a4f1613f5922f4e88535b42a7e48b58a29ea29",
+    "host_bridge.py": "375668f66dd20b320632ddbea07e68d9b4d458e9b42a3637ffae26fc9a90fe3a",
+    "source-tree-bindings.json": "4716b6e49ec763752b0da1c60a733d340857cc5d90c81d5f26b77614cb8dfbfc",
+    "initial-provider-state.json": "76a38212d06d8f88f3f8298e1900f2767273df1915d5cc9e5ab501dd0e6da61d",
+    "prepared-input-review-1.json": "7e169de39a6a1f1c01d06a6f7fce2611dfd92910215ec39c1d0646a6ae63ec92",
+    "pre-freeze-review-candidate-2.json": "fc2bedd2cbb0a89e09f6104f6bfde5c4919ca773a7af2188215c368055651306",
+    "handles/4cecb8101ae8acb7/packet.json": "96845d4e18342d56e9f4b974496474ea176bef50126c5c8472321cf3664777c3",
+    "handles/4cecb8101ae8acb7/dispatch.txt": "f6bd5427fb1192949326487858165d0a60666c57de29310a5379edb3d6fb6df2",
+    "handles/7bb8e4e5a5448ec5/packet.json": "aed042c338890ecf963eb5c12010fdff1e82f66cbe223868068b20a0a925fcd6",
+    "handles/7bb8e4e5a5448ec5/dispatch.txt": "f2821e4950674d4a4101f0aecd6b4bbcb6d628b6eb942a300555bd0e537d1a85",
+    "handles/7bfe2562b40417b1/packet.json": "b80dcfdcda01ae40dd4a86d2a78f37f6a097bc2ee7819ee51cb0d021d21e3ac0",
+    "handles/7bfe2562b40417b1/dispatch.txt": "44787f5a157de82d2b6cc907c89aefc47e082fb0c81f2623505c8e153b5a85c7"
+  }
+}
