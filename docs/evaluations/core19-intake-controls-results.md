@@ -51,6 +51,59 @@ Neither a resolver return, a keyword match nor an admitted request establishes
 teaching quality. Precise semantic conclusions follow the retained review, while
 mechanical tests only reproduce the evidence and reject missing/duplicate rows.
 
+## Reproduce the retained evidence offline
+
+Start from a complete Core checkout and the isolated dependency setup in the
+[README](../../README.md#offline-validation-and-retained-evidence). From the
+repository root, run the existing focused test module on POSIX:
+
+    ../learning-os-core-venv/bin/python -m unittest discover -s tests -p "test_intake_experience.py" -v
+
+On Windows PowerShell, retain the README's `PYTHONUTF8=1` setting and use
+`..\learning-os-core-venv\Scripts\python.exe` for the interpreter.
+This runs six deterministic tests: frozen input/case checks, exact request
+replay, missing/duplicate response rejection, successor-state binding, frozen
+policy preservation and artifact-bound semantic-review coverage. It does not
+sample a new consumer, rerun the semantic reviewer or grade teaching quality.
+The full Core validator and aggregate tests in the README remain the required
+integration checks; this focused command does not replace them.
+
+Follow the existing materials in this order:
+
+1. [Prospective plan](core19-intake-controls-plan.md) and
+   [consumer packet](../../tests/fixtures/core19-intake/consumer-packet.json):
+   the frozen policy, learner messages, initial state and granted capabilities.
+2. [Original consumer decisions](../../tests/fixtures/core19-intake/consumer-response.json):
+   `i03` sets Topic minimal, `i04` first-creates global thorough, `i05` resets
+   the Topic override to inherit global thorough, and `i08` requests global
+   balanced while the owner is absent. The other cases justify no write.
+3. [Mechanical replay](../../tests/fixtures/core19-intake/mechanical-replay.json):
+   the host receipts, changed paths and durable readback. The first three
+   requests change their scoped owner; `i08` returns `applied: false` without
+   creating one. [The helper](../../tests/intake_controls_fixture.py) rebuilds
+   each case with a fake provider and fixed clock in temporary directories.
+4. [Successor packet](../../tests/fixtures/core19-intake/successor-packet.json),
+   [original successor decisions](../../tests/fixtures/core19-intake/successor-response.json)
+   and [semantic assessment](../../tests/fixtures/core19-intake/semantic-review.json):
+   three fresh-context decisions and the retained, artifact-bound review.
+
+The setup starts with an existing synthetic Topic, Goal, Plan, Progress and Main
+Branch. The helper supplies the trusted locator, provider, read/write policy,
+write gate and generation; the consumer packet supplies owner version tokens.
+It does not demonstrate creating a first Topic from an empty installation. In an
+actual host session, existing-owner tokens must come from a current
+`read_learning_context`; absent-global creation requires verified absence and a
+null token. The frozen example tokens are not inputs for a live learner write.
+See [scoped intake admission](../reference-host.md#scoped-intake-controls-surface-v4).
+
+`IntakeJourney.recover()` opens a new broker session and reads the post-replay
+owners. The later consumer packet also carries `known_context`, including facts
+not fully represented in those owners. This replay verifies preference and
+inheritance recovery plus the retained artifact bindings, not complete
+teaching-context recovery from durable state alone. The original model outputs
+and their scope limits remain unchanged. No credentials, real Instance, model
+runner or transport service are needed for this offline path.
+
 ## Validation and historical compatibility
 
 New deterministic tests cover owner preservation, first creation, no-op absence,
