@@ -1,0 +1,153 @@
+{
+  "seals": {
+    "baseline": {
+      "sealed_at": "2026-10-09T17:02:43.998084+00:00",
+      "handle": "981faa92ca00038e",
+      "packet_sha256": "007d93c39902e7186553fd29a53daf749c52c7911f72a250ec31cc726bcd11ed",
+      "task_sha256": "7bef86ea8133c8d8a45c161ad519ac2f5008c82d3a23cb895782392c6c09c5be",
+      "first_response_sha256": "8e6a7043dca600d8d7150d97e94164ba97cc12bae1851c3bae8aeb5ee182f6b2",
+      "first_response_format_valid": true,
+      "receipt_integrity_errors": [],
+      "receipt_hashes": {
+        "001.json": "333a77c24ab672bd799adc63af40f0391056e86632cfb3910f63c4ac98c0f6eb",
+        "002.json": "bfa5415dc5d2e4f78378908a8ab51b3a44c99375caa687c66ff2d49171cae372",
+        "003.json": "f3abbacaed829ddf3aae70d0a85904f79f0db31485046a5d95f5dc4357552db7"
+      },
+      "request_count": 3,
+      "operations": [
+        "read_learning_context",
+        "discover_learning_evidence",
+        "read_learning_context"
+      ],
+      "failed_results": [],
+      "initial_state_sha256": "8003e8136238b035b363d7c581e8ed094e5fddcdb81c4a91c8be81fbb1665226",
+      "final_state_sha256": "8003e8136238b035b363d7c581e8ed094e5fddcdb81c4a91c8be81fbb1665226",
+      "changed_paths": [],
+      "original_evidence_unchanged": true,
+      "new_evidence_paths": [],
+      "successor_decision": {
+        "status": "no_new_payload",
+        "trigger": false,
+        "payload_changed_paths": [],
+        "applied_owning_write_indices": [],
+        "full_state_changed": false,
+        "rule": "frozen payload projection; semantic interpretation is separate"
+      },
+      "transport_rejection_hashes": {}
+    },
+    "report": {
+      "sealed_at": "2026-10-09T17:05:19.319628+00:00",
+      "handle": "60ab06c5915864c9",
+      "packet_sha256": "007d93c39902e7186553fd29a53daf749c52c7911f72a250ec31cc726bcd11ed",
+      "task_sha256": "b9ddb8c01626f3c92ebb7360ac6eacbc043efc04cdbf56cc788b0757fdc9f8fd",
+      "first_response_sha256": "3e6cc301db6d185f184cfb7d8ac05b10982375dd2b4537117bdfd3ce766d98aa",
+      "first_response_format_valid": true,
+      "receipt_integrity_errors": [],
+      "receipt_hashes": {
+        "001.json": "858a33db54f015c34281988095bce07a84a02e8cc83596cf91e083d9145a04e9",
+        "002.json": "9ac594e08cbb026dec9645101a328a98e257884628ad7a055401cc1f83fbf112",
+        "003.json": "828d5fc8a17fc956a4cf4c5e6cdc324d62f87140334a2cc1548985ced995d5bd",
+        "004.json": "46b6f6dc2e6de363e905684f36a2bf424b2add5c21368ad3b73e16ebef361c70",
+        "005.json": "68c8a39cbe8979e58379b92958c46f52c6959cf215ea68e5d9cb8f47457c50c2"
+      },
+      "request_count": 5,
+      "operations": [
+        "read_learning_context",
+        "discover_learning_evidence",
+        "read_learning_context",
+        "reconcile_knowledge",
+        "read_learning_context"
+      ],
+      "failed_results": [],
+      "initial_state_sha256": "a189f6ebfdb2de8ef87d91e1a975349d36c537f06ecc5e3bcf2f91e46a821b49",
+      "final_state_sha256": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73",
+      "changed_paths": [
+        "learner/knowledge/synthetic.yaml"
+      ],
+      "original_evidence_unchanged": true,
+      "new_evidence_paths": [],
+      "successor_decision": {
+        "status": "triggered",
+        "trigger": true,
+        "payload_changed_paths": [
+          "learner/knowledge/synthetic.yaml"
+        ],
+        "applied_owning_write_indices": [
+          4
+        ],
+        "full_state_changed": true,
+        "rule": "frozen payload projection; semantic interpretation is separate"
+      },
+      "transport_rejection_hashes": {}
+    },
+    "successor": {
+      "sealed_at": "2026-10-09T17:07:29.739288+00:00",
+      "handle": "f3257f07c9e0c925",
+      "packet_sha256": "8948f82870db18f2f6bb1e8a970775cafcbec231b28e4b1e03d6fc4f270ea463",
+      "task_sha256": "d56dff45cfde4e69b93ae741ba49fef843c039784ab71f9104748cfc188f12bc",
+      "first_response_sha256": "0f01f714dc8bda68fe7de76b03934dafbc44d743001b0e8f3df430146f0606ba",
+      "first_response_format_valid": true,
+      "receipt_integrity_errors": [],
+      "receipt_hashes": {
+        "001.json": "64bd6531f371aad616df1525c6bb7cbcf627e760a6612e81b6214f5105667663",
+        "002.json": "2f41fec151e5504dad9a9fd8291ad6b3209fc037458f018ae9e8541ff279f1e1",
+        "003.json": "69ef89554efaae3d99c0ae0ec59a23c5e8489e9121c4c10b76aad245fb1e869f"
+      },
+      "request_count": 3,
+      "operations": [
+        "read_learning_context",
+        "discover_learning_evidence",
+        "read_learning_context"
+      ],
+      "failed_results": [],
+      "initial_state_sha256": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73",
+      "final_state_sha256": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73",
+      "changed_paths": [],
+      "original_evidence_unchanged": true,
+      "new_evidence_paths": [],
+      "successor_decision": {
+        "status": "successor_no_recursion",
+        "trigger": false
+      },
+      "transport_rejection_hashes": {}
+    }
+  },
+  "seal_sha256": {
+    "baseline": "31927a0c71afa2500dfb1d33577f8f74bc86688d87ef86f3d7280aafecc3928a",
+    "report": "1e292682cd64ba4977a7be47f2763322724193a2a2e187eec5d7ce4cb157538e",
+    "successor": "877e94bb27655eb093e4110fc743fcfea33061377189ea3f0d2660f3489beaa8"
+  },
+  "successor_origin": {
+    "at": "2026-10-09T17:05:34.027939+00:00",
+    "parent_handle": "60ab06c5915864c9",
+    "parent_sealed_sha256": "1e292682cd64ba4977a7be47f2763322724193a2a2e187eec5d7ce4cb157538e",
+    "parent_state_sha256": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73",
+    "trigger": {
+      "status": "triggered",
+      "trigger": true,
+      "payload_changed_paths": [
+        "learner/knowledge/synthetic.yaml"
+      ],
+      "applied_owning_write_indices": [
+        4
+      ],
+      "full_state_changed": true,
+      "rule": "frozen payload projection; semantic interpretation is separate"
+    },
+    "readonly": true,
+    "frozen_files": {
+      "initial-state.json": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73",
+      "packet.json": "8948f82870db18f2f6bb1e8a970775cafcbec231b28e4b1e03d6fc4f270ea463",
+      "task.txt": "d56dff45cfde4e69b93ae741ba49fef843c039784ab71f9104748cfc188f12bc",
+      "transport-spec.json": "878a7faef32f98b9a0afe4866563d403de4ce494a7e1722508c2fa79998b9790"
+    }
+  },
+  "successor_origin_sha256": "484c5ddb3ed941b5799b259b0d3b9bf34f793b7c10fb88597080d94c3f6d9a26",
+  "successor_created": {
+    "handle": "f3257f07c9e0c925",
+    "origin_sha256": "484c5ddb3ed941b5799b259b0d3b9bf34f793b7c10fb88597080d94c3f6d9a26"
+  },
+  "frozen_successor_packet_sha256": "8948f82870db18f2f6bb1e8a970775cafcbec231b28e4b1e03d6fc4f270ea463",
+  "frozen_successor_task_template_sha256": "20e6fa578325f1cd5fcfcbb9af0a5f3ddddbd57cce003f3c2271565f4548d0d3",
+  "qualification": "No discretionary post-output semantic filter. Baseline no payload change; report payload change plus applied owning write; successor is read-only and does not recurse. Raw task/handoff text excluded."
+}

@@ -1,0 +1,101 @@
+{
+  "version": "core34-autonomous-correction-prospective-method-review-v1",
+  "reviewed_at": "2026-10-09T17:00:23.035721+00:00",
+  "verdict": "accepted_for_the_bounded_prospective_study",
+  "review_context": "Separate native reviewer context; same-family/provider independence is not established. No consumer model was invoked by this reviewer.",
+  "candidate": "prospective-candidate-3.json",
+  "consumer_status_at_review": "Both first-consumer receipt directories are empty, both provider states remain the prepared initial states, and neither first-response file exists.",
+  "scope": "Temporary fictional method review only. This verdict is not permission for publication, repository/source mutation, deployment, real learner work, extra trials, project acceptance or production mechanisms.",
+  "source_binding": {
+    "canonical_main_as_supplied": "0c1611568c9222d1329a6963bd64c93c5c3b5ec7",
+    "canonical_tree_as_supplied": "593090cf68c7e56f5c319602ade9da48a313f5f8",
+    "working_file_verification": "All 221 source-bindings hashes independently matched the current local working files.",
+    "local_head_qualification": "The local snapshot HEAD is 235bb039595afce5cf4bd6bc4becc204bc141793 with HEAD tree 05ee86873e660b16547130ed77337f7425613d5a and staged publication content. This review binds working files and does not identify that local HEAD with canonical main. Remote main/tree verification is supplied by the parent, not independently repeated here.",
+    "governance": "Read AGENTS.md. Core remains synthetic product semantics, separate from live Instance and Runtime-Control authority."
+  },
+  "meaningful_novelty": {
+    "finding": "Yes, for a bounded conjunction that earlier retained studies did not exercise together.",
+    "comparisons": [
+      "Cold resume and constrained recovery supplied an operator-selected completed recovery trace; they did not test consumer-chosen actual acquisition.",
+      "Context-selection tested consumer-selected actual reads but used rich checkpoints and no newly pending assistance reinterpretation.",
+      "This design starts from one sparse target activity return point, allows self-selected actual reads to acquire an unreferenced report, leaves correction/persistence optional, and conditionally tests the resulting state in a fresh read-only context."
+    ],
+    "limits": "The performance/report semantic scenario is reused, not an independent new performance. Full public guidance already discusses hint-based withdrawal, so this remains product-policy-conditioned adoption, not unguided discovery, protocol ablation or a reliability estimate."
+  },
+  "prepared_worlds": {
+    "finding": "The report world differs only by the added neutral report document and its associated blob. Existing Knowledge, Progress, performance, other documents, existing blobs, fake instance head and extra snapshot-path set are unchanged.",
+    "checkpoint": "The target return point contains subject, sparse activity and conceptual scope, without prior answer, assistance report, capability judgment or recommended intervention. Ordinary non-target Progress boilerplate remains, so sparse is relative to the rich prior checkpoints, not an empty state.",
+    "performance_count": "Exactly one task_response occurrence exists in each world. Shared history across worlds is not pooled as repeated performance.",
+    "first_inputs": "Initial semantic packet bytes are identical. The two formal tasks differ only by opaque handle and assigned paths. Neither initial packet contains an actual Evidence ID, concrete Knowledge owner or arm label."
+  },
+  "acceptable_actions": {
+    "finding": "The frozen set preserves unknown versus absence and does not force a diagnostic, action label, different next question, or durable write.",
+    "limited_acquisition": "A safe continuation supported by the obtained checkpoint can be acceptable. Unread, denied or unavailable Evidence remains unknown. A successful context-scoped discovery supports only that explicit matching snapshot, not absence across legacy/cross-topic history.",
+    "report_interpretation": "Once acquired with original performance and relevant Knowledge, the concrete neutral report removes the sole apparent basis for independent explanation while preserving separately recalled naming. Withdrawal of support is not substantive inability, a new failure, or an automatic unsupported transition.",
+    "durable_semantics": "Any chosen reconciliation must inspect actual retrieved support, complete submitted payload and expected token, actual applied result and later readback where present. Preserve immutable Evidence and unaffected naming. The neutral report cannot be inserted as support/challenge merely to encode its relevance.",
+    "separate_outcomes": "Acquisition, interpretation, durable decision and successor use must be reported separately. Acquired-safe-no-persistence is acceptable but does not demonstrate persistence transfer. Safe-limited-acquisition is not automatically unsafe teaching.",
+    "assessment": "Final semantic review must inspect the actual learner-facing teaching content, not keywords, shape validity or host admission. Public write operations return only applied, not a new token."
+  },
+  "successor_rule": {
+    "finding": "Objective enough before observation; no favorable semantic judgment is used to select successors.",
+    "projection": "Compare initial and sealed-final parsed Knowledge and Progress. Exclude only top-level revision/updated_at and per-capability Knowledge updated_at. Preserve all other fields, including claim conditions, confidence, references, basis prose and nested checkpoint content.",
+    "eligibility": "A surviving projected difference and an applied owning write trigger exactly one fresh read-only successor. Wording-only changes conservatively trigger; metadata-only and fully reverted changes do not. Invalid/missing payload, uncorroborated mutation or receipt-integrity/state-chain error blocks rather than silently counting as no-change.",
+    "provenance": "The read-only successor packet and task template are now materialized before any first response. The generator uses these local frozen templates and the sealed final provider state; it does not regenerate semantic input from the external prior-study packet or copy the parent response/receipts. Read-only successors do not recurse.",
+    "interpretive_limit": "A triggered successor does not itself establish correction. The independent outcome review must distinguish an unrelated checkpoint or wording change from actual preservation of the report-specific claim limits."
+  },
+  "transport_and_replay": {
+    "finding": "The temporary bridge leaves product source and operation semantics unchanged while recording actual first requests and persisting actual allowed fictional writes.",
+    "reviewed_safeguards": [
+      "Raw request bytes and hash are journaled before parse/invoke; malformed-input paths retain current unchanged state when available.",
+      "Exclusive per-handle lock, non-clobbering receipt reservation and separate concurrent-rejection artifacts protect first-call order and prevent overwrites.",
+      "The lock is shared by sealing, and the sealed marker is rechecked after acquisition.",
+      "Exceptions after provider construction retain provider trace and actual after-state, even if a mutation preceded the exception.",
+      "The sealer checks raw/parsed request bindings, contiguous order, complete response, state hashes and before-to-after chain through final state before successor eligibility.",
+      "Fictional event time is fixed separately from real receipt timestamps; fake provider tokens remain synthetic.",
+      "Deterministic replay consumes original raw bytes and requires actual result, provider-call trace and resulting state equivalence; it does not repair returned requests."
+    ],
+    "preparation_failure": "The first operator preflight omitted the Knowledge revision increment and was guard_rejected. It is retained; a separate corrected operator copy passed. This is not a failed or resampled consumer.",
+    "independent_checks": "24 method checks passed, including exact replay of seven real-host operator requests (with the original denied write and malformed-input failure); five additional successor checks passed. The mock-injected exception is a transport-forensics negative and is not represented as an ordinary-host deterministic replay."
+  },
+  "freeze_and_execution_conditions": [
+    "Freeze this review, candidate 3, exact first packet/task/state/spec bytes, source bindings, bridge/preparation/sealer/replay/successor code, successor templates and retained preparation/preflight evidence before consumer dispatch.",
+    "Preserve the complete first results, failures and trajectories without output repair, selective retry, arm substitution or model resampling. Any host/transport interruption stays visible and is not a reason to choose a better trajectory.",
+    "Run only the two first worlds and objectively triggered read-only successors; final review and exact mechanical replay must precede a success claim.",
+    "If any bound source/input/helper changes after freezing, do not silently carry the prospective verdict forward."
+  ],
+  "remaining_limits": [
+    "Two first trajectories and at most two triggered successors do not estimate reliability, population effects, learning benefit or causal effects separated from model variation.",
+    "Small coherent fictional portfolios, known Topic/Subtopic bindings and supplied path/API vocabulary do not test arbitrary search, large/noisy portfolios, missing context recovery or ranking efficiency.",
+    "Shared-filesystem instruction isolation is not a hard sandbox. Operation receipts do not attest full native tool history or exact backend generation inputs/build/seed.",
+    "Fake static head/blob identities, reconstructed sessions and deterministic local copies do not establish real-provider freshness, concurrent CAS, process-crash recovery or external durability.",
+    "No learner answers, retention, transfer or real learner state are tested. Earlier failed/partial results and broader Core #34 obligations remain unchanged."
+  ],
+  "reviewed_file_sha256": {
+    "prospective-candidate-3.json": "75433dfee8c78784d73631fa47846e3b5a477a0515d08c7858368788e09b72b9",
+    "source-bindings.json": "7fb5e30c77176e1b1307fa35841abc425548410e7946ca6f5bfffcf4a632c04b",
+    "host_bridge.py": "734ee2613a67233fe03b6ab8ca1cb83fa46bf720e6ef865594993a06f2b00783",
+    "prepare.py": "76a9dea9a7200366207ca95d3577104fd2ebbfc5eb54129c9ec25ca571c92da3",
+    "seal.py": "e9b52f958d0a30701569cc8f043f9b2affce9dc7141fa5a93746ecdd565dcd2b",
+    "replay.py": "4273d3d975dbddc24a1c77f78c9ece3017e0e75c51337024e53d104e8908bf44",
+    "make_successor.py": "08db6f70b8e4d3e4a03932aa708bfd7af83dd97d834660c2c11a56b0bda352de",
+    "successor-packet-template.json": "8948f82870db18f2f6bb1e8a970775cafcbec231b28e4b1e03d6fc4f270ea463",
+    "successor-task-template.txt": "20e6fa578325f1cd5fcfcbb9af0a5f3ddddbd57cce003f3c2271565f4548d0d3",
+    "common-handoff.txt": "d2824d359eaafeda0cd6c9948f1c4d71223f3b47e877240ffa3232056fc562ca",
+    "handles.json": "c26be4ed0475cb9e20c93ca3ae2662849c5555e41451709e03403495c197285c",
+    "mechanical-world-delta.json": "e3d1aed828b029a8dfc0bf2a226f34dcccca2f9aaf6e24738d0aa1501bf74482",
+    "preparation-first.json": "b4522e90335bbd399777c3c0459c003540d7e777710eebce15b2b38dc6eb7c32",
+    "mechanical-preflight.json": "bf704e39608efd2671d9c4c7d69746bf891b15b116e6e959da04190bef84624a",
+    "mechanical-integrity-trigger-preflight.json": "8ff1a8157b25d6570aa0563c540a6bbe187bea83c90da6aaffe59aa28ef3ec41",
+    "reviewer-method-checks.py": "745c879d0903d3cd075e60d6d2a555119a8752e198e8dc972e1b5fd12a25d265",
+    "reviewer-method-checks.json": "23490297e5b056beef6be9e2f9f5132123b97a6c0fe684df15770d438d88f5ae",
+    "reviewer-successor-checks.json": "9c18da04e48cf751a1eda11d8772125296b583ee474519713f9bea99d6e31fc0",
+    "handles/981faa92ca00038e/initial-state.json": "8003e8136238b035b363d7c581e8ed094e5fddcdb81c4a91c8be81fbb1665226",
+    "handles/981faa92ca00038e/packet.json": "007d93c39902e7186553fd29a53daf749c52c7911f72a250ec31cc726bcd11ed",
+    "handles/981faa92ca00038e/task.txt": "7bef86ea8133c8d8a45c161ad519ac2f5008c82d3a23cb895782392c6c09c5be",
+    "handles/981faa92ca00038e/transport-spec.json": "6c514bc65085e06b94be5ed2d626252735a48fc676bfa1994c2b26afaa5f123a",
+    "handles/60ab06c5915864c9/initial-state.json": "a189f6ebfdb2de8ef87d91e1a975349d36c537f06ecc5e3bcf2f91e46a821b49",
+    "handles/60ab06c5915864c9/packet.json": "007d93c39902e7186553fd29a53daf749c52c7911f72a250ec31cc726bcd11ed",
+    "handles/60ab06c5915864c9/task.txt": "b9ddb8c01626f3c92ebb7360ac6eacbc043efc04cdbf56cc788b0757fdc9f8fd",
+    "handles/60ab06c5915864c9/transport-spec.json": "6c514bc65085e06b94be5ed2d626252735a48fc676bfa1994c2b26afaa5f123a"
+  }
+}

@@ -1,0 +1,200 @@
+{
+  "version": "core34-autonomous-correction-publication-v1",
+  "synthetic_only": true,
+  "original_archive_sha256": "fdaeef6fd1fd92f7789f8608a573387bde74decd9c13b540ca6e2ff743bb63bc",
+  "original_source_main": "0c1611568c9222d1329a6963bd64c93c5c3b5ec7",
+  "publication_base": "cfbb42afbede5cd9753d2f967f42d6ba683d82ea",
+  "first_packet_count": 1,
+  "first_world_count": 2,
+  "dependent_successor_count": 1,
+  "model_resamples": 0,
+  "total_requests": 11,
+  "new_performance_occurrences": 0,
+  "dependencies": {
+    "tests/cold_resume_fixture.py": "39b46e6b531172c3d33b6cf7824b44a11964cbda2a59c4326bf73ceab4e9cc8d",
+    "tests/correction_propagation_fixture.py": "5cdf6c9a47fa5855de58964873494f505f9eea72da103b2635549a69a1a884a7"
+  },
+  "cases": {
+    "baseline": {
+      "handle": "981faa92ca00038e",
+      "request_count": 3,
+      "packet_file": "first-packet.json",
+      "packet_sha256": "007d93c39902e7186553fd29a53daf749c52c7911f72a250ec31cc726bcd11ed",
+      "task_sha256": "7bef86ea8133c8d8a45c161ad519ac2f5008c82d3a23cb895782392c6c09c5be",
+      "response_sha256": "8e6a7043dca600d8d7150d97e94164ba97cc12bae1851c3bae8aeb5ee182f6b2",
+      "initial_state_sha256": "8003e8136238b035b363d7c581e8ed094e5fddcdb81c4a91c8be81fbb1665226",
+      "final_state_sha256": "8003e8136238b035b363d7c581e8ed094e5fddcdb81c4a91c8be81fbb1665226",
+      "initial_state_file": "baseline-state.json",
+      "final_state_file": "baseline-state.json",
+      "readonly": false,
+      "applied_writes": 0
+    },
+    "report": {
+      "handle": "60ab06c5915864c9",
+      "request_count": 5,
+      "packet_file": "first-packet.json",
+      "packet_sha256": "007d93c39902e7186553fd29a53daf749c52c7911f72a250ec31cc726bcd11ed",
+      "task_sha256": "b9ddb8c01626f3c92ebb7360ac6eacbc043efc04cdbf56cc788b0757fdc9f8fd",
+      "response_sha256": "3e6cc301db6d185f184cfb7d8ac05b10982375dd2b4537117bdfd3ce766d98aa",
+      "initial_state_sha256": "a189f6ebfdb2de8ef87d91e1a975349d36c537f06ecc5e3bcf2f91e46a821b49",
+      "final_state_sha256": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73",
+      "initial_state_file": "report-state.json",
+      "final_state_file": "report-post-state.json",
+      "readonly": false,
+      "applied_writes": 1
+    },
+    "successor": {
+      "handle": "f3257f07c9e0c925",
+      "request_count": 3,
+      "packet_file": "successor-packet.json",
+      "packet_sha256": "8948f82870db18f2f6bb1e8a970775cafcbec231b28e4b1e03d6fc4f270ea463",
+      "task_sha256": "d56dff45cfde4e69b93ae741ba49fef843c039784ab71f9104748cfc188f12bc",
+      "response_sha256": "0f01f714dc8bda68fe7de76b03934dafbc44d743001b0e8f3df430146f0606ba",
+      "initial_state_sha256": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73",
+      "final_state_sha256": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73",
+      "initial_state_file": "report-post-state.json",
+      "final_state_file": "report-post-state.json",
+      "readonly": true,
+      "applied_writes": 0
+    }
+  },
+  "files": {
+    ".gitattributes": {
+      "sha256": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da",
+      "bytes": 8,
+      "kind": "publication-only",
+      "purpose": "Preserve frozen byte parity"
+    },
+    "baseline-response.json": {
+      "sha256": "8e6a7043dca600d8d7150d97e94164ba97cc12bae1851c3bae8aeb5ee182f6b2",
+      "bytes": 1953,
+      "kind": "verbatim",
+      "source_path": "handles/981faa92ca00038e/first-response.json",
+      "source_sha256": "8e6a7043dca600d8d7150d97e94164ba97cc12bae1851c3bae8aeb5ee182f6b2"
+    },
+    "baseline-state.json": {
+      "sha256": "8003e8136238b035b363d7c581e8ed094e5fddcdb81c4a91c8be81fbb1665226",
+      "bytes": 3980,
+      "kind": "verbatim",
+      "source_path": "handles/981faa92ca00038e/initial-state.json",
+      "source_sha256": "8003e8136238b035b363d7c581e8ed094e5fddcdb81c4a91c8be81fbb1665226"
+    },
+    "baseline-trajectory.json": {
+      "sha256": "3777ef246253071dc4d90c4d8c90dd6ccec79bb5527a85a5799b844c4259970a",
+      "bytes": 26257,
+      "kind": "derived",
+      "transformation": "Each original receipt retains raw request bytes/parsed inputs/results/provider trace/times/full state. Remove only request_file and add its original whole-receipt hash plus omission list."
+    },
+    "first-packet.json": {
+      "sha256": "007d93c39902e7186553fd29a53daf749c52c7911f72a250ec31cc726bcd11ed",
+      "bytes": 54556,
+      "kind": "verbatim",
+      "source_path": "handles/981faa92ca00038e/packet.json",
+      "source_sha256": "007d93c39902e7186553fd29a53daf749c52c7911f72a250ec31cc726bcd11ed"
+    },
+    "input-provenance.json": {
+      "sha256": "a9ce498f3b15a1ad527c40fbd441a5546c3459e29ca99bc6edaffe4f036668f0",
+      "bytes": 35209,
+      "kind": "derived",
+      "transformation": "Compose exact source/dispatch/check summaries and hashes; omit source_root and raw task/orchestration text; retain explicit trailing-LF/after-dispatch qualifications."
+    },
+    "mechanical-exact-replay.json": {
+      "sha256": "eb05c8354ee0ac84f9e390593c7a84ea089d2e6e8e5e49953cc7334f42b42046",
+      "bytes": 47557,
+      "kind": "composed",
+      "sources": {
+        "replay-first.json": "c2cb8ecd5f7600dd7ea5b437a2c1328b9d18545bef5ab7cb48817d46089f1731",
+        "replay-second.json": "4f7d20cc31eb07ea9da728008a1bd4eef472128ddf272f74a41b0530710941a0",
+        "replay-successor.json": "e0c6d117eba576576684c57dbd2aaeecd513a30c0aabd2fe8e859a5637966608"
+      },
+      "transformation": "Unchanged three original JSON replay values keyed by case; no result repair."
+    },
+    "preparation-provenance.json": {
+      "sha256": "e97405b52e057b97b9e64b99ce79854def27634ca05cc574ec892e98137d34be",
+      "bytes": 92016,
+      "kind": "derived",
+      "transformation": "Preserve original preparation values, method changes and operator results/states; omit machine request-file paths and exception traceback strings from operator receipts, bind original receipt hashes. Preserve original failure-log hash and distinguish injected negative. Disclose original cumulative baseline trace alias; no original trace is trimmed or relabeled as stage-local."
+    },
+    "prospective-freeze.json": {
+      "sha256": "3cd56919f80827ba2bdb273b402afbe6c57a0bb47f54caa42208315be5ff4985",
+      "bytes": 8824,
+      "kind": "verbatim",
+      "source_path": "prospective-freeze.json",
+      "source_sha256": "3cd56919f80827ba2bdb273b402afbe6c57a0bb47f54caa42208315be5ff4985"
+    },
+    "prospective-method-review.json": {
+      "sha256": "518d3b444625e5ecbcac8782b5d813e7bd7f3acd794f19b34742645da8c35977",
+      "bytes": 12923,
+      "kind": "verbatim",
+      "source_path": "prospective-method-review.json",
+      "source_sha256": "518d3b444625e5ecbcac8782b5d813e7bd7f3acd794f19b34742645da8c35977"
+    },
+    "prospective-plan.json": {
+      "sha256": "75433dfee8c78784d73631fa47846e3b5a477a0515d08c7858368788e09b72b9",
+      "bytes": 9493,
+      "kind": "verbatim",
+      "source_path": "prospective-plan.json",
+      "source_sha256": "75433dfee8c78784d73631fa47846e3b5a477a0515d08c7858368788e09b72b9"
+    },
+    "report-post-state.json": {
+      "sha256": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73",
+      "bytes": 4533,
+      "kind": "verbatim",
+      "source_path": "handles/60ab06c5915864c9/sealed-state.json",
+      "source_sha256": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73"
+    },
+    "report-response.json": {
+      "sha256": "3e6cc301db6d185f184cfb7d8ac05b10982375dd2b4537117bdfd3ce766d98aa",
+      "bytes": 2682,
+      "kind": "verbatim",
+      "source_path": "handles/60ab06c5915864c9/first-response.json",
+      "source_sha256": "3e6cc301db6d185f184cfb7d8ac05b10982375dd2b4537117bdfd3ce766d98aa"
+    },
+    "report-state.json": {
+      "sha256": "a189f6ebfdb2de8ef87d91e1a975349d36c537f06ecc5e3bcf2f91e46a821b49",
+      "bytes": 4902,
+      "kind": "verbatim",
+      "source_path": "handles/60ab06c5915864c9/initial-state.json",
+      "source_sha256": "a189f6ebfdb2de8ef87d91e1a975349d36c537f06ecc5e3bcf2f91e46a821b49"
+    },
+    "report-trajectory.json": {
+      "sha256": "7c4a0b5cf65071f3e87efba7c4cd1646fffda07395dae36996f44fb2f8303fc5",
+      "bytes": 49186,
+      "kind": "derived",
+      "transformation": "Each original receipt retains raw request bytes/parsed inputs/results/provider trace/times/full state. Remove only request_file and add its original whole-receipt hash plus omission list."
+    },
+    "semantic-method-review.json": {
+      "sha256": "d68a0c2210286c795118f5c4735031f4d094486b086b7663d3ffcfad5c8f04ef",
+      "bytes": 22197,
+      "kind": "verbatim",
+      "source_path": "semantic-method-review-final.json",
+      "source_sha256": "d68a0c2210286c795118f5c4735031f4d094486b086b7663d3ffcfad5c8f04ef"
+    },
+    "successor-packet.json": {
+      "sha256": "8948f82870db18f2f6bb1e8a970775cafcbec231b28e4b1e03d6fc4f270ea463",
+      "bytes": 53898,
+      "kind": "verbatim",
+      "source_path": "handles/f3257f07c9e0c925/packet.json",
+      "source_sha256": "8948f82870db18f2f6bb1e8a970775cafcbec231b28e4b1e03d6fc4f270ea463"
+    },
+    "successor-response.json": {
+      "sha256": "0f01f714dc8bda68fe7de76b03934dafbc44d743001b0e8f3df430146f0606ba",
+      "bytes": 2478,
+      "kind": "verbatim",
+      "source_path": "handles/f3257f07c9e0c925/first-response.json",
+      "source_sha256": "0f01f714dc8bda68fe7de76b03934dafbc44d743001b0e8f3df430146f0606ba"
+    },
+    "successor-trajectory.json": {
+      "sha256": "ce4304a0f303942d664d6f412e6622be66ddc1e42ae0f8b2e3ee6a384dc7b488",
+      "bytes": 29155,
+      "kind": "derived",
+      "transformation": "Each original receipt retains raw request bytes/parsed inputs/results/provider trace/times/full state. Remove only request_file and add its original whole-receipt hash plus omission list."
+    },
+    "successor-trigger-provenance.json": {
+      "sha256": "e6e802ab35f1955e007b90e0946a8d9abebbd36120b7d02448b81f36efdc259f",
+      "bytes": 6993,
+      "kind": "composed",
+      "transformation": "Unchanged sealed summaries, origin and created values plus exact source hashes/template hashes and explicit qualification."
+    }
+  }
+}

@@ -4,3 +4,5 @@ fixtures/** -text
 # Exact historical sources frozen by the withdrawn-support prospective manifest.
 /correction_propagation_fixture.py -text
 /test_correction_propagation.py -text
+# Exact preparation source frozen by the autonomous-correction manifest.
+/cold_resume_fixture.py -text

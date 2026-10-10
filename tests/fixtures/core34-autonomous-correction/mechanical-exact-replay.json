@@ -1,0 +1,1415 @@
+{
+  "baseline": {
+    "handle": "981faa92ca00038e",
+    "requests": [
+      {
+        "index": 1,
+        "request_sha256": "649978c296590173c11b17c30c25a71202f8c546589e5f41dfb61276922d4e77",
+        "response": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "read_learning_context",
+          "result": {
+            "documents": [
+              {
+                "path": "topics/synthetic/subtopics/unit/progress.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: subtopic_progress\nrevision: 3\nupdated_at: '2026-10-09T16:50:00Z'\ntopic: synthetic\nsubtopic: unit\nplan_revision: 1\nmilestones:\n  foundation:\n    status: completed\n  next-step:\n    status: in_progress\ncurrent:\n  milestone:\n  - next-step\nblockers: []\nresume:\n  return_point:\n    kind: teaching_thread\n    focus: Token identity and contextual representations\n    activity: Compare two sentence prefixes ending in the same vocabulary token.\n    scope: Conceptual application.\n  ready_next: []\nwatch:\n- kind: node\n  reason: preserve me\navoid_retesting:\n- foundation\n",
+                "version_token": "9999999999999999999999999999999999999999"
+              }
+            ],
+            "missing_optional": [
+              "topics/synthetic/subtopics/unit/definition.yaml",
+              "topics/synthetic/subtopics/unit/plan.yaml"
+            ]
+          }
+        },
+        "provider_calls": [
+          [
+            "materialize",
+            9100000101,
+            "main"
+          ],
+          [
+            "read",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "deployment.yaml"
+          ],
+          [
+            "materialize",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "main"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "release",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "release",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          [
+            "read",
+            9100000103,
+            "main",
+            "topics/synthetic/coordination/branches/main/runtime.yaml"
+          ],
+          [
+            "read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "topics/synthetic/coordination/branches.yaml"
+          ],
+          [
+            "read",
+            9100000101,
+            "main",
+            "deployment.yaml"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "snapshot_read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "topics/synthetic/subtopics/unit/progress.yaml"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "resolve",
+            9100000101,
+            "main"
+          ]
+        ],
+        "state_sha256": "8003e8136238b035b363d7c581e8ed094e5fddcdb81c4a91c8be81fbb1665226",
+        "exact": true
+      },
+      {
+        "index": 2,
+        "request_sha256": "cf8a36702c795e2223003ab8be2de64b7fb2ed5c5b5e7abd599f8b4535a9f1e1",
+        "response": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "discover_learning_evidence",
+          "result": {
+            "recipe_version": "bound-evidence-discovery-v1",
+            "scope": {
+              "topic": "synthetic",
+              "subtopic": "unit"
+            },
+            "coverage": "all_context_matches_in_bounded_snapshot",
+            "evidence": [
+              {
+                "path": "evidence/evi-synthetic-answer-001.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+                "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "knowledge_references": [
+                  {
+                    "target": {
+                      "type": "capability",
+                      "domain": "synthetic",
+                      "concept": "token-identity",
+                      "capability": "explanation"
+                    },
+                    "knowledge_path": "learner/knowledge/synthetic.yaml",
+                    "reference_status": "referenced",
+                    "sides": [
+                      "support"
+                    ]
+                  },
+                  {
+                    "target": {
+                      "type": "capability",
+                      "domain": "synthetic",
+                      "concept": "token-identity",
+                      "capability": "label_recall"
+                    },
+                    "knowledge_path": "learner/knowledge/synthetic.yaml",
+                    "reference_status": "referenced",
+                    "sides": [
+                      "support"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "knowledge_owners": [
+              {
+                "path": "learner/knowledge/synthetic.yaml",
+                "state": "present",
+                "version_token": "9999999999999999999999999999999999999999"
+              }
+            ]
+          }
+        },
+        "provider_calls": [
+          [
+            "materialize",
+            9100000101,
+            "main"
+          ],
+          [
+            "read",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "deployment.yaml"
+          ],
+          [
+            "materialize",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "main"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "release",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "release",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          [
+            "read",
+            9100000103,
+            "main",
+            "topics/synthetic/coordination/branches/main/runtime.yaml"
+          ],
+          [
+            "read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "topics/synthetic/coordination/branches.yaml"
+          ],
+          [
+            "read",
+            9100000101,
+            "main",
+            "deployment.yaml"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "snapshot_read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "evidence/evi-synthetic-answer-001.yaml"
+          ],
+          [
+            "snapshot_read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "learner/knowledge/synthetic.yaml"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "resolve",
+            9100000101,
+            "main"
+          ]
+        ],
+        "state_sha256": "8003e8136238b035b363d7c581e8ed094e5fddcdb81c4a91c8be81fbb1665226",
+        "exact": true
+      },
+      {
+        "index": 3,
+        "request_sha256": "30161b4e8dad8c100792bc26cbafcf674d6bdb50a88e2890aa9d2e58f7f176a7",
+        "response": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "read_learning_context",
+          "result": {
+            "documents": [
+              {
+                "path": "learner/knowledge/synthetic.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 2\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      explanation:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One correct explanation appeared unassisted. Independent explanation\n          is provisionally supported for the next conceptual application; this is\n          not mastery or a derivation claim.\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+                "version_token": "9999999999999999999999999999999999999999"
+              }
+            ],
+            "missing_optional": []
+          }
+        },
+        "provider_calls": [
+          [
+            "materialize",
+            9100000101,
+            "main"
+          ],
+          [
+            "read",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "deployment.yaml"
+          ],
+          [
+            "materialize",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "main"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "release",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "release",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          [
+            "read",
+            9100000103,
+            "main",
+            "topics/synthetic/coordination/branches/main/runtime.yaml"
+          ],
+          [
+            "read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "topics/synthetic/coordination/branches.yaml"
+          ],
+          [
+            "read",
+            9100000101,
+            "main",
+            "deployment.yaml"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "snapshot_read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "learner/knowledge/synthetic.yaml"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "resolve",
+            9100000101,
+            "main"
+          ]
+        ],
+        "state_sha256": "8003e8136238b035b363d7c581e8ed094e5fddcdb81c4a91c8be81fbb1665226",
+        "exact": true
+      }
+    ],
+    "final_state_sha256": "8003e8136238b035b363d7c581e8ed094e5fddcdb81c4a91c8be81fbb1665226",
+    "exact": true
+  },
+  "report": {
+    "handle": "60ab06c5915864c9",
+    "requests": [
+      {
+        "index": 1,
+        "request_sha256": "e9595824365cf93f4752fdc35d7f3e57631d4247799c3518d5f747fc64fb6581",
+        "response": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "read_learning_context",
+          "result": {
+            "documents": [
+              {
+                "path": "topics/synthetic/subtopics/unit/progress.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: subtopic_progress\nrevision: 3\nupdated_at: '2026-10-09T16:50:00Z'\ntopic: synthetic\nsubtopic: unit\nplan_revision: 1\nmilestones:\n  foundation:\n    status: completed\n  next-step:\n    status: in_progress\ncurrent:\n  milestone:\n  - next-step\nblockers: []\nresume:\n  return_point:\n    kind: teaching_thread\n    focus: Token identity and contextual representations\n    activity: Compare two sentence prefixes ending in the same vocabulary token.\n    scope: Conceptual application.\n  ready_next: []\nwatch:\n- kind: node\n  reason: preserve me\navoid_retesting:\n- foundation\n",
+                "version_token": "9999999999999999999999999999999999999999"
+              }
+            ],
+            "missing_optional": [
+              "topics/synthetic/subtopics/unit/definition.yaml",
+              "topics/synthetic/subtopics/unit/plan.yaml"
+            ]
+          }
+        },
+        "provider_calls": [
+          [
+            "materialize",
+            9100000101,
+            "main"
+          ],
+          [
+            "read",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "deployment.yaml"
+          ],
+          [
+            "materialize",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "main"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "release",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "release",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          [
+            "read",
+            9100000103,
+            "main",
+            "topics/synthetic/coordination/branches/main/runtime.yaml"
+          ],
+          [
+            "read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "topics/synthetic/coordination/branches.yaml"
+          ],
+          [
+            "read",
+            9100000101,
+            "main",
+            "deployment.yaml"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "snapshot_read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "topics/synthetic/subtopics/unit/progress.yaml"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "resolve",
+            9100000101,
+            "main"
+          ]
+        ],
+        "state_sha256": "a189f6ebfdb2de8ef87d91e1a975349d36c537f06ecc5e3bcf2f91e46a821b49",
+        "exact": true
+      },
+      {
+        "index": 2,
+        "request_sha256": "cf8a36702c795e2223003ab8be2de64b7fb2ed5c5b5e7abd599f8b4535a9f1e1",
+        "response": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "discover_learning_evidence",
+          "result": {
+            "recipe_version": "bound-evidence-discovery-v1",
+            "scope": {
+              "topic": "synthetic",
+              "subtopic": "unit"
+            },
+            "coverage": "all_context_matches_in_bounded_snapshot",
+            "evidence": [
+              {
+                "path": "evidence/evi-synthetic-answer-001.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+                "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "knowledge_references": [
+                  {
+                    "target": {
+                      "type": "capability",
+                      "domain": "synthetic",
+                      "concept": "token-identity",
+                      "capability": "explanation"
+                    },
+                    "knowledge_path": "learner/knowledge/synthetic.yaml",
+                    "reference_status": "referenced",
+                    "sides": [
+                      "support"
+                    ]
+                  },
+                  {
+                    "target": {
+                      "type": "capability",
+                      "domain": "synthetic",
+                      "concept": "token-identity",
+                      "capability": "label_recall"
+                    },
+                    "knowledge_path": "learner/knowledge/synthetic.yaml",
+                    "reference_status": "referenced",
+                    "sides": [
+                      "support"
+                    ]
+                  }
+                ]
+              },
+              {
+                "path": "evidence/evi-synthetic-report-002.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-report-002\nobserved_at: '2026-10-06T09:15:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner later said about the answer recorded in evi-synthetic-answer-001:\n    \"I recalled the two names myself, but for the explanation I looked at a hint saying\n    the vocabulary ID is fixed and the contextual representation varies with context.\n    I have not attempted another answer since then.\"'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-102\n",
+                "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "knowledge_references": [
+                  {
+                    "target": {
+                      "type": "capability",
+                      "domain": "synthetic",
+                      "concept": "token-identity",
+                      "capability": "explanation"
+                    },
+                    "knowledge_path": "learner/knowledge/synthetic.yaml",
+                    "reference_status": "not_referenced_by_current_knowledge",
+                    "sides": []
+                  }
+                ]
+              }
+            ],
+            "knowledge_owners": [
+              {
+                "path": "learner/knowledge/synthetic.yaml",
+                "state": "present",
+                "version_token": "9999999999999999999999999999999999999999"
+              }
+            ]
+          }
+        },
+        "provider_calls": [
+          [
+            "materialize",
+            9100000101,
+            "main"
+          ],
+          [
+            "read",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "deployment.yaml"
+          ],
+          [
+            "materialize",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "main"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "release",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "release",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          [
+            "read",
+            9100000103,
+            "main",
+            "topics/synthetic/coordination/branches/main/runtime.yaml"
+          ],
+          [
+            "read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "topics/synthetic/coordination/branches.yaml"
+          ],
+          [
+            "read",
+            9100000101,
+            "main",
+            "deployment.yaml"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "snapshot_read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "evidence/evi-synthetic-answer-001.yaml"
+          ],
+          [
+            "snapshot_read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "evidence/evi-synthetic-report-002.yaml"
+          ],
+          [
+            "snapshot_read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "learner/knowledge/synthetic.yaml"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "resolve",
+            9100000101,
+            "main"
+          ]
+        ],
+        "state_sha256": "a189f6ebfdb2de8ef87d91e1a975349d36c537f06ecc5e3bcf2f91e46a821b49",
+        "exact": true
+      },
+      {
+        "index": 3,
+        "request_sha256": "30161b4e8dad8c100792bc26cbafcf674d6bdb50a88e2890aa9d2e58f7f176a7",
+        "response": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "read_learning_context",
+          "result": {
+            "documents": [
+              {
+                "path": "learner/knowledge/synthetic.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 2\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      explanation:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One correct explanation appeared unassisted. Independent explanation\n          is provisionally supported for the next conceptual application; this is\n          not mastery or a derivation claim.\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+                "version_token": "9999999999999999999999999999999999999999"
+              }
+            ],
+            "missing_optional": []
+          }
+        },
+        "provider_calls": [
+          [
+            "materialize",
+            9100000101,
+            "main"
+          ],
+          [
+            "read",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "deployment.yaml"
+          ],
+          [
+            "materialize",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "main"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "release",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "release",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          [
+            "read",
+            9100000103,
+            "main",
+            "topics/synthetic/coordination/branches/main/runtime.yaml"
+          ],
+          [
+            "read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "topics/synthetic/coordination/branches.yaml"
+          ],
+          [
+            "read",
+            9100000101,
+            "main",
+            "deployment.yaml"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "snapshot_read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "learner/knowledge/synthetic.yaml"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "resolve",
+            9100000101,
+            "main"
+          ]
+        ],
+        "state_sha256": "a189f6ebfdb2de8ef87d91e1a975349d36c537f06ecc5e3bcf2f91e46a821b49",
+        "exact": true
+      },
+      {
+        "index": 4,
+        "request_sha256": "370d825a64e343b3bf0aa7feece0535a16ff92be4f55fa8483f448df047c61b5",
+        "response": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "reconcile_knowledge",
+          "result": {
+            "applied": true
+          }
+        },
+        "provider_calls": [
+          [
+            "materialize",
+            9100000101,
+            "main"
+          ],
+          [
+            "read",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "deployment.yaml"
+          ],
+          [
+            "materialize",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "main"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "release",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "release",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          [
+            "read",
+            9100000103,
+            "main",
+            "topics/synthetic/coordination/branches/main/runtime.yaml"
+          ],
+          [
+            "read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "topics/synthetic/coordination/branches.yaml"
+          ],
+          [
+            "read",
+            9100000101,
+            "main",
+            "deployment.yaml"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "snapshot_read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "learner/knowledge/synthetic.yaml"
+          ],
+          [
+            "materialize",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "resolve",
+            9100000101,
+            "main"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "release",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "update",
+            9100000103,
+            "main",
+            "learner/knowledge/synthetic.yaml",
+            "9999999999999999999999999999999999999999",
+            "8888888888888888888888888888888888888888"
+          ]
+        ],
+        "state_sha256": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73",
+        "exact": true
+      },
+      {
+        "index": 5,
+        "request_sha256": "30161b4e8dad8c100792bc26cbafcf674d6bdb50a88e2890aa9d2e58f7f176a7",
+        "response": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "read_learning_context",
+          "result": {
+            "documents": [
+              {
+                "path": "learner/knowledge/synthetic.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\nupdated_at: '2026-10-09T16:50:00Z'\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+                "version_token": "9999999999999999999999999999999999999999"
+              }
+            ],
+            "missing_optional": []
+          }
+        },
+        "provider_calls": [
+          [
+            "materialize",
+            9100000101,
+            "main"
+          ],
+          [
+            "read",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "deployment.yaml"
+          ],
+          [
+            "materialize",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "main"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "release",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "release",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          [
+            "read",
+            9100000103,
+            "main",
+            "topics/synthetic/coordination/branches/main/runtime.yaml"
+          ],
+          [
+            "read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "topics/synthetic/coordination/branches.yaml"
+          ],
+          [
+            "read",
+            9100000101,
+            "main",
+            "deployment.yaml"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "snapshot_read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "learner/knowledge/synthetic.yaml"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "resolve",
+            9100000101,
+            "main"
+          ]
+        ],
+        "state_sha256": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73",
+        "exact": true
+      }
+    ],
+    "final_state_sha256": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73",
+    "exact": true
+  },
+  "successor": {
+    "handle": "f3257f07c9e0c925",
+    "requests": [
+      {
+        "index": 1,
+        "request_sha256": "e9595824365cf93f4752fdc35d7f3e57631d4247799c3518d5f747fc64fb6581",
+        "response": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "read_learning_context",
+          "result": {
+            "documents": [
+              {
+                "path": "topics/synthetic/subtopics/unit/progress.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: subtopic_progress\nrevision: 3\nupdated_at: '2026-10-09T16:50:00Z'\ntopic: synthetic\nsubtopic: unit\nplan_revision: 1\nmilestones:\n  foundation:\n    status: completed\n  next-step:\n    status: in_progress\ncurrent:\n  milestone:\n  - next-step\nblockers: []\nresume:\n  return_point:\n    kind: teaching_thread\n    focus: Token identity and contextual representations\n    activity: Compare two sentence prefixes ending in the same vocabulary token.\n    scope: Conceptual application.\n  ready_next: []\nwatch:\n- kind: node\n  reason: preserve me\navoid_retesting:\n- foundation\n",
+                "version_token": "9999999999999999999999999999999999999999"
+              }
+            ],
+            "missing_optional": [
+              "topics/synthetic/subtopics/unit/definition.yaml",
+              "topics/synthetic/subtopics/unit/plan.yaml"
+            ]
+          }
+        },
+        "provider_calls": [
+          [
+            "materialize",
+            9100000101,
+            "main"
+          ],
+          [
+            "read",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "deployment.yaml"
+          ],
+          [
+            "materialize",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "main"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "release",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "release",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          [
+            "read",
+            9100000103,
+            "main",
+            "topics/synthetic/coordination/branches/main/runtime.yaml"
+          ],
+          [
+            "read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "topics/synthetic/coordination/branches.yaml"
+          ],
+          [
+            "read",
+            9100000101,
+            "main",
+            "deployment.yaml"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "snapshot_read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "topics/synthetic/subtopics/unit/progress.yaml"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "resolve",
+            9100000101,
+            "main"
+          ]
+        ],
+        "state_sha256": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73",
+        "exact": true
+      },
+      {
+        "index": 2,
+        "request_sha256": "cf8a36702c795e2223003ab8be2de64b7fb2ed5c5b5e7abd599f8b4535a9f1e1",
+        "response": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "discover_learning_evidence",
+          "result": {
+            "recipe_version": "bound-evidence-discovery-v1",
+            "scope": {
+              "topic": "synthetic",
+              "subtopic": "unit"
+            },
+            "coverage": "all_context_matches_in_bounded_snapshot",
+            "evidence": [
+              {
+                "path": "evidence/evi-synthetic-answer-001.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-answer-001\nobserved_at: '2026-10-06T09:00:00Z'\nobservation:\n  kind: task_response\n  summary: On one sentence-pair task, the learner correctly named token ID and contextual\n    representation and explained that the vocabulary ID stays fixed while the contextual\n    representation can vary. The visible response contained no mention of outside\n    assistance.\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: label_recall\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-101\n",
+                "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "knowledge_references": [
+                  {
+                    "target": {
+                      "type": "capability",
+                      "domain": "synthetic",
+                      "concept": "token-identity",
+                      "capability": "explanation"
+                    },
+                    "knowledge_path": "learner/knowledge/synthetic.yaml",
+                    "reference_status": "not_referenced_by_current_knowledge",
+                    "sides": []
+                  },
+                  {
+                    "target": {
+                      "type": "capability",
+                      "domain": "synthetic",
+                      "concept": "token-identity",
+                      "capability": "label_recall"
+                    },
+                    "knowledge_path": "learner/knowledge/synthetic.yaml",
+                    "reference_status": "referenced",
+                    "sides": [
+                      "support"
+                    ]
+                  }
+                ]
+              },
+              {
+                "path": "evidence/evi-synthetic-report-002.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-synthetic-report-002\nobserved_at: '2026-10-06T09:15:00Z'\nobservation:\n  kind: learner_self_report\n  summary: 'The learner later said about the answer recorded in evi-synthetic-answer-001:\n    \"I recalled the two names myself, but for the explanation I looked at a hint saying\n    the vocabulary ID is fixed and the contextual representation varies with context.\n    I have not attempted another answer since then.\"'\ninterpretation:\n  direction: neutral\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\nsource:\n  round_id: synthetic-round-102\n",
+                "version_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "knowledge_references": [
+                  {
+                    "target": {
+                      "type": "capability",
+                      "domain": "synthetic",
+                      "concept": "token-identity",
+                      "capability": "explanation"
+                    },
+                    "knowledge_path": "learner/knowledge/synthetic.yaml",
+                    "reference_status": "not_referenced_by_current_knowledge",
+                    "sides": []
+                  }
+                ]
+              }
+            ],
+            "knowledge_owners": [
+              {
+                "path": "learner/knowledge/synthetic.yaml",
+                "state": "present",
+                "version_token": "9999999999999999999999999999999999999999"
+              }
+            ]
+          }
+        },
+        "provider_calls": [
+          [
+            "materialize",
+            9100000101,
+            "main"
+          ],
+          [
+            "read",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "deployment.yaml"
+          ],
+          [
+            "materialize",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "main"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "release",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "release",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          [
+            "read",
+            9100000103,
+            "main",
+            "topics/synthetic/coordination/branches/main/runtime.yaml"
+          ],
+          [
+            "read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "topics/synthetic/coordination/branches.yaml"
+          ],
+          [
+            "read",
+            9100000101,
+            "main",
+            "deployment.yaml"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "snapshot_read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "evidence/evi-synthetic-answer-001.yaml"
+          ],
+          [
+            "snapshot_read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "evidence/evi-synthetic-report-002.yaml"
+          ],
+          [
+            "snapshot_read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "learner/knowledge/synthetic.yaml"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "resolve",
+            9100000101,
+            "main"
+          ]
+        ],
+        "state_sha256": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73",
+        "exact": true
+      },
+      {
+        "index": 3,
+        "request_sha256": "30161b4e8dad8c100792bc26cbafcf674d6bdb50a88e2890aa9d2e58f7f176a7",
+        "response": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "read_learning_context",
+          "result": {
+            "documents": [
+              {
+                "path": "learner/knowledge/synthetic.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 3\nupdated_at: '2026-10-09T16:50:00Z'\ndomain: synthetic\nconcepts:\n  token-identity:\n    capabilities:\n      label_recall:\n        state: provisional\n        confidence: medium\n        evidence_refs:\n          support:\n          - evi-synthetic-answer-001\n          challenge: []\n        basis_summary: One observed correct naming of token ID and contextual representation\n          provisionally supports recalling these two labels. No broader vocabulary\n          claim is made.\n",
+                "version_token": "9999999999999999999999999999999999999999"
+              }
+            ],
+            "missing_optional": []
+          }
+        },
+        "provider_calls": [
+          [
+            "materialize",
+            9100000101,
+            "main"
+          ],
+          [
+            "read",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "deployment.yaml"
+          ],
+          [
+            "materialize",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "main"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "release",
+            9100000102,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "release",
+            9100000101,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          [
+            "read",
+            9100000103,
+            "main",
+            "topics/synthetic/coordination/branches/main/runtime.yaml"
+          ],
+          [
+            "read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "topics/synthetic/coordination/branches.yaml"
+          ],
+          [
+            "read",
+            9100000101,
+            "main",
+            "deployment.yaml"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "materialize",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "snapshot_read",
+            9100000103,
+            "8888888888888888888888888888888888888888",
+            "learner/knowledge/synthetic.yaml"
+          ],
+          [
+            "release",
+            9100000103,
+            "8888888888888888888888888888888888888888"
+          ],
+          [
+            "resolve",
+            9100000103,
+            "main"
+          ],
+          [
+            "resolve",
+            9100000101,
+            "main"
+          ]
+        ],
+        "state_sha256": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73",
+        "exact": true
+      }
+    ],
+    "final_state_sha256": "d79acf400908d8f7b486cdd013cfc386127d4d5bf3bb50c9edba722492600f73",
+    "exact": true
+  }
+}
