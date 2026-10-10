@@ -15,7 +15,14 @@ from tests import autonomous_correction_fixture as fixture
 
 
 def synthetic_row(before, after, index=1, operation='reconcile_knowledge'):
-    request = {'operation': operation, 'arguments': {}}
+    arguments = {
+        'reconcile_knowledge': {'content': after['docs'].get(fixture.READ_PATH, 'synthetic'),
+                                'expected_version_token': 'synthetic-version'},
+        'save_learning_checkpoint': {'checkpoint': {'milestone': [], 'return_point': None, 'ready_next': []},
+                                     'expected_version_token': 'synthetic-version'},
+        'read_learning_context': {'required_paths': [fixture.READ_PATH]},
+    }.get(operation, {})
+    request = {'operation': operation, 'arguments': arguments}
     raw = fixture.encoded(request)
     return {'index': index, 'request': request, 'request_raw_base64': base64.b64encode(raw).decode(),
             'request_raw_utf8': raw.decode(), 'request_sha256': fixture.digest(raw),
@@ -24,6 +31,13 @@ def synthetic_row(before, after, index=1, operation='reconcile_knowledge'):
             'before_state_sha256': fixture.digest(fixture.encoded(before)),
             'after_state': copy.deepcopy(after), 'after_state_sha256': fixture.digest(fixture.encoded(after)),
             'state_unchanged': before == after, 'changed_paths': fixture.changed_paths(before, after)}
+
+
+def replace_request(row, request):
+    raw = fixture.encoded(request)
+    row.update(request=request, request_raw_base64=base64.b64encode(raw).decode('ascii'),
+               request_raw_utf8=raw.decode('utf-8'), request_sha256=fixture.digest(raw))
+    row['response']['operation'] = request.get('operation')
 
 
 class AutonomousCorrectionTests(unittest.TestCase):
@@ -168,6 +182,118 @@ class AutonomousCorrectionTests(unittest.TestCase):
         self.assertEqual('blocked', fixture.successor_decision(before, altered, [synthetic_row(before, altered)])['status'])
         self.assertEqual('anomaly', fixture.successor_decision(before, after,
             [synthetic_row(before, after, operation='read_learning_context')])['status'])
+
+    def test_host_response_has_exactly_one_result_branch(self):
+        before, after = fixture.read('report-state.json'), fixture.read('report-post-state.json')
+        responses = [
+            {'surface_version': 'v4', 'ok': True, 'operation': 'reconcile_knowledge',
+             'result': {'applied': True}, 'error': {'code': 'guard_rejected'}},
+            {'surface_version': 'v4', 'ok': False, 'operation': 'reconcile_knowledge',
+             'result': {'applied': True}, 'error': {'code': 'guard_rejected'}},
+            {'surface_version': 'v4', 'ok': True, 'operation': 'reconcile_knowledge',
+             'result': {'applied': True}, 'extra': 'ambiguous'},
+        ]
+        for response in responses:
+            rows = fixture.read('report-trajectory.json'); rows[3]['response'] = response
+            with self.subTest(response=response):
+                decision = fixture.successor_decision(before, after, rows)
+                self.assertEqual('blocked', decision['status']); self.assertFalse(decision['trigger'])
+        for response in (
+            {'surface_version': 'v4', 'ok': False, 'operation': 'reconcile_knowledge',
+             'error': {'code': 'guard_rejected', 'retryable': False}},
+            {'runner_exception': 'Injected', 'message': 'Failed before write'},
+        ):
+            row = synthetic_row(before, before); row['response'] = response
+            with self.subTest(valid_nonwriting_response=response):
+                self.assertEqual('no_new_payload', fixture.successor_decision(before, before, [row])['status'])
+
+    def test_request_shape_checks_source_dispatch_without_runtime_io(self):
+        valid = {
+            'read_learning_context': {'required_paths': [fixture.READ_PATH], 'optional_paths': []},
+            'discover_learning_evidence': {},
+            'reconcile_knowledge': {'content': 'syntactic content only', 'expected_version_token': None},
+            'save_learning_checkpoint': {'checkpoint': {'milestone': [], 'return_point': None, 'ready_next': []},
+                                         'expected_version_token': 'synthetic-version'},
+            'create_evidence': {'content': 'syntactic content only'},
+            'set_intake_preference': {'scope': 'synthetic', 'depth': 'syntactic', 'expected_version_token': None},
+            'reset_intake_preference': {'scope': 'synthetic', 'expected_version_token': 'synthetic-version'},
+        }
+        self.assertEqual(set(valid), fixture.REFERENCE_HOST_OPERATIONS)
+        with mock.patch.object(fixture.RuntimeSessionBroker, '__init__', side_effect=AssertionError('real broker')), \
+                mock.patch.object(fixture.ReferenceLearningHost, 'open', side_effect=AssertionError('host session')), \
+                mock.patch.object(fixture, 'make_provider', side_effect=AssertionError('provider')), \
+                mock.patch.object(fixture.RuntimeSessionBroker, '_normalize_learning_checkpoint',
+                    wraps=fixture.RuntimeSessionBroker._normalize_learning_checkpoint) as normalize:
+            for operation, arguments in valid.items():
+                request = {'operation': operation, 'arguments': arguments}
+                original = copy.deepcopy(request)
+                with self.subTest(operation=operation):
+                    self.assertTrue(fixture.request_shape_admitted(request))
+                    self.assertEqual(original, request)
+            normalize.assert_called_once_with(valid['save_learning_checkpoint']['checkpoint'])
+
+    def test_malformed_host_requests_cannot_trigger_successor(self):
+        before, after = fixture.read('report-state.json'), fixture.read('report-post-state.json')
+        write = fixture.read('report-trajectory.json')[3]['request']
+        invalid = [dict(copy.deepcopy(write), extra='unsupported'),
+                   {'operation': 'unknown_operation', 'arguments': {}},
+                   {'operation': '', 'arguments': {}},
+                   {'operation': 'reconcile_knowledge', 'arguments': []}]
+        for operation, arguments in (
+            ('read_learning_context', {}),
+            ('read_learning_context', {'required_paths': 'not an array'}),
+            ('read_learning_context', {'required_paths': ['']}),
+            ('read_learning_context', {'required_paths': [], 'optional_paths': [17]}),
+            ('discover_learning_evidence', {'extra': True}),
+            ('reconcile_knowledge', {'expected_version_token': None}),
+            ('reconcile_knowledge', {'content': [], 'expected_version_token': None}),
+            ('reconcile_knowledge', {'content': 'x', 'expected_version_token': 7}),
+            ('reconcile_knowledge', {'content': 'x', 'expected_version_token': ''}),
+            ('reconcile_knowledge', {'content': 'x', 'expected_version_token': None, 'extra': True}),
+            ('create_evidence', {'content': []}),
+            ('set_intake_preference', {'scope': 'x', 'expected_version_token': None}),
+            ('reset_intake_preference', {'scope': 'x', 'expected_version_token': None, 'depth': 'x'}),
+        ):
+            invalid.append({'operation': operation, 'arguments': arguments})
+        checkpoint = {'milestone': [], 'return_point': None, 'ready_next': []}
+        for key, value in (('milestone', 'scalar'), ('milestone', ['duplicate', 'duplicate']),
+                           ('ready_next', 'scalar'), ('ready_next', [7]), ('return_point', 'scalar'),
+                           ('return_point', {'': 'invalid key'}), ('extra', True)):
+            altered = dict(copy.deepcopy(checkpoint), **{key: value})
+            invalid.append({'operation': 'save_learning_checkpoint',
+                            'arguments': {'checkpoint': altered, 'expected_version_token': 'synthetic-version'}})
+        for request in invalid:
+            rows = fixture.read('report-trajectory.json')
+            # Keep the real later owning write, so an invalid earlier read cannot
+            # be hidden merely by the absence of an applied operation.
+            replace_request(rows[0], request)
+            with self.subTest(request=request):
+                self.assertFalse(fixture.request_shape_admitted(request))
+                decision = fixture.successor_decision(before, after, rows)
+                self.assertEqual('blocked', decision['status']); self.assertFalse(decision['trigger'])
+
+    def test_every_payload_delta_requires_its_same_receipt_owner(self):
+        before, knowledge = fixture.read('report-state.json'), fixture.read('report-post-state.json')
+        progress = copy.deepcopy(before)
+        value = yaml.safe_load(progress['docs'][fixture.CHECKPOINT_PATH])
+        value['resume']['return_point']['activity'] += ' Changed.'
+        progress['docs'][fixture.CHECKPOINT_PATH] = yaml.safe_dump(value, sort_keys=False)
+        both = copy.deepcopy(knowledge); both['docs'][fixture.CHECKPOINT_PATH] = progress['docs'][fixture.CHECKPOINT_PATH]
+        for after, operation in ((knowledge, 'save_learning_checkpoint'), (progress, 'reconcile_knowledge'),
+                                  (both, 'reconcile_knowledge'), (both, 'save_learning_checkpoint')):
+            with self.subTest(operation=operation, paths=fixture.changed_paths(before, after)):
+                decision = fixture.successor_decision(before, after, [synthetic_row(before, after, operation=operation)])
+                self.assertEqual('anomaly', decision['status']); self.assertFalse(decision['trigger'])
+        for after, operation in ((knowledge, 'reconcile_knowledge'), (progress, 'save_learning_checkpoint')):
+            row = synthetic_row(before, after, operation=operation)
+            self.assertTrue(fixture.successor_decision(before, after, [row])['trigger'])
+            row['response']['result']['applied'] = False
+            self.assertEqual('anomaly', fixture.successor_decision(before, after, [row])['status'])
+        rows = [synthetic_row(before, knowledge), synthetic_row(knowledge, both, 2, 'save_learning_checkpoint')]
+        decision = fixture.successor_decision(before, both, rows)
+        self.assertTrue(decision['trigger']); self.assertEqual([1, 2], decision['applied_owning_write_indices'])
+        borrowed = [synthetic_row(before, before), synthetic_row(before, knowledge, 2, 'read_learning_context')]
+        self.assertEqual('anomaly', fixture.successor_decision(before, knowledge, borrowed)['status'])
 
     def test_changed_source_fixture_dependency_fails(self):
         fixture.verify_dependencies()

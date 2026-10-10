@@ -14,8 +14,8 @@ from unittest import mock
 
 import yaml
 
-from scripts.reference_host import ReferenceLearningHost
-from scripts.runtime_broker import DeploymentWriteGate, RuntimeCapabilityPolicy
+from scripts.reference_host import REFERENCE_HOST_OPERATIONS, ReferenceLearningHost
+from scripts.runtime_broker import DeploymentWriteGate, RuntimeCapabilityPolicy, RuntimeSessionBroker
 from tests.answer_closure_fixture import make_provider, state_of
 from tests.cold_resume_fixture import ColdJourney
 from tests.correction_propagation_fixture import PERFORMANCE_PATH, REPORT_PATH
@@ -27,6 +27,7 @@ MANIFEST_SHA256 = 'bdb76ccd3392043249a03266cbc4c246cec3d9a0dc3853eb6d5fe469c44ee
 EVENT_TIME = '2026-10-09T16:50:00Z'
 REAL_CLOCK = datetime.datetime
 WRITES = {'reconcile_knowledge', 'save_learning_checkpoint'}
+PAYLOAD_OWNERS = {READ_PATH: 'reconcile_knowledge', CHECKPOINT_PATH: 'save_learning_checkpoint'}
 
 
 class FrozenClock(REAL_CLOCK):
@@ -143,6 +144,30 @@ def payload_projection(state):
     return projected
 
 
+def request_shape_admitted(request):
+    """Use the source dispatcher without a real broker, session or provider.
+
+    This checks request shape only. State-dependent content, capability and
+    version-token acceptance still require the separate exact host replay.
+    """
+    class ShapeAdmitted(Exception):
+        pass
+
+    def boundary(*args, **kwargs):
+        if request['operation'] == 'save_learning_checkpoint':
+            RuntimeSessionBroker._normalize_learning_checkpoint(kwargs['checkpoint'])
+        raise ShapeAdmitted
+
+    broker = mock.Mock(spec_set=RuntimeSessionBroker)
+    for operation in REFERENCE_HOST_OPERATIONS:
+        getattr(broker, operation).side_effect = boundary
+    try:
+        ReferenceLearningHost(broker, None).invoke(request)
+    except ShapeAdmitted:
+        return True
+    return False
+
+
 def receipt_integrity_errors(before, after, rows):
     errors, state = [], before
     if not isinstance(rows, list):
@@ -153,12 +178,12 @@ def receipt_integrity_errors(before, after, rows):
             require(row['index'] == index and digest(raw) == row['request_sha256'], 'receipt order/hash mismatch')
             require(raw.decode('utf-8') == row['request_raw_utf8'] and json.loads(raw) == row['request'],
                     'raw/parsed request mismatch')
-            require(isinstance(row['request'], dict)
-                    and isinstance(row['request'].get('operation'), str)
-                    and isinstance(row['request'].get('arguments'), dict), 'invalid request envelope')
+            require(request_shape_admitted(row['request']), 'invalid request shape')
             response = row.get('response')
             require(isinstance(response, dict), 'incomplete response envelope')
-            host_result = ('runner_exception' not in response and response.get('surface_version') == 'v4'
+            host_result = (set(response) == {'surface_version', 'ok', 'operation',
+                                            'result' if response.get('ok') is True else 'error'}
+                and response.get('surface_version') == 'v4'
                 and type(response.get('ok')) is bool
                 and response.get('operation') == row['request'].get('operation')
                 and isinstance(response.get('result' if response['ok'] else 'error'), dict))
@@ -187,6 +212,17 @@ def successor_decision(before, after, rows):
     try:
         left, right = payload_projection(before), payload_projection(after)
         delta = [p for p in left if left[p] != right[p]]
+        previous = left
+        for row in rows:
+            current = payload_projection(row['after_state'])
+            row_delta = [p for p in previous if previous[p] != current[p]]
+            applied = (row['response'].get('ok') is True
+                       and row['response'].get('result', {}).get('applied') is True)
+            if any(not applied or row['request']['operation'] != PAYLOAD_OWNERS[path]
+                   for path in row_delta):
+                return {'status': 'anomaly', 'trigger': False,
+                        'reason': 'payload changed without an applied owning write'}
+            previous = current
     except (KeyError, ValueError, TypeError, AttributeError, yaml.YAMLError) as exc:
         return {'status': 'blocked', 'trigger': False, 'reason': 'invalid payload projection',
                 'exception': type(exc).__name__}
@@ -194,8 +230,6 @@ def successor_decision(before, after, rows):
               and r['request'].get('operation') in WRITES
               and r.get('response', {}).get('ok') is True
               and r['response'].get('result', {}).get('applied') is True]
-    if delta and not writes:
-        return {'status': 'anomaly', 'trigger': False, 'reason': 'payload changed without an applied owning write'}
     return {'status': 'triggered' if delta else 'no_new_payload', 'trigger': bool(delta),
             'payload_changed_paths': delta, 'applied_owning_write_indices': writes}
 
