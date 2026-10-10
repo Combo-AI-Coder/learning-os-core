@@ -15,10 +15,31 @@ validator, synthetic tests, and stable reusable domain templates. It contains
 no learner state, no Evidence, no Instance or deployment authority, and no
 credentials. All test fixtures are synthetic.
 
-Validation (offline, deterministic):
+## Offline validation and retained evidence
 
-    python scripts/validate_learning_os.py . --core
-    python -m unittest discover -s tests -v
+Use Python 3.12 (the current CI baseline); the aggregate test suite also needs
+Git on `PATH`. Install the declared Python dependencies from
+`requirements-dev.txt` in an isolated virtual environment. From the repository
+root, on POSIX:
+
+    python -m venv ../learning-os-core-venv
+    ../learning-os-core-venv/bin/python -m pip install -r requirements-dev.txt
+    ../learning-os-core-venv/bin/python scripts/validate_learning_os.py . --core
+    ../learning-os-core-venv/bin/python -m unittest discover -s tests -v
+
+On Windows PowerShell, first set `$env:PYTHONUTF8 = '1'` for the current
+session, matching the Windows CI environment. Create the virtual environment
+with the same first command, then replace `../learning-os-core-venv/bin/python`
+with `..\learning-os-core-venv\Scripts\python.exe` in the remaining commands.
+Use that environment's Python for the other validation commands below as well. Dependency
+installation may need package-index access; the validation and synthetic replay
+use local fixtures, without model calls or live learner/provider access.
+
+For a smaller evidence-reading entry, see the
+[Core #19 offline intake-control replay](docs/evaluations/core19-intake-controls-results.md#reproduce-the-retained-evidence-offline).
+It covers the retained scope/set/reset/inheritance cases and explains which
+inputs were pre-seeded. It is a replay of existing synthetic evidence, not a
+new learner session or an end-user quickstart.
 
 The V0.4-B2-B split-aware Instance surface validates a materialized Instance
 snapshot against a locally materialized Core snapshot plus an explicit
