@@ -58,6 +58,10 @@ def require(condition, message):
         raise ValueError(message)
 
 
+def same_record(left, right):
+    return RuntimeSessionBroker._type_sensitive_semantic_equal(left, right)
+
+
 def verify_artifacts(directory=FIXTURES):
     directory = Path(directory)
     raw = (directory / 'publication-manifest.json').read_bytes()
@@ -97,16 +101,16 @@ def build_worlds():
     verify_dependencies()
     preparation = read('preparation-provenance.json')['preparation']
     with mock.patch('scripts.runtime_broker.datetime_module.datetime', FrozenClock), ColdJourney(False) as journey:
-        require(state_of(journey.provider) == preparation[0]['state'], 'base preparation state changed')
+        require(same_record(state_of(journey.provider), preparation[0]['state']), 'base preparation state changed')
         constructor_calls = json.loads(encoded(journey.provider.calls))
-        require(constructor_calls == preparation[0]['provider_calls'][:len(constructor_calls)],
+        require(same_record(constructor_calls, preparation[0]['provider_calls'][:len(constructor_calls)]),
                 'constructor prefix differs from retained cumulative trace')
         with journey.open(writable=True) as host:
             for row in preparation[1:3]:
-                require(host.invoke(row['request']) == row['response'], 'checkpoint preparation changed')
+                require(same_record(host.invoke(row['request']), row['response']), 'checkpoint preparation changed')
         # Original preparation row retained this mutable call list until all
         # baseline checkpoint operations had finished; compare its full scope.
-        require(json.loads(encoded(journey.provider.calls)) == preparation[0]['provider_calls'],
+        require(same_record(json.loads(encoded(journey.provider.calls)), preparation[0]['provider_calls']),
                 'cumulative baseline preparation trace changed')
         baseline = state_of(journey.provider)
     row = preparation[3]
@@ -115,7 +119,8 @@ def build_worlds():
         with mock.patch('scripts.runtime_broker.datetime_module.datetime', FrozenClock), opened(provider, preparation=True) as host:
             result = host.invoke(row['request'])
         report = state_of(provider)
-        require(result == row['response'] and json.loads(encoded(provider.calls)) == row['provider_calls'],
+        require(same_record(result, row['response'])
+                and same_record(json.loads(encoded(provider.calls)), row['provider_calls']),
                 'report preparation result/trace changed')
     require(changed_paths(baseline, report) == [REPORT_PATH], 'report changed unrelated document')
     for key in ('docs', 'blobs'):
@@ -125,7 +130,7 @@ def build_worlds():
             and baseline['snapshot_extra_paths'] == report['snapshot_extra_paths'], 'report changed authority/inventory')
     require(digest(encoded(baseline)) == row['before_state_sha256']
             and digest(encoded(report)) == row['after_state_sha256'], 'report state binding changed')
-    require(baseline == read('baseline-state.json') and report == read('report-state.json'),
+    require(same_record(baseline, read('baseline-state.json')) and same_record(report, read('report-state.json')),
             'prepared world differs from first state')
     require(yaml.safe_load(report['docs'][REPORT_PATH])['interpretation']['direction'] == 'neutral',
             'report is not neutral')
@@ -346,7 +351,19 @@ def successor_decision(before, after, rows):
               and r.get('response', {}).get('ok') is True
               and r['response'].get('result', {}).get('applied') is True]
     return {'status': 'triggered' if delta else 'no_new_payload', 'trigger': bool(delta),
-            'payload_changed_paths': delta, 'applied_owning_write_indices': writes}
+            'payload_changed_paths': delta, 'applied_owning_write_indices': writes,
+            'full_state_changed': before != after,
+            'rule': 'frozen payload projection; semantic interpretation is separate'}
+
+
+def verify_successor_decision(decision, frozen):
+    fields = {'status', 'trigger', 'payload_changed_paths', 'applied_owning_write_indices',
+              'full_state_changed', 'rule'}
+    require(isinstance(decision, dict) and set(decision) == fields
+            and isinstance(frozen, dict) and set(frozen) == fields,
+            'frozen successor decision fields changed')
+    require(RuntimeSessionBroker._type_sensitive_semantic_equal(decision, frozen),
+            'frozen successor decision changed')
 
 
 def validate_trajectory(rows, case):
@@ -360,6 +377,7 @@ def validate_trajectory(rows, case):
     operations = ['read_learning_context', 'discover_learning_evidence', 'read_learning_context']
     if case == 'report':
         operations += ['reconcile_knowledge', 'read_learning_context']
+    require(len(operations) == len(rows), 'retained operation coverage changed')
     owners, tokens, writes = set(), {}, 0
     for row, witness, operation in zip(rows, retained, operations):
         req, result = row['request'], row['response']
@@ -370,7 +388,7 @@ def validate_trajectory(rows, case):
         require(row.get('omitted_fields') == ['request_file'] and 'request_file' not in row,
                 'receipt omission disclosure changed')
         require(row['request_sha256'] == witness['request_sha256'] and row['index'] == witness['index']
-                and result == witness['response'] and row['provider_calls'] == witness['provider_calls']
+                and same_record(result, witness['response']) and same_record(row['provider_calls'], witness['provider_calls'])
                 and row['after_state_sha256'] == witness['state_sha256'], 'original replay binding changed')
         if operation == 'discover_learning_evidence':
             owners = {d['path'] for d in result['result']['knowledge_owners'] if d['state'] == 'present'}
@@ -386,7 +404,7 @@ def validate_trajectory(rows, case):
                 tokens[document['path']] = document['version_token']
         elif operation in WRITES:
             writes += 1
-            require(case == 'report' and result['result'] == {'applied': True}
+            require(case == 'report' and same_record(result['result'], {'applied': True})
                     and req['arguments']['expected_version_token'] == tokens.get(READ_PATH),
                     'owning write lacks actual fresh token/result')
     require(writes == spec['applied_writes'], 'owning-write count changed')
@@ -394,8 +412,9 @@ def validate_trajectory(rows, case):
 
 
 def verify_state_invariants(before, after, case):
+    validate_receipt_state(before); validate_receipt_state(after)
     if case != 'report':
-        require(before == after, 'nonwriting trajectory changed state')
+        require(same_record(before, after), 'nonwriting trajectory changed state')
     else:
         require(changed_paths(before, after) == [READ_PATH], 'correction changed unrelated document')
         old, new = (yaml.safe_load(s['docs'][READ_PATH]) for s in (before, after))
@@ -403,7 +422,7 @@ def verify_state_invariants(before, after, case):
         del expected['concepts']['token-identity']['capabilities']['explanation']
         expected['revision'] += 1
         expected['updated_at'] = EVENT_TIME
-        require(new == expected, 'retained claim-specific correction/naming preservation changed')
+        require(same_record(new, expected), 'retained claim-specific correction/naming preservation changed')
         for field in ('instance_head', 'snapshot_extra_paths'):
             require(before[field] == after[field], 'authority/inventory changed')
         require(all(after['blobs'].get(p) == value for p, value in before['blobs'].items() if p != READ_PATH),
@@ -420,7 +439,7 @@ def verify_state_invariants(before, after, case):
 
 def verify_review_bindings(review):
     manifest = read('publication-manifest.json')
-    require(review == read('semantic-method-review.json'), 'review differs from retained artifact')
+    require(same_record(review, read('semantic-method-review.json')), 'review differs from retained artifact')
     bindings = review.get('bound_artifact_sha256', {})
     for name, item in manifest['files'].items():
         if item['kind'] == 'verbatim' and name != 'semantic-method-review.json':
@@ -466,7 +485,7 @@ def replay():
     for case in ('baseline', 'report', 'successor'):
         spec = manifest['cases'][case]
         state = worlds[case] if case != 'successor' else copy.deepcopy(worlds['report_final'])
-        require(state == read(spec['initial_state_file']), 'successor/initial state binding changed')
+        require(same_record(state, read(spec['initial_state_file'])), 'successor/initial state binding changed')
         initial = copy.deepcopy(state)
         rows = validate_trajectory(read(case + '-trajectory.json'), case)
         receipts = []
@@ -476,18 +495,19 @@ def replay():
                 with mock.patch('scripts.runtime_broker.datetime_module.datetime', FrozenClock), opened(provider, readonly=spec['readonly']) as host:
                     result = host.invoke(json.loads(base64.b64decode(row['request_raw_base64'])))
                 after = state_of(provider)
-                require(result == row['response'] and json.loads(encoded(provider.calls)) == row['provider_calls'],
+                require(same_record(result, row['response'])
+                        and same_record(json.loads(encoded(provider.calls)), row['provider_calls']),
                         'actual result/provider trace changed')
-                require(after == row['after_state'], 'actual after-state changed')
+                require(same_record(after, row['after_state']), 'actual after-state changed')
                 receipts.append({'index': row['index'], 'request_sha256': row['request_sha256'],
                                  'response': result, 'state_sha256': digest(encoded(after))})
                 state = after
-        require(state == read(spec['final_state_file']), 'sealed final state changed')
+        require(same_record(state, read(spec['final_state_file'])), 'sealed final state changed')
         verify_state_invariants(initial, state, case)
         decision = successor_decision(initial, state, rows)
         if case != 'successor':
             frozen = read('successor-trigger-provenance.json')['seals'][case]['successor_decision']
-            require(all(decision.get(k) == frozen.get(k) for k in decision), 'frozen successor decision changed')
+            verify_successor_decision(decision, frozen)
         if case == 'report':
             worlds['report_final'] = state
         output.append({'case': case, 'receipts': receipts, 'state_sha256': digest(encoded(state)),

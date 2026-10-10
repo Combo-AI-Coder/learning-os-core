@@ -97,10 +97,12 @@ class AutonomousCorrectionTests(unittest.TestCase):
                 fixture.validate_trajectory(rows, 'report')
 
     def test_failed_result_provider_trace_and_state_concealment_fail(self):
-        for mutation in ('failed', 'provider', 'state', 'flags', 'missing_optional', 'evidence', 'owner'):
+        for mutation in ('failed', 'provider', 'provider_number_type', 'state', 'flags', 'missing_optional', 'evidence', 'owner'):
             rows = fixture.read('report-trajectory.json')
             if mutation == 'failed': rows[3]['response']['ok'] = False
             elif mutation == 'provider': rows[0]['provider_calls'].append(['changed'])
+            elif mutation == 'provider_number_type':
+                rows[0]['provider_calls'][0][1] = float(rows[0]['provider_calls'][0][1])
             elif mutation == 'state': rows[3]['after_state']['docs'][fixture.READ_PATH] += '\n'
             elif mutation == 'flags': rows[3]['state_unchanged'] = True
             elif mutation == 'missing_optional': rows[0]['response']['result']['missing_optional'] = []
@@ -119,7 +121,7 @@ class AutonomousCorrectionTests(unittest.TestCase):
     def test_correction_preserves_naming_original_evidence_and_one_occurrence(self):
         before, after = fixture.read('report-state.json'), fixture.read('report-post-state.json')
         fixture.verify_state_invariants(before, after, 'report')
-        for mutation in ('label', 'repeat', 'old_evidence', 'progress', 'extra_claim'):
+        for mutation in ('label', 'repeat', 'old_evidence', 'progress', 'extra_claim', 'extra_blob', 'missing_blob'):
             altered = copy.deepcopy(after)
             if mutation in ('label', 'extra_claim'):
                 value = yaml.safe_load(altered['docs'][fixture.READ_PATH])
@@ -129,6 +131,8 @@ class AutonomousCorrectionTests(unittest.TestCase):
                 altered['docs'][fixture.READ_PATH] = yaml.safe_dump(value)
             elif mutation == 'repeat': altered['docs']['evidence/duplicate.yaml'] = before['docs'][fixture.PERFORMANCE_PATH]
             elif mutation == 'old_evidence': altered['docs'][fixture.PERFORMANCE_PATH] += '# changed\n'
+            elif mutation == 'extra_blob': altered['blobs']['evidence/unrelated.yaml'] = 'synthetic-token'
+            elif mutation == 'missing_blob': altered['blobs'].pop(fixture.READ_PATH)
             else: altered['docs'][fixture.CHECKPOINT_PATH] += '# changed\n'
             with self.subTest(mutation=mutation), self.assertRaises(ValueError):
                 fixture.verify_state_invariants(before, altered, 'report')
@@ -140,8 +144,36 @@ class AutonomousCorrectionTests(unittest.TestCase):
             decision = fixture.successor_decision(fixture.read(spec['initial_state_file']),
                 fixture.read(spec['final_state_file']), fixture.read(case + '-trajectory.json'))
             self.assertEqual(case == 'report', decision['trigger'])
-            self.assertEqual(provenance['seals'][case]['successor_decision']['status'], decision['status'])
+            frozen = provenance['seals'][case]['successor_decision']
+            self.assertEqual(frozen, decision)
+            fixture.verify_successor_decision(decision, frozen)
         self.assertEqual('report-post-state.json', fixture.read('publication-manifest.json')['cases']['successor']['initial_state_file'])
+
+    def test_reconstructed_successor_decision_preserves_the_whole_frozen_contract(self):
+        fields = {'status', 'trigger', 'payload_changed_paths', 'applied_owning_write_indices',
+                  'full_state_changed', 'rule'}
+        for case in ('baseline', 'report'):
+            frozen = fixture.read('successor-trigger-provenance.json')['seals'][case]['successor_decision']
+            self.assertEqual(fields, set(frozen))
+            fixture.verify_successor_decision(copy.deepcopy(frozen), frozen)
+            for field in fields:
+                missing = copy.deepcopy(frozen); missing.pop(field)
+                changed = copy.deepcopy(frozen); changed[field] = None
+                for candidate in (missing, changed):
+                    with self.subTest(case=case, field=field, candidate=candidate), self.assertRaises(ValueError):
+                        fixture.verify_successor_decision(candidate, frozen)
+                    with self.assertRaises(ValueError): fixture.verify_successor_decision(frozen, candidate)
+                with self.assertRaises(ValueError): fixture.verify_successor_decision(missing, missing)
+            for field in ('trigger', 'full_state_changed'):
+                aliased = copy.deepcopy(frozen); aliased[field] = int(aliased[field])
+                with self.assertRaises(ValueError): fixture.verify_successor_decision(aliased, frozen)
+            extra = dict(frozen, unrecognized=True)
+            with self.assertRaises(ValueError): fixture.verify_successor_decision(extra, frozen)
+            for invalid in (None, [], 'invalid'):
+                with self.assertRaises(ValueError): fixture.verify_successor_decision(invalid, frozen)
+        frozen = fixture.read('successor-trigger-provenance.json')['seals']['report']['successor_decision']
+        aliased = copy.deepcopy(frozen); aliased['applied_owning_write_indices'] = [4.0]
+        with self.assertRaises(ValueError): fixture.verify_successor_decision(aliased, frozen)
 
     def test_payload_wording_changes_trigger_but_metadata_and_reversion_do_not(self):
         before = fixture.read('baseline-state.json')
@@ -470,7 +502,7 @@ class AutonomousCorrectionTests(unittest.TestCase):
     def test_actual_replay_rejects_result_trace_and_state_divergence(self):
         real_opened = fixture.opened
         worlds = {'baseline': fixture.read('baseline-state.json'), 'report': fixture.read('report-state.json')}
-        for mode in ('result', 'trace', 'state'):
+        for mode in ('result', 'result_bool_type', 'trace', 'trace_number_type', 'state'):
             @contextmanager
             def corrupted(provider, **kwargs):
                 with real_opened(provider, **kwargs) as host:
@@ -478,7 +510,10 @@ class AutonomousCorrectionTests(unittest.TestCase):
                         def invoke(self, request):
                             result = host.invoke(request)
                             if mode == 'result': result['result']['documents'][0]['content'] += '\n'
+                            elif mode == 'result_bool_type': result['ok'] = 1
                             elif mode == 'trace': provider.calls.append(('operator-negative',))
+                            elif mode == 'trace_number_type':
+                                call = list(provider.calls[-1]); call[1] = float(call[1]); provider.calls[-1] = tuple(call)
                             else: provider.docs[fixture.READ_PATH] += '# operator-negative\n'
                             return result
                     yield Proxy()
