@@ -5,6 +5,7 @@ product algorithm or a semantic tutor grader. All providers are local fakes.
 """
 import base64
 import copy
+from contextlib import nullcontext
 import datetime
 import hashlib
 import json
@@ -24,7 +25,8 @@ from scripts.validate_learning_os import (InstanceValidator, instance_path_ident
 from tests.answer_closure_fixture import make_provider, state_of
 from tests.cold_resume_fixture import ColdJourney
 from tests.correction_propagation_fixture import PERFORMANCE_PATH, REPORT_PATH
-from tests.test_runtime_broker import CHECKPOINT_PATH, READ_PATH, RUNTIME_PATH, locator
+from tests.test_runtime_broker import (BrokerProvider, CHECKPOINT_PATH, INSTANCE_ID, READ_PATH,
+                                       RUNTIME_PATH, locator)
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / 'tests/fixtures/core34-autonomous-correction'
@@ -268,10 +270,84 @@ class ReceiptMemory:
         return self.state['docs'][path], self.state['blobs'][path]
 
 
+def receipt_read_response(state, request):
+    """Run source read algorithms on memory, not runtime authority or a filesystem."""
+    require(request['operation'] in {'read_learning_context', 'discover_learning_evidence'},
+            'receipt read adapter forbids writes')
+    written = set()
+
+    class MemoryPath:
+        def __init__(self, path=''):
+            self.path = path
+
+        def joinpath(self, *parts):
+            return MemoryPath('/'.join(filter(None, (self.path, *parts))))
+
+        @property
+        def parent(self):
+            return MemoryPath(self.path.rpartition('/')[0])
+
+        def mkdir(self, *, parents, exist_ok):
+            require(parents is True and exist_ok is True, 'unexpected memory directory mode')
+
+        def write_text(self, content, *, encoding, newline):
+            require(encoding == 'utf-8' and newline == '\n'
+                    and content == state['docs'][self.path], 'memory snapshot changed document bytes')
+            written.add(self.path)
+
+    # Reuse the synthetic provider's exact inventory filter without constructing
+    # that provider or giving it real paths; its writes target this checked sink.
+    provider = object.__new__(BrokerProvider)
+    provider.instance, provider.calls = MemoryPath(), []
+    provider.docs, provider.blobs = dict(state['docs']), dict(state['blobs'])
+    provider.instance_head = state['instance_head']
+    provider.snapshot_extra_paths = set(state['snapshot_extra_paths'])
+    provider.promote_after_target_read = provider.advance_branch_after_target_read = False
+    snapshot = provider.materialize(INSTANCE_ID, state['instance_head'])
+    require(written == set(dict(snapshot.blob_shas)), 'memory snapshot inventory mismatch')
+    authority, deployment, handle = SimpleNamespace(snapshot=snapshot), object(), object()
+    session = SimpleNamespace(deployment=deployment,
+        binding=SimpleNamespace(**FIRST_FIELDS['session_binding']),
+        policy=RuntimeCapabilityPolicy(readable_roots=tuple(FIRST_FIELDS['host_interface']['readable_roots'])))
+
+    class MemoryGuard:
+        def snapshot(self, actual_deployment, *, require_active):
+            require(actual_deployment is deployment and require_active is False, 'unexpected read admission')
+            return deployment
+
+        def assert_snapshot_current(self, actual_deployment, actual_snapshot, *, require_active):
+            require(actual_deployment is deployment and actual_snapshot is deployment
+                    and require_active is False, 'unexpected read fence')
+
+    class MemoryReadBroker(RuntimeSessionBroker):
+        def __init__(self):
+            self.provider, self.guard = provider, MemoryGuard()
+            self.write_admission = SimpleNamespace(read_lease=lambda: nullcontext())
+
+        def _session_operation(self, actual_handle):
+            require(actual_handle is handle, 'unexpected read handle')
+            return nullcontext(session)
+
+        def _pin_instance_authority(self, actual_session):
+            require(actual_session is session, 'unexpected read session')
+            return authority
+
+        def _assert_pinned_instance_current(self, actual_session, actual_authority):
+            require(actual_session is session and actual_authority is authority, 'unexpected memory authority')
+
+        def _release_materializations(self, snapshots):
+            require(len(snapshots) == 1 and snapshots[0] is snapshot, 'unexpected memory release')
+
+    return ReferenceLearningHost(MemoryReadBroker(), handle).invoke(request)
+
+
 def validate_receipt_effects(before, row):
     after, request, response = row['after_state'], row['request'], row['response']
     operation, arguments = request['operation'], request['arguments']
     allowed = set()
+    if operation in {'read_learning_context', 'discover_learning_evidence'} and response.get('ok') is True:
+        require(same_record(response, receipt_read_response(before, request)),
+                'read result does not match the source snapshot/operation')
     if operation in WRITES and response.get('ok') is True:
         result = response['result']
         require(set(result) == {'applied'} and type(result['applied']) is bool, 'invalid write result')

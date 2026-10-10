@@ -27,9 +27,12 @@ def synthetic_row(before, after, index=1, operation='reconcile_knowledge'):
     }.get(operation, {})
     request = {'operation': operation, 'arguments': arguments}
     raw = fixture.encoded(request)
+    response = (fixture.receipt_read_response(before, request)
+                if operation in {'read_learning_context', 'discover_learning_evidence'} else
+                {'surface_version': 'v4', 'ok': True, 'operation': operation, 'result': {'applied': True}})
     return {'index': index, 'request': request, 'request_raw_base64': base64.b64encode(raw).decode(),
             'request_raw_utf8': raw.decode(), 'request_sha256': fixture.digest(raw),
-            'response': {'surface_version': 'v4', 'ok': True, 'operation': operation, 'result': {'applied': True}},
+            'response': response,
             'provider_calls': [],
             'before_state_sha256': fixture.digest(fixture.encoded(before)),
             'after_state': copy.deepcopy(after), 'after_state_sha256': fixture.digest(fixture.encoded(after)),
@@ -609,6 +612,114 @@ class AutonomousCorrectionTests(unittest.TestCase):
             self.assertEqual('triggered', fixture.successor_decision(before, after, [row])['status'])
             self.assertEqual(1, version.call_count); self.assertGreater(structural.call_count, 0)
         self.assertEqual(saved, (before, after, row))
+
+    def test_read_result_fields_and_values_are_bound_to_each_receipt_state(self):
+        before, after = fixture.read('report-state.json'), fixture.read('report-post-state.json')
+        source = fixture.read('report-trajectory.json')
+        read_fields = {'documents', 'missing_optional'}
+        document_fields = {'path', 'content', 'version_token'}
+        self.assertEqual(read_fields, set(source[0]['response']['result']))
+        self.assertEqual(document_fields, set(source[0]['response']['result']['documents'][0]))
+        for field in read_fields | {'extra'}:
+            rows = copy.deepcopy(source); result = rows[0]['response']['result']
+            if field == 'extra': result[field] = None
+            else: result.pop(field)
+            with self.subTest(result_field=field):
+                self.assertEqual('blocked', fixture.successor_decision(before, after, rows)['status'])
+        for field in document_fields | {'extra'}:
+            for value in (None, 'fabricated', []):
+                rows = copy.deepcopy(source); document = rows[0]['response']['result']['documents'][0]
+                if value is None and field != 'extra': document.pop(field)
+                else: document[field] = value
+                with self.subTest(document_field=field, value=value):
+                    self.assertEqual('blocked', fixture.successor_decision(before, after, rows)['status'])
+                    with self.assertRaises(ValueError): fixture.validate_trajectory(rows, 'report')
+        for result in ({}, {'documents': [], 'missing_optional': []},
+                        {'documents': source[0]['response']['result']['documents'], 'missing_optional': [fixture.READ_PATH]}):
+            rows = copy.deepcopy(source); rows[0]['response']['result'] = result
+            self.assertEqual('blocked', fixture.successor_decision(before, after, rows)['status'])
+        rows = copy.deepcopy(source)
+        rows[4]['response']['result'] = copy.deepcopy(rows[2]['response']['result'])
+        self.assertEqual('blocked', fixture.successor_decision(before, after, rows)['status'])
+
+    def test_discovery_result_has_complete_source_owned_objects(self):
+        before, after = fixture.read('report-state.json'), fixture.read('report-post-state.json')
+        source = fixture.read('report-trajectory.json')
+        result = source[1]['response']['result']
+        objects = [([], {'recipe_version', 'scope', 'coverage', 'evidence', 'knowledge_owners'}),
+                   (['scope'], {'topic', 'subtopic'}),
+                   (['evidence', 0], {'path', 'content', 'version_token', 'knowledge_references'}),
+                   (['knowledge_owners', 0], {'path', 'state', 'version_token'}),
+                   (['evidence', 0, 'knowledge_references', 0],
+                    {'target', 'knowledge_path', 'reference_status', 'sides'}),
+                   (['evidence', 0, 'knowledge_references', 0, 'target'],
+                    {'type', 'domain', 'concept', 'capability'})]
+        for path, fields in objects:
+            target = result
+            for key in path: target = target[key]
+            self.assertEqual(fields, set(target))
+            for field in fields | {'extra'}:
+                rows = copy.deepcopy(source); target = rows[1]['response']['result']
+                for key in path: target = target[key]
+                if field == 'extra': target[field] = None
+                else: target.pop(field)
+                with self.subTest(path=path, field=field):
+                    self.assertEqual('blocked', fixture.successor_decision(before, after, rows)['status'])
+        for path, value in ((['recipe_version'], 'fabricated'), (['scope', 'subtopic'], 'other'),
+                            (['coverage'], 'partial'), (['evidence'], []), (['knowledge_owners'], []),
+                            (['evidence', 0, 'content'], 'fabricated'),
+                            (['evidence', 0, 'version_token'], 'fabricated'),
+                            (['knowledge_owners', 0, 'state'], 'absent'),
+                            (['knowledge_owners', 0, 'version_token'], None),
+                            (['evidence', 0, 'knowledge_references', 0, 'reference_status'], 'fabricated'),
+                            (['evidence', 0, 'knowledge_references', 0, 'sides'], [])):
+            rows = copy.deepcopy(source); target = rows[1]['response']['result']
+            for key in path[:-1]: target = target[key]
+            target[path[-1]] = value
+            with self.subTest(path=path, value=value):
+                self.assertEqual('blocked', fixture.successor_decision(before, after, rows)['status'])
+        rows = copy.deepcopy(source); rows[1]['response']['result']['evidence'].reverse()
+        self.assertEqual('blocked', fixture.successor_decision(before, after, rows)['status'])
+
+    def test_read_snapshot_order_optionals_and_hidden_documents_use_source_inventory(self):
+        state = fixture.read('report-state.json')
+        hidden = 'topics/synthetic/subtopics/unit/not-materialized.yaml'
+        missing = 'evidence/evi-not-present.yaml'
+        state['docs'][hidden], state['blobs'][hidden] = 'not in snapshot inventory', 'hidden-token'
+        request = {'operation': 'read_learning_context', 'arguments': {
+            'required_paths': [fixture.CHECKPOINT_PATH, fixture.READ_PATH], 'optional_paths': [hidden, missing]}}
+        expected = {'surface_version': 'v4', 'ok': True, 'operation': 'read_learning_context', 'result': {
+            'documents': [{'path': path, 'content': state['docs'][path], 'version_token': state['blobs'][path]}
+                          for path in (fixture.CHECKPOINT_PATH, fixture.READ_PATH)],
+            'missing_optional': [hidden, missing]}}
+        row = synthetic_row(state, state, operation='read_learning_context')
+        replace_request(row, request); row['response'] = copy.deepcopy(expected)
+        self.assertTrue(fixture.same_record(expected, fixture.receipt_read_response(state, request)))
+        self.assertEqual('no_new_payload', fixture.successor_decision(state, state, [row])['status'])
+        for field in ('documents', 'missing_optional'):
+            changed = copy.deepcopy(row); changed['response']['result'][field].reverse()
+            self.assertEqual('blocked', fixture.successor_decision(state, state, [changed])['status'])
+        for path in (hidden, missing, 'learner/model.yaml'):
+            changed = copy.deepcopy(row)
+            replace_request(changed, {'operation': 'read_learning_context', 'arguments': {'required_paths': [path]}})
+            changed['response']['result'] = {'documents': [], 'missing_optional': []}
+            self.assertEqual('blocked', fixture.successor_decision(state, state, [changed])['status'])
+
+    def test_read_source_algorithms_are_memory_only_and_cannot_write(self):
+        state = fixture.read('report-state.json'); rows = fixture.read('report-trajectory.json')
+        saved = copy.deepcopy(state)
+        with mock.patch('builtins.open', side_effect=AssertionError('filesystem open')), \
+                mock.patch.object(Path, 'mkdir', side_effect=AssertionError('filesystem mkdir')), \
+                mock.patch.object(Path, 'write_text', side_effect=AssertionError('filesystem write')), \
+                mock.patch.object(Path, 'read_text', side_effect=AssertionError('filesystem read')), \
+                mock.patch.object(fixture.BrokerProvider, '__init__', side_effect=AssertionError('provider init')), \
+                mock.patch.object(fixture.RuntimeSessionBroker, '__init__', side_effect=AssertionError('runtime init')), \
+                mock.patch.object(fixture.ReferenceLearningHost, 'open', side_effect=AssertionError('host open')), \
+                mock.patch.object(fixture, 'make_provider', side_effect=AssertionError('real provider')):
+            for row in rows[:3]:
+                self.assertTrue(fixture.same_record(row['response'], fixture.receipt_read_response(state, row['request'])))
+            with self.assertRaises(ValueError): fixture.receipt_read_response(state, rows[3]['request'])
+        self.assertEqual(saved, state)
 
     def test_changed_source_fixture_dependency_fails(self):
         fixture.verify_dependencies()
