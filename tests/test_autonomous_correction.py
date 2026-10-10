@@ -15,10 +15,13 @@ from tests import autonomous_correction_fixture as fixture
 
 
 def synthetic_row(before, after, index=1, operation='reconcile_knowledge'):
+    progress = yaml.safe_load(after['docs'][fixture.CHECKPOINT_PATH])
     arguments = {
         'reconcile_knowledge': {'content': after['docs'].get(fixture.READ_PATH, 'synthetic'),
                                 'expected_version_token': 'synthetic-version'},
-        'save_learning_checkpoint': {'checkpoint': {'milestone': [], 'return_point': None, 'ready_next': []},
+        'save_learning_checkpoint': {'checkpoint': {'milestone': progress['current']['milestone'],
+                                                    'return_point': progress['resume']['return_point'],
+                                                    'ready_next': progress['resume']['ready_next']},
                                      'expected_version_token': 'synthetic-version'},
         'read_learning_context': {'required_paths': [fixture.READ_PATH]},
     }.get(operation, {})
@@ -153,7 +156,11 @@ class AutonomousCorrectionTests(unittest.TestCase):
             if path == fixture.READ_PATH:
                 value['concepts']['token-identity']['capabilities']['explanation']['updated_at'] = '2026-10-10T00:00:00Z'
             metadata['docs'][path] = yaml.safe_dump(value, sort_keys=False)
-        self.assertFalse(fixture.successor_decision(before, metadata, [synthetic_row(before, metadata)])['trigger'])
+        knowledge_metadata = copy.deepcopy(before)
+        knowledge_metadata['docs'][fixture.READ_PATH] = metadata['docs'][fixture.READ_PATH]
+        rows = [synthetic_row(before, knowledge_metadata),
+                synthetic_row(knowledge_metadata, metadata, 2, 'save_learning_checkpoint')]
+        self.assertFalse(fixture.successor_decision(before, metadata, rows)['trigger'])
         reverted = [synthetic_row(before, wording), synthetic_row(wording, before, 2)]
         self.assertFalse(fixture.successor_decision(before, before, reverted)['trigger'])
 
@@ -180,7 +187,7 @@ class AutonomousCorrectionTests(unittest.TestCase):
                 self.assertEqual('blocked', fixture.successor_decision(before, after, rows)['status'])
         altered = copy.deepcopy(after); altered['docs'][fixture.READ_PATH] = '['
         self.assertEqual('blocked', fixture.successor_decision(before, altered, [synthetic_row(before, altered)])['status'])
-        self.assertEqual('anomaly', fixture.successor_decision(before, after,
+        self.assertEqual('blocked', fixture.successor_decision(before, after,
             [synthetic_row(before, after, operation='read_learning_context')])['status'])
 
     def test_host_response_has_exactly_one_result_branch(self):
@@ -211,12 +218,13 @@ class AutonomousCorrectionTests(unittest.TestCase):
         valid = {
             'read_learning_context': {'required_paths': [fixture.READ_PATH], 'optional_paths': []},
             'discover_learning_evidence': {},
-            'reconcile_knowledge': {'content': 'syntactic content only', 'expected_version_token': None},
+            'reconcile_knowledge': {'content': fixture.read('report-state.json')['docs'][fixture.READ_PATH],
+                                    'expected_version_token': None},
             'save_learning_checkpoint': {'checkpoint': {'milestone': [], 'return_point': None, 'ready_next': []},
                                          'expected_version_token': 'synthetic-version'},
-            'create_evidence': {'content': 'syntactic content only'},
-            'set_intake_preference': {'scope': 'synthetic', 'depth': 'syntactic', 'expected_version_token': None},
-            'reset_intake_preference': {'scope': 'synthetic', 'expected_version_token': 'synthetic-version'},
+            'create_evidence': {'content': fixture.read('report-state.json')['docs'][fixture.PERFORMANCE_PATH]},
+            'set_intake_preference': {'scope': 'topic', 'depth': 'balanced', 'expected_version_token': None},
+            'reset_intake_preference': {'scope': 'topic', 'expected_version_token': 'synthetic-version'},
         }
         self.assertEqual(set(valid), fixture.REFERENCE_HOST_OPERATIONS)
         with mock.patch.object(fixture.RuntimeSessionBroker, '__init__', side_effect=AssertionError('real broker')), \
@@ -283,17 +291,157 @@ class AutonomousCorrectionTests(unittest.TestCase):
                                   (both, 'reconcile_knowledge'), (both, 'save_learning_checkpoint')):
             with self.subTest(operation=operation, paths=fixture.changed_paths(before, after)):
                 decision = fixture.successor_decision(before, after, [synthetic_row(before, after, operation=operation)])
-                self.assertEqual('anomaly', decision['status']); self.assertFalse(decision['trigger'])
+                self.assertEqual('blocked', decision['status']); self.assertFalse(decision['trigger'])
         for after, operation in ((knowledge, 'reconcile_knowledge'), (progress, 'save_learning_checkpoint')):
             row = synthetic_row(before, after, operation=operation)
             self.assertTrue(fixture.successor_decision(before, after, [row])['trigger'])
             row['response']['result']['applied'] = False
-            self.assertEqual('anomaly', fixture.successor_decision(before, after, [row])['status'])
+            self.assertEqual('blocked', fixture.successor_decision(before, after, [row])['status'])
         rows = [synthetic_row(before, knowledge), synthetic_row(knowledge, both, 2, 'save_learning_checkpoint')]
         decision = fixture.successor_decision(before, both, rows)
         self.assertTrue(decision['trigger']); self.assertEqual([1, 2], decision['applied_owning_write_indices'])
         borrowed = [synthetic_row(before, before), synthetic_row(before, knowledge, 2, 'read_learning_context')]
-        self.assertEqual('anomaly', fixture.successor_decision(before, knowledge, borrowed)['status'])
+        self.assertEqual('blocked', fixture.successor_decision(before, knowledge, borrowed)['status'])
+
+    def test_malformed_full_states_are_blocked_without_exceptions(self):
+        before, after = fixture.read('report-state.json'), fixture.read('report-post-state.json')
+        malformed = [None, [], 'state', {'docs': []}]
+        for field, value in (('docs', []), ('docs', None), ('blobs', []), ('blobs', None),
+                             ('instance_head', 7), ('snapshot_extra_paths', {}),
+                             ('snapshot_extra_paths', ['missing-path']), ('extra', 'unrecognized')):
+            altered = copy.deepcopy(after); altered[field] = value; malformed.append(altered)
+        for field, value in (('docs', 7), ('blobs', None)):
+            altered = copy.deepcopy(after); altered[field][fixture.READ_PATH] = value; malformed.append(altered)
+        altered = copy.deepcopy(after); altered['blobs'].pop(fixture.READ_PATH); malformed.append(altered)
+        altered = copy.deepcopy(after); altered['blobs'][fixture.READ_PATH] = ''; malformed.append(altered)
+        for path in ('evidence/../../outside.yaml', '/tmp/outside.yaml'):
+            altered = copy.deepcopy(after)
+            altered['docs'][path] = 'content'; altered['blobs'][path] = 'synthetic-token'
+            malformed.append(altered)
+        altered = copy.deepcopy(after); altered.pop('instance_head'); malformed.append(altered)
+        for state in malformed:
+            row = synthetic_row(before, after); row['after_state'] = state
+            row['after_state_sha256'] = fixture.digest(fixture.encoded(state))
+            with self.subTest(state=state):
+                self.assertEqual('blocked', fixture.successor_decision(state, state, [])['status'])
+                self.assertEqual('blocked', fixture.successor_decision(before, state, [row])['status'])
+                restored = synthetic_row(before, after, 2)
+                restored['before_state_sha256'] = row['after_state_sha256']
+                self.assertEqual('blocked', fixture.successor_decision(before, after, [row, restored])['status'])
+
+    def test_full_state_side_effects_cannot_hide_behind_owned_payload(self):
+        before, after = fixture.read('report-state.json'), fixture.read('report-post-state.json')
+        variants = []
+        for field, path in (('docs', fixture.PERFORMANCE_PATH), ('blobs', fixture.PERFORMANCE_PATH),
+                            ('blobs', fixture.CHECKPOINT_PATH)):
+            changed = copy.deepcopy(after); changed[field][path] += 'changed'; variants.append(changed)
+        for mode in ('add', 'delete'):
+            changed = copy.deepcopy(after)
+            for field in ('docs', 'blobs'):
+                if mode == 'add': changed[field]['unknown/document.yaml'] = 'new'
+                else: changed[field].pop(fixture.PERFORMANCE_PATH)
+            variants.append(changed)
+        changed = copy.deepcopy(after); changed['instance_head'] = 'changed'; variants.append(changed)
+        changed = copy.deepcopy(after); changed['snapshot_extra_paths'] = []; variants.append(changed)
+        for changed in variants:
+            with self.subTest(changed=fixture.changed_paths(before, changed)):
+                self.assertEqual('blocked', fixture.successor_decision(before, changed,
+                    [synthetic_row(before, changed)])['status'])
+        metadata = copy.deepcopy(before); metadata['docs'][fixture.READ_PATH] += '\n'
+        for operation, response in (
+            ('read_learning_context', {'surface_version': 'v4', 'ok': True,
+                                      'operation': 'read_learning_context', 'result': {}}),
+            ('reconcile_knowledge', {'surface_version': 'v4', 'ok': True,
+                                    'operation': 'reconcile_knowledge', 'result': {'applied': False}}),
+            ('reconcile_knowledge', {'surface_version': 'v4', 'ok': False,
+                                    'operation': 'reconcile_knowledge', 'error': {'code': 'guard_rejected', 'retryable': False}}),
+            ('reconcile_knowledge', {'runner_exception': 'Injected', 'message': 'failed'}),
+        ):
+            row = synthetic_row(before, metadata, operation=operation); row['response'] = response
+            with self.subTest(operation=operation, response=response):
+                self.assertEqual('blocked', fixture.successor_decision(before, metadata, [row])['status'])
+
+    def test_broker_payload_gates_and_frozen_consumer_scope(self):
+        before, after = fixture.read('report-state.json'), fixture.read('report-post-state.json')
+        for content in ('syntactic content only', '[]', 'domain: x\ndomain: y\n',
+                        'document_type: learner_knowledge\ndomain: synthetic\nconcepts: []\n'):
+            row = synthetic_row(before, after); request = copy.deepcopy(row['request'])
+            request['arguments']['content'] = content; replace_request(row, request)
+            with self.subTest(content=content):
+                self.assertFalse(fixture.request_shape_admitted(request))
+                self.assertEqual('blocked', fixture.successor_decision(before, after, [row])['status'])
+        for operation, arguments in (
+            ('create_evidence', {'content': before['docs'][fixture.PERFORMANCE_PATH]}),
+            ('set_intake_preference', {'scope': 'topic', 'depth': 'balanced', 'expected_version_token': None}),
+            ('reset_intake_preference', {'scope': 'topic', 'expected_version_token': None}),
+        ):
+            row = synthetic_row(before, before); request = {'operation': operation, 'arguments': arguments}
+            replace_request(row, request)
+            with self.subTest(operation=operation):
+                self.assertTrue(fixture.request_shape_admitted(request))
+                self.assertEqual('blocked', fixture.successor_decision(before, before, [row])['status'])
+        self.assertFalse(fixture.request_shape_admitted({'operation': 'create_evidence', 'arguments': {'content': 'scalar'}}))
+        for paths in ([], [fixture.READ_PATH, fixture.READ_PATH], ['../outside.yaml']):
+            self.assertFalse(fixture.request_shape_admitted({'operation': 'read_learning_context',
+                                                            'arguments': {'required_paths': paths}}))
+
+    def test_write_candidates_are_bound_to_owned_outputs(self):
+        before, after = fixture.read('report-state.json'), fixture.read('report-post-state.json')
+        for mismatch in ('unchanged_content', 'wrong_domain'):
+            row = synthetic_row(before, after); request = copy.deepcopy(row['request'])
+            if mismatch == 'unchanged_content': request['arguments']['content'] = before['docs'][fixture.READ_PATH]
+            else:
+                candidate = yaml.safe_load(request['arguments']['content']); candidate['domain'] = 'elsewhere'
+                request['arguments']['content'] = yaml.safe_dump(candidate)
+            replace_request(row, request)
+            with self.subTest(mismatch=mismatch):
+                self.assertEqual('blocked', fixture.successor_decision(before, after, [row])['status'])
+        progress = copy.deepcopy(before); document = yaml.safe_load(progress['docs'][fixture.CHECKPOINT_PATH])
+        document['resume']['return_point']['activity'] += ' changed'
+        progress['docs'][fixture.CHECKPOINT_PATH] = yaml.safe_dump(document)
+        row = synthetic_row(before, progress, operation='save_learning_checkpoint')
+        row['request']['arguments']['checkpoint']['return_point']['activity'] += ' other'
+        replace_request(row, row['request'])
+        self.assertEqual('blocked', fixture.successor_decision(before, progress, [row])['status'])
+        document['milestones']['injected'] = {'state': 'invented'}
+        progress['docs'][fixture.CHECKPOINT_PATH] = yaml.safe_dump(document)
+        self.assertEqual('blocked', fixture.successor_decision(before, progress,
+            [synthetic_row(before, progress, operation='save_learning_checkpoint')])['status'])
+
+    def test_integrity_preserves_scalar_types_and_bounded_yaml(self):
+        before, after = fixture.read('report-state.json'), fixture.read('report-post-state.json')
+        for field, value in (('current', []), ('resume', []), ('milestones', []), ('ready_next', 'scalar'),
+                             ('empty_milestone', None)):
+            malformed = yaml.safe_load(before['docs'][fixture.CHECKPOINT_PATH])
+            if field == 'ready_next': malformed['resume'][field] = value
+            elif field == 'empty_milestone':
+                malformed['milestones'][''] = {}
+                malformed['resume']['return_point'] = {'milestone': ''}
+            else: malformed[field] = value
+            left, right = copy.deepcopy(before), copy.deepcopy(after)
+            left['docs'][fixture.CHECKPOINT_PATH] = right['docs'][fixture.CHECKPOINT_PATH] = yaml.safe_dump(malformed)
+            row = synthetic_row(before, after)
+            row.update(before_state_sha256=fixture.digest(fixture.encoded(left)), after_state=right,
+                       after_state_sha256=fixture.digest(fixture.encoded(right)))
+            with self.subTest(malformed_unchanged_progress=field):
+                self.assertEqual('blocked', fixture.successor_decision(left, left, [])['status'])
+                self.assertEqual('blocked', fixture.successor_decision(left, right, [row])['status'])
+        for field in ('index', 'state_unchanged'):
+            row = synthetic_row(before, after); row[field] = True if field == 'index' else 0
+            self.assertEqual('blocked', fixture.successor_decision(before, after, [row])['status'])
+        for suffix in ('\nconcepts: {}\n', '\nrecursive: &loop [*loop]\n'):
+            changed = copy.deepcopy(after); changed['docs'][fixture.READ_PATH] += suffix
+            self.assertEqual('blocked', fixture.successor_decision(before, changed,
+                [synthetic_row(before, changed)])['status'])
+        left = copy.deepcopy(before); document = yaml.safe_load(left['docs'][fixture.CHECKPOINT_PATH])
+        document['resume']['return_point']['typed_marker'] = True
+        left['docs'][fixture.CHECKPOINT_PATH] = yaml.safe_dump(document)
+        right = copy.deepcopy(left); document['resume']['return_point']['typed_marker'] = 1
+        right['docs'][fixture.CHECKPOINT_PATH] = yaml.safe_dump(document)
+        row = synthetic_row(left, right, operation='save_learning_checkpoint')
+        self.assertTrue(fixture.successor_decision(left, right, [row])['trigger'])
+        row['request']['arguments']['checkpoint']['return_point']['typed_marker'] = True
+        self.assertEqual('blocked', fixture.successor_decision(left, right, [row])['status'])
 
     def test_changed_source_fixture_dependency_fails(self):
         fixture.verify_dependencies()

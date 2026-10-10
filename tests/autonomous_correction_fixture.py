@@ -15,7 +15,11 @@ from unittest import mock
 import yaml
 
 from scripts.reference_host import REFERENCE_HOST_OPERATIONS, ReferenceLearningHost
-from scripts.runtime_broker import DeploymentWriteGate, RuntimeCapabilityPolicy, RuntimeSessionBroker
+from scripts.runtime_adapter import GuardRejected, ResolutionError
+from scripts.runtime_broker import (DeploymentWriteGate, RuntimeCapabilityPolicy, RuntimeSessionBroker,
+                                    _load_candidate_yaml, _relative_path)
+from scripts.validate_learning_os import (instance_path_identity_mismatches,
+                                          validate_instance_document_trust_boundary)
 from tests.answer_closure_fixture import make_provider, state_of
 from tests.cold_resume_fixture import ColdJourney
 from tests.correction_propagation_fixture import PERFORMANCE_PATH, REPORT_PATH
@@ -131,8 +135,26 @@ def build_worlds():
 def payload_projection(state):
     projected = {}
     for path, kind in ((READ_PATH, 'learner_knowledge'), (CHECKPOINT_PATH, 'subtopic_progress')):
-        value = yaml.safe_load(state['docs'][path])
+        value = _load_candidate_yaml(state['docs'][path], kind)
         require(isinstance(value, dict) and value.get('document_type') == kind, 'invalid payload projection')
+        require(not instance_path_identity_mismatches(path, value, kind)
+                and not validate_instance_document_trust_boundary(path, value, kind), 'invalid payload identity/trust')
+        if kind == 'learner_knowledge':
+            RuntimeSessionBroker._knowledge_evidence_ref_map(value, label='projected', allow_legacy_duplicates=True)
+        else:
+            require(all(isinstance(value.get(field), dict) for field in ('current', 'resume', 'milestones')),
+                    'invalid Progress checkpoint sections')
+            checkpoint = RuntimeSessionBroker._normalize_learning_checkpoint({
+                'milestone': value['current'].get('milestone'),
+                'return_point': value['resume'].get('return_point'),
+                'ready_next': value['resume'].get('ready_next')})
+            require(all(milestone in value['milestones'] for milestone in checkpoint['milestone']),
+                    'Progress names an unknown milestone')
+            return_point = checkpoint['return_point']
+            if isinstance(return_point, dict) and 'milestone' in return_point:
+                require(isinstance(return_point['milestone'], str)
+                        and return_point['milestone'] and return_point['milestone'] in value['milestones'],
+                        'invalid Progress return-point milestone')
         value = copy.deepcopy(value)
         for name in ('revision', 'updated_at'):
             value.pop(name, None)
@@ -145,40 +167,123 @@ def payload_projection(state):
 
 
 def request_shape_admitted(request):
-    """Use the source dispatcher without a real broker, session or provider.
+    """Run source admission up to its first state access, without runtime I/O.
 
-    This checks request shape only. State-dependent content, capability and
-    version-token acceptance still require the separate exact host replay.
+    Host and broker pure payload gates run; state-dependent schema, capability
+    and version-token acceptance still require the separate exact host replay.
     """
     class ShapeAdmitted(Exception):
         pass
 
-    def boundary(*args, **kwargs):
-        if request['operation'] == 'save_learning_checkpoint':
-            RuntimeSessionBroker._normalize_learning_checkpoint(kwargs['checkpoint'])
-        raise ShapeAdmitted
+    class BoundaryBroker(RuntimeSessionBroker):
+        def __init__(self):
+            pass
 
-    broker = mock.Mock(spec_set=RuntimeSessionBroker)
-    for operation in REFERENCE_HOST_OPERATIONS:
-        getattr(broker, operation).side_effect = boundary
+        def _session_operation(self, *args, **kwargs):
+            if request['operation'] == 'reconcile_knowledge':
+                candidate, path = self._knowledge_candidate(request['arguments']['content'])
+                self._knowledge_evidence_ref_map(candidate, label='candidate')
+                require(not instance_path_identity_mismatches(path, candidate, 'learner_knowledge')
+                        and not validate_instance_document_trust_boundary(path, candidate, 'learner_knowledge'),
+                        'invalid Knowledge candidate identity/trust')
+            raise ShapeAdmitted
+
+        def _session_state(self, *args, **kwargs):
+            raise ShapeAdmitted
+
     try:
-        ReferenceLearningHost(broker, None).invoke(request)
+        ReferenceLearningHost(BoundaryBroker(), None).invoke(request)
     except ShapeAdmitted:
         return True
+    except (AttributeError, KeyError, TypeError, ValueError, RecursionError, yaml.YAMLError):
+        return False
     return False
+
+
+def validate_receipt_state(state):
+    require(isinstance(state, dict)
+            and set(state) == {'docs', 'blobs', 'instance_head', 'snapshot_extra_paths'}, 'invalid state envelope')
+    for field in ('docs', 'blobs'):
+        require(isinstance(state[field], dict)
+                and all(isinstance(path, str) and path and isinstance(value, str)
+                        for path, value in state[field].items()), 'invalid state ' + field)
+        for path, value in state[field].items():
+            require(_relative_path(path, 'receipt state path') == path, 'noncanonical state path')
+            require(field != 'blobs' or bool(value), 'empty state blob token')
+    require(set(state['docs']) == set(state['blobs']), 'state document/blob inventory mismatch')
+    require(isinstance(state['instance_head'], str) and state['instance_head'], 'invalid state head')
+    paths = state['snapshot_extra_paths']
+    require(isinstance(paths, list) and all(isinstance(path, str) and path for path in paths)
+            and paths == sorted(set(paths)) and set(paths) <= set(state['docs']), 'invalid state inventory')
+
+
+def validate_receipt_effects(before, row):
+    after, request, response = row['after_state'], row['request'], row['response']
+    operation, arguments = request['operation'], request['arguments']
+    allowed = set()
+    if operation in WRITES and response.get('ok') is True:
+        result = response['result']
+        require(set(result) == {'applied'} and type(result['applied']) is bool, 'invalid write result')
+        if result['applied']:
+            if operation == 'reconcile_knowledge':
+                _, target = RuntimeSessionBroker._knowledge_candidate(arguments['content'])
+                require(target == READ_PATH, 'write targets an unbound Knowledge owner')
+                require(arguments['content'] == after['docs'][target], 'Knowledge request/output mismatch')
+            else:
+                target = CHECKPOINT_PATH
+                normalized = RuntimeSessionBroker._normalize_learning_checkpoint(arguments['checkpoint'])
+                old = _load_candidate_yaml(before['docs'][target], 'previous Progress')
+                new = _load_candidate_yaml(after['docs'][target], 'next Progress')
+                require(isinstance(old, dict) and isinstance(new, dict), 'invalid Progress payload')
+                expected = copy.deepcopy(old)
+                require(isinstance(expected.get('current'), dict) and isinstance(expected.get('resume'), dict),
+                        'invalid Progress checkpoint sections')
+                milestones = expected.get('milestones')
+                require(isinstance(milestones, dict)
+                        and all(milestone in milestones for milestone in normalized['milestone']),
+                        'checkpoint names an unknown milestone')
+                return_point = normalized['return_point']
+                if isinstance(return_point, dict) and 'milestone' in return_point:
+                    require(isinstance(return_point['milestone'], str) and return_point['milestone']
+                            and return_point['milestone'] in milestones,
+                            'checkpoint return point names an unknown milestone')
+                expected['current']['milestone'] = normalized['milestone']
+                expected['resume']['return_point'] = normalized['return_point']
+                expected['resume']['ready_next'] = normalized['ready_next']
+                for value in (expected, new):
+                    value.pop('revision', None); value.pop('updated_at', None)
+                require(RuntimeSessionBroker._type_sensitive_semantic_equal(expected, new),
+                        'checkpoint request/output mismatch or unrelated Progress change')
+            allowed.add(target)
+    for field in ('docs', 'blobs'):
+        require(set(before[field]) == set(after[field]), 'receipt changed ' + field + ' inventory')
+        require({path for path in before[field] if before[field][path] != after[field][path]} <= allowed,
+                'receipt changed non-owner ' + field)
+    require(before['instance_head'] == after['instance_head']
+            and before['snapshot_extra_paths'] == after['snapshot_extra_paths'], 'receipt changed authority/inventory')
 
 
 def receipt_integrity_errors(before, after, rows):
     errors, state = [], before
     if not isinstance(rows, list):
         return ['receipts are not a list']
+    try:
+        validate_receipt_state(before); validate_receipt_state(after)
+    except (KeyError, TypeError, ValueError, GuardRejected, ResolutionError) as exc:
+        return [{'error': str(exc)}]
     for index, row in enumerate(rows, 1):
         try:
+            require(isinstance(row, dict), 'receipt is not a mapping')
+            validate_receipt_state(row['after_state'])
             raw = base64.b64decode(row['request_raw_base64'], validate=True)
-            require(row['index'] == index and digest(raw) == row['request_sha256'], 'receipt order/hash mismatch')
-            require(raw.decode('utf-8') == row['request_raw_utf8'] and json.loads(raw) == row['request'],
+            require(type(row['index']) is int and row['index'] == index
+                    and digest(raw) == row['request_sha256'], 'receipt order/hash mismatch')
+            require(raw.decode('utf-8') == row['request_raw_utf8']
+                    and RuntimeSessionBroker._type_sensitive_semantic_equal(json.loads(raw), row['request']),
                     'raw/parsed request mismatch')
             require(request_shape_admitted(row['request']), 'invalid request shape')
+            require(row['request']['operation'] in FIRST_FIELDS['host_interface']['operations'],
+                    'operation outside frozen consumer interface')
             response = row.get('response')
             require(isinstance(response, dict), 'incomplete response envelope')
             host_result = (set(response) == {'surface_version', 'ok', 'operation',
@@ -191,13 +296,22 @@ def receipt_integrity_errors(before, after, rows):
                 and isinstance(response.get('runner_exception'), str)
                 and isinstance(response.get('message'), str))
             require(host_result or runner_error, 'incomplete response envelope')
+            if host_result and response['ok'] is False:
+                error = response['error']
+                require(set(error) == {'code', 'retryable'}
+                        and error['code'] in {'cas_conflict', 'guard_rejected', 'resolution_failed'}
+                        and type(error['retryable']) is bool
+                        and error['retryable'] == (error['code'] == 'cas_conflict'), 'invalid host failure')
             require(isinstance(row.get('provider_calls'), list), 'missing provider trace')
             require(row['before_state_sha256'] == digest(encoded(state)), 'before state-chain mismatch')
             require(row['after_state_sha256'] == digest(encoded(row['after_state'])), 'after state hash mismatch')
-            require(row['state_unchanged'] == (state == row['after_state'])
+            require(type(row['state_unchanged']) is bool
+                    and row['state_unchanged'] == (state == row['after_state'])
                     and row['changed_paths'] == changed_paths(state, row['after_state']), 'state flags inconsistent')
+            validate_receipt_effects(state, row)
             state = row['after_state']
-        except (KeyError, ValueError, TypeError, UnicodeError) as exc:
+        except (KeyError, ValueError, TypeError, UnicodeError, AttributeError, RecursionError,
+                GuardRejected, ResolutionError, yaml.YAMLError) as exc:
             errors.append({'index': index, 'error': str(exc)})
     if state != after:
         errors.append({'error': 'receipt chain does not reach final state'})
@@ -211,11 +325,12 @@ def successor_decision(before, after, rows):
         return {'status': 'blocked', 'trigger': False, 'reason': 'receipt integrity', 'errors': errors}
     try:
         left, right = payload_projection(before), payload_projection(after)
-        delta = [p for p in left if left[p] != right[p]]
+        delta = [p for p in left if not RuntimeSessionBroker._type_sensitive_semantic_equal(left[p], right[p])]
         previous = left
         for row in rows:
             current = payload_projection(row['after_state'])
-            row_delta = [p for p in previous if previous[p] != current[p]]
+            row_delta = [p for p in previous
+                         if not RuntimeSessionBroker._type_sensitive_semantic_equal(previous[p], current[p])]
             applied = (row['response'].get('ok') is True
                        and row['response'].get('result', {}).get('applied') is True)
             if any(not applied or row['request']['operation'] != PAYLOAD_OWNERS[path]
@@ -223,7 +338,7 @@ def successor_decision(before, after, rows):
                 return {'status': 'anomaly', 'trigger': False,
                         'reason': 'payload changed without an applied owning write'}
             previous = current
-    except (KeyError, ValueError, TypeError, AttributeError, yaml.YAMLError) as exc:
+    except (KeyError, ValueError, TypeError, AttributeError, GuardRejected, ResolutionError, yaml.YAMLError) as exc:
         return {'status': 'blocked', 'trigger': False, 'reason': 'invalid payload projection',
                 'exception': type(exc).__name__}
     writes = [r['index'] for r in rows if isinstance(r.get('request'), dict)
