@@ -5,18 +5,16 @@ product algorithm or a semantic tutor grader. All providers are local fakes.
 """
 import base64
 import copy
-from contextlib import nullcontext
 import datetime
 import hashlib
 import json
 from pathlib import Path
 import tempfile
-from types import SimpleNamespace
 from unittest import mock
 
 import yaml
 
-from scripts.reference_host import REFERENCE_HOST_OPERATIONS, ReferenceLearningHost
+from scripts.reference_host import ReferenceLearningHost
 from scripts.runtime_adapter import GuardRejected, ResolutionError
 from scripts.runtime_broker import (DeploymentWriteGate, RuntimeCapabilityPolicy, RuntimeSessionBroker,
                                     _load_candidate_yaml, _relative_path)
@@ -25,8 +23,7 @@ from scripts.validate_learning_os import (InstanceValidator, instance_path_ident
 from tests.answer_closure_fixture import make_provider, state_of
 from tests.cold_resume_fixture import ColdJourney
 from tests.correction_propagation_fixture import PERFORMANCE_PATH, REPORT_PATH
-from tests.test_runtime_broker import (BrokerProvider, CHECKPOINT_PATH, INSTANCE_ID, READ_PATH,
-                                       RUNTIME_PATH, locator)
+from tests.test_runtime_broker import CHECKPOINT_PATH, READ_PATH, RUNTIME_PATH, locator
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / 'tests/fixtures/core34-autonomous-correction'
@@ -196,41 +193,6 @@ def payload_projection(state):
     return projected
 
 
-def request_shape_admitted(request):
-    """Run source admission up to its first state access, without runtime I/O.
-
-    Host and broker pure payload gates run. Receipt effects additionally check
-    in-memory owner versions and payload rules; runtime authority/capability
-    acceptance still requires the separate exact host replay.
-    """
-    class ShapeAdmitted(Exception):
-        pass
-
-    class BoundaryBroker(RuntimeSessionBroker):
-        def __init__(self):
-            pass
-
-        def _session_operation(self, *args, **kwargs):
-            if request['operation'] == 'reconcile_knowledge':
-                candidate, path = self._knowledge_candidate(request['arguments']['content'])
-                self._knowledge_evidence_ref_map(candidate, label='candidate')
-                require(not instance_path_identity_mismatches(path, candidate, 'learner_knowledge')
-                        and not validate_instance_document_trust_boundary(path, candidate, 'learner_knowledge'),
-                        'invalid Knowledge candidate identity/trust')
-            raise ShapeAdmitted
-
-        def _session_state(self, *args, **kwargs):
-            raise ShapeAdmitted
-
-    try:
-        ReferenceLearningHost(BoundaryBroker(), None).invoke(request)
-    except ShapeAdmitted:
-        return True
-    except (AttributeError, KeyError, TypeError, ValueError, RecursionError, yaml.YAMLError):
-        return False
-    return False
-
-
 def validate_receipt_state(state):
     require(isinstance(state, dict)
             and set(state) == {'docs', 'blobs', 'instance_head', 'snapshot_extra_paths'}, 'invalid state envelope')
@@ -248,225 +210,65 @@ def validate_receipt_state(state):
             and paths == sorted(set(paths)) and set(paths) <= set(state['docs']), 'invalid state inventory')
 
 
-class ReceiptMemory:
-    """Read-only adapter for source gates; never opens paths or real providers."""
-    def __init__(self, state, path=None):
-        self.state, self.path = state, path
 
-    def joinpath(self, *parts):
-        return ReceiptMemory(self.state, '/'.join(parts))
-
-    def is_file(self):
-        return self.path in self.state['docs']
-
-    def read_text(self, *, encoding):
-        require(encoding == 'utf-8', 'unsupported receipt encoding')
-        return self.state['docs'][self.path]
-
-    def read_materialized_text(self, snapshot, path):
-        require(snapshot is self.state, 'unbound receipt snapshot')
-        if path not in self.state['docs']:
-            raise ResolutionError('receipt Evidence is missing')
-        return self.state['docs'][path], self.state['blobs'][path]
+def _load_publication_evidence():
+    """Pin the bytes actually parsed, without a verify-then-reread race."""
+    raw = (FIXTURES / 'publication-manifest.json').read_bytes()
+    require(digest(raw) == MANIFEST_SHA256, 'publication manifest changed')
+    manifest = json.loads(raw)
+    files = {}
+    for case, spec in manifest['cases'].items():
+        for name in (spec['initial_state_file'], spec['final_state_file'], case + '-trajectory.json',
+                     'mechanical-exact-replay.json'):
+            if name not in files:
+                content = (FIXTURES / name).read_bytes()
+                require(digest(content) == manifest['files'][name]['sha256'], 'publication bytes changed: ' + name)
+                files[name] = content
+    mechanical = json.loads(files['mechanical-exact-replay.json'])
+    return tuple((case, encoded(spec), files[spec['initial_state_file']], files[spec['final_state_file']],
+                  files[case + '-trajectory.json'], encoded(mechanical[case]['requests']))
+                 for case, spec in manifest['cases'].items())
 
 
-def receipt_read_response(state, request):
-    """Run source read algorithms on memory, not runtime authority or a filesystem."""
-    require(request['operation'] in {'read_learning_context', 'discover_learning_evidence'},
-            'receipt read adapter forbids writes')
-    written = set()
-
-    class MemoryPath:
-        def __init__(self, path=''):
-            self.path = path
-
-        def joinpath(self, *parts):
-            return MemoryPath('/'.join(filter(None, (self.path, *parts))))
-
-        @property
-        def parent(self):
-            return MemoryPath(self.path.rpartition('/')[0])
-
-        def mkdir(self, *, parents, exist_ok):
-            require(parents is True and exist_ok is True, 'unexpected memory directory mode')
-
-        def write_text(self, content, *, encoding, newline):
-            require(encoding == 'utf-8' and newline == '\n'
-                    and content == state['docs'][self.path], 'memory snapshot changed document bytes')
-            written.add(self.path)
-
-    # Reuse the synthetic provider's exact inventory filter without constructing
-    # that provider or giving it real paths; its writes target this checked sink.
-    provider = object.__new__(BrokerProvider)
-    provider.instance, provider.calls = MemoryPath(), []
-    provider.docs, provider.blobs = dict(state['docs']), dict(state['blobs'])
-    provider.instance_head = state['instance_head']
-    provider.snapshot_extra_paths = set(state['snapshot_extra_paths'])
-    provider.promote_after_target_read = provider.advance_branch_after_target_read = False
-    snapshot = provider.materialize(INSTANCE_ID, state['instance_head'])
-    require(written == set(dict(snapshot.blob_shas)), 'memory snapshot inventory mismatch')
-    authority, deployment, handle = SimpleNamespace(snapshot=snapshot), object(), object()
-    session = SimpleNamespace(deployment=deployment,
-        binding=SimpleNamespace(**FIRST_FIELDS['session_binding']),
-        policy=RuntimeCapabilityPolicy(readable_roots=tuple(FIRST_FIELDS['host_interface']['readable_roots'])))
-
-    class MemoryGuard:
-        def snapshot(self, actual_deployment, *, require_active):
-            require(actual_deployment is deployment and require_active is False, 'unexpected read admission')
-            return deployment
-
-        def assert_snapshot_current(self, actual_deployment, actual_snapshot, *, require_active):
-            require(actual_deployment is deployment and actual_snapshot is deployment
-                    and require_active is False, 'unexpected read fence')
-
-    class MemoryReadBroker(RuntimeSessionBroker):
-        def __init__(self):
-            self.provider, self.guard = provider, MemoryGuard()
-            self.write_admission = SimpleNamespace(read_lease=lambda: nullcontext())
-
-        def _session_operation(self, actual_handle):
-            require(actual_handle is handle, 'unexpected read handle')
-            return nullcontext(session)
-
-        def _pin_instance_authority(self, actual_session):
-            require(actual_session is session, 'unexpected read session')
-            return authority
-
-        def _assert_pinned_instance_current(self, actual_session, actual_authority):
-            require(actual_session is session and actual_authority is authority, 'unexpected memory authority')
-
-        def _release_materializations(self, snapshots):
-            require(len(snapshots) == 1 and snapshots[0] is snapshot, 'unexpected memory release')
-
-    return ReferenceLearningHost(MemoryReadBroker(), handle).invoke(request)
+# Immutable bytes loaded once at module admission; every comparison parses fresh
+# objects. This is publication identity, not proof that current source still
+# executes these receipts. replay() independently verifies that through the Host.
+_PUBLICATION_EVIDENCE = _load_publication_evidence()
 
 
-def validate_receipt_effects(before, row):
-    after, request, response = row['after_state'], row['request'], row['response']
-    operation, arguments = request['operation'], request['arguments']
-    allowed = set()
-    if operation in {'read_learning_context', 'discover_learning_evidence'} and response.get('ok') is True:
-        require(same_record(response, receipt_read_response(before, request)),
-                'read result does not match the source snapshot/operation')
-    if operation in WRITES and response.get('ok') is True:
-        result = response['result']
-        require(set(result) == {'applied'} and type(result['applied']) is bool, 'invalid write result')
-        old_documents, new_documents = receipt_payloads(before), receipt_payloads(after)
-        target = READ_PATH if operation == 'reconcile_knowledge' else CHECKPOINT_PATH
-        require(arguments['expected_version_token'] == before['blobs'][target], 'owning write token mismatch')
-        old, new = old_documents[target], new_documents[target]
-        require('schema_version' in old and same_record(old['schema_version'], new.get('schema_version')),
-                'owning write changed the fixed schema version')
-        if operation == 'reconcile_knowledge':
-            require(result['applied'], 'Knowledge has no successful unapplied result')
-            _, candidate_target = RuntimeSessionBroker._knowledge_candidate(arguments['content'])
-            require(candidate_target == target, 'write targets an unbound Knowledge owner')
-            require(arguments['content'] == after['docs'][target], 'Knowledge request/output mismatch')
-            broker = object.__new__(RuntimeSessionBroker)
-            broker.provider = ReceiptMemory(before)
-            broker._assert_new_knowledge_evidence_relevant(
-                state=SimpleNamespace(policy=RuntimeCapabilityPolicy(readable_roots=('evidence',))),
-                snapshot=before, current=old, candidate=new)
-        else:
-            normalized = RuntimeSessionBroker._normalize_learning_checkpoint(arguments['checkpoint'])
-            existing = {'milestone': old['current'].get('milestone'),
-                        'return_point': old['resume'].get('return_point'),
-                        'ready_next': old['resume'].get('ready_next')}
-            require(result['applied'] == (not same_record(existing, normalized)),
-                    'checkpoint applied/no-op result contradicts requested payload')
-            milestones = old['milestones']
-            require(all(milestone in milestones for milestone in normalized['milestone']),
-                    'checkpoint names an unknown milestone')
-            return_point = normalized['return_point']
-            if isinstance(return_point, dict) and 'milestone' in return_point:
-                require(isinstance(return_point['milestone'], str) and return_point['milestone']
-                        and return_point['milestone'] in milestones,
-                        'checkpoint return point names an unknown milestone')
-            if result['applied']:
-                expected = copy.deepcopy(old)
-                expected['current']['milestone'] = normalized['milestone']
-                expected['resume']['return_point'] = normalized['return_point']
-                expected['resume']['ready_next'] = normalized['ready_next']
-                expected['revision'] = old['revision'] + 1
-                # This synthetic witness runs with the declared pinned clock.
-                expected['updated_at'] = EVENT_TIME
-                require(same_record(expected, new), 'checkpoint request/output or revision mismatch')
-        if result['applied']:
-            RuntimeSessionBroker._assert_semantic_version_transition(ReceiptMemory(before),
-                path=target, document_type=new['document_type'], content=after['docs'][target])
-            allowed.add(target)
-    for field in ('docs', 'blobs'):
-        require(set(before[field]) == set(after[field]), 'receipt changed ' + field + ' inventory')
-        require({path for path in before[field] if before[field][path] != after[field][path]} <= allowed,
-                'receipt changed non-owner ' + field)
-    require(before['instance_head'] == after['instance_head']
-            and before['snapshot_extra_paths'] == after['snapshot_extra_paths'], 'receipt changed authority/inventory')
+def receipt_integrity_errors(before, after, rows, *, case=None):
+    """Authenticate only the retained witness, not arbitrary proposed receipts.
 
-
-def receipt_integrity_errors(before, after, rows):
-    errors, state = [], before
-    if not isinstance(rows, list):
-        return ['receipts are not a list']
+    A complete case binds every field, including the full provider trace, raw
+    request, result and serialized state. Unknown evidence is explicitly unbound;
+    it is not classified as a bad teaching outcome or a failed source operation.
+    """
     try:
-        validate_receipt_state(before); validate_receipt_state(after)
-    except (KeyError, TypeError, ValueError, GuardRejected, ResolutionError) as exc:
-        return [{'error': str(exc)}]
-    for index, row in enumerate(rows, 1):
-        try:
-            require(isinstance(row, dict), 'receipt is not a mapping')
-            validate_receipt_state(row['after_state'])
-            raw = base64.b64decode(row['request_raw_base64'], validate=True)
-            require(type(row['index']) is int and row['index'] == index
-                    and digest(raw) == row['request_sha256'], 'receipt order/hash mismatch')
-            require(raw.decode('utf-8') == row['request_raw_utf8']
-                    and RuntimeSessionBroker._type_sensitive_semantic_equal(json.loads(raw), row['request']),
-                    'raw/parsed request mismatch')
-            require(request_shape_admitted(row['request']), 'invalid request shape')
-            require(row['request']['operation'] in FIRST_FIELDS['host_interface']['operations'],
-                    'operation outside frozen consumer interface')
-            response = row.get('response')
-            require(isinstance(response, dict), 'incomplete response envelope')
-            host_result = (set(response) == {'surface_version', 'ok', 'operation',
-                                            'result' if response.get('ok') is True else 'error'}
-                and response.get('surface_version') == 'v4'
-                and type(response.get('ok')) is bool
-                and response.get('operation') == row['request'].get('operation')
-                and isinstance(response.get('result' if response['ok'] else 'error'), dict))
-            runner_error = (set(response) == {'runner_exception', 'message'}
-                and isinstance(response.get('runner_exception'), str)
-                and isinstance(response.get('message'), str))
-            require(host_result or runner_error, 'incomplete response envelope')
-            if host_result and response['ok'] is False:
-                error = response['error']
-                require(set(error) == {'code', 'retryable'}
-                        and error['code'] in {'cas_conflict', 'guard_rejected', 'resolution_failed'}
-                        and type(error['retryable']) is bool
-                        and error['retryable'] == (error['code'] == 'cas_conflict'), 'invalid host failure')
-            require(isinstance(row.get('provider_calls'), list), 'missing provider trace')
-            require(row['before_state_sha256'] == digest(encoded(state)), 'before state-chain mismatch')
-            require(row['after_state_sha256'] == digest(encoded(row['after_state'])), 'after state hash mismatch')
-            require(type(row['state_unchanged']) is bool
-                    and row['state_unchanged'] == (state == row['after_state'])
-                    and row['changed_paths'] == changed_paths(state, row['after_state']), 'state flags inconsistent')
-            validate_receipt_effects(state, row)
-            state = row['after_state']
-        except (KeyError, ValueError, TypeError, UnicodeError, AttributeError, RecursionError,
-                GuardRejected, ResolutionError, yaml.YAMLError) as exc:
-            errors.append({'index': index, 'error': str(exc)})
-    if state != after:
-        errors.append({'error': 'receipt chain does not reach final state'})
-    return errors
+        for label, _, initial, final, trajectory, _ in _PUBLICATION_EVIDENCE:
+            if case is not None and case != label:
+                continue
+            if (same_record(before, json.loads(initial)) and same_record(after, json.loads(final))
+                    and same_record(rows, json.loads(trajectory))):
+                return []
+    except (KeyError, TypeError, ValueError, RecursionError, GuardRejected, ResolutionError):
+        pass
+    return [{'error': 'unbound publication evidence'}]
+
+
+def payload_delta(before, after):
+    """Counterfactual projection only; a delta never authenticates an execution."""
+    left, right = payload_projection(before), payload_projection(after)
+    return [path for path in left if not same_record(left[path], right[path])]
 
 
 def successor_decision(before, after, rows):
-    """Fixed payload/integrity rule; no post-output semantic success filter."""
+    """Reconstruct the frozen decision only for authenticated retained evidence."""
     errors = receipt_integrity_errors(before, after, rows)
     if errors:
-        return {'status': 'blocked', 'trigger': False, 'reason': 'receipt integrity', 'errors': errors}
+        return {'status': 'blocked', 'trigger': False, 'reason': 'publication binding', 'errors': errors}
     try:
-        left, right = payload_projection(before), payload_projection(after)
-        delta = [p for p in left if not RuntimeSessionBroker._type_sensitive_semantic_equal(left[p], right[p])]
-        previous = left
+        delta = payload_delta(before, after)
+        previous = payload_projection(before)
         for row in rows:
             current = payload_projection(row['after_state'])
             row_delta = [p for p in previous
@@ -502,12 +304,13 @@ def verify_successor_decision(decision, frozen):
 
 
 def validate_trajectory(rows, case):
-    manifest = read('publication-manifest.json')
-    spec = manifest['cases'][case]
-    initial, final = read(spec['initial_state_file']), read(spec['final_state_file'])
+    records = [record for record in _PUBLICATION_EVIDENCE if record[0] == case]
+    require(len(records) == 1, 'unbound publication case')
+    _, spec_raw, initial_raw, final_raw, _, witness_raw = records[0]
+    spec, initial, final = (json.loads(raw) for raw in (spec_raw, initial_raw, final_raw))
     require(isinstance(rows, list) and len(rows) == spec['request_count'], 'missing/duplicate/surplus receipts')
-    require(not receipt_integrity_errors(initial, final, rows), 'receipt integrity/state-chain mismatch')
-    retained = read('mechanical-exact-replay.json')[case]['requests']
+    require(not receipt_integrity_errors(initial, final, rows, case=case), 'receipt integrity/state-chain mismatch')
+    retained = json.loads(witness_raw)
     require(len(retained) == len(rows), 'replay coverage changed')
     operations = ['read_learning_context', 'discover_learning_evidence', 'read_learning_context']
     if case == 'report':
