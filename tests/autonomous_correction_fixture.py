@@ -10,6 +10,7 @@ import hashlib
 import json
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 from unittest import mock
 
 import yaml
@@ -18,7 +19,7 @@ from scripts.reference_host import REFERENCE_HOST_OPERATIONS, ReferenceLearningH
 from scripts.runtime_adapter import GuardRejected, ResolutionError
 from scripts.runtime_broker import (DeploymentWriteGate, RuntimeCapabilityPolicy, RuntimeSessionBroker,
                                     _load_candidate_yaml, _relative_path)
-from scripts.validate_learning_os import (instance_path_identity_mismatches,
+from scripts.validate_learning_os import (InstanceValidator, instance_path_identity_mismatches,
                                           validate_instance_document_trust_boundary)
 from tests.answer_closure_fixture import make_provider, state_of
 from tests.cold_resume_fixture import ColdJourney
@@ -137,11 +138,14 @@ def build_worlds():
     return {'baseline': baseline, 'report': report}
 
 
-def payload_projection(state):
-    projected = {}
+def receipt_payloads(state):
+    """Validate owned documents with pure source gates over in-memory records."""
+    documents = {}
     for path, kind in ((READ_PATH, 'learner_knowledge'), (CHECKPOINT_PATH, 'subtopic_progress')):
         value = _load_candidate_yaml(state['docs'][path], kind)
         require(isinstance(value, dict) and value.get('document_type') == kind, 'invalid payload projection')
+        require(isinstance(value.get('schema_version'), str) and value['schema_version'].strip(),
+                'missing owned document schema version')
         require(not instance_path_identity_mismatches(path, value, kind)
                 and not validate_instance_document_trust_boundary(path, value, kind), 'invalid payload identity/trust')
         if kind == 'learner_knowledge':
@@ -160,10 +164,29 @@ def payload_projection(state):
                 require(isinstance(return_point['milestone'], str)
                         and return_point['milestone'] and return_point['milestone'] in value['milestones'],
                         'invalid Progress return-point milestone')
-        value = copy.deepcopy(value)
+        documents[path] = value
+    validator = object.__new__(InstanceValidator)
+    validator.docs, validator.findings, validator.evidence = dict(documents), [], set()
+    for path, content in state['docs'].items():
+        if path.startswith('evidence/'):
+            evidence, canonical = RuntimeSessionBroker._evidence_candidate(content)
+            require(canonical == path and not validate_instance_document_trust_boundary(path, evidence, 'evidence'),
+                    'invalid receipt Evidence identity/trust')
+            validator.docs[path] = evidence
+            validator.evidence.add(evidence['id'])
+    validator.structural()
+    validator.refs()
+    require(not validator.findings, 'invalid owned document structure/references')
+    return documents
+
+
+def payload_projection(state):
+    projected = {}
+    for path, document in receipt_payloads(state).items():
+        value = copy.deepcopy(document)
         for name in ('revision', 'updated_at'):
             value.pop(name, None)
-        if kind == 'learner_knowledge':
+        if path == READ_PATH:
             for concept in value.get('concepts', {}).values():
                 for capability in concept.get('capabilities', {}).values():
                     capability.pop('updated_at', None)
@@ -174,8 +197,9 @@ def payload_projection(state):
 def request_shape_admitted(request):
     """Run source admission up to its first state access, without runtime I/O.
 
-    Host and broker pure payload gates run; state-dependent schema, capability
-    and version-token acceptance still require the separate exact host replay.
+    Host and broker pure payload gates run. Receipt effects additionally check
+    in-memory owner versions and payload rules; runtime authority/capability
+    acceptance still requires the separate exact host replay.
     """
     class ShapeAdmitted(Exception):
         pass
@@ -222,6 +246,28 @@ def validate_receipt_state(state):
             and paths == sorted(set(paths)) and set(paths) <= set(state['docs']), 'invalid state inventory')
 
 
+class ReceiptMemory:
+    """Read-only adapter for source gates; never opens paths or real providers."""
+    def __init__(self, state, path=None):
+        self.state, self.path = state, path
+
+    def joinpath(self, *parts):
+        return ReceiptMemory(self.state, '/'.join(parts))
+
+    def is_file(self):
+        return self.path in self.state['docs']
+
+    def read_text(self, *, encoding):
+        require(encoding == 'utf-8', 'unsupported receipt encoding')
+        return self.state['docs'][self.path]
+
+    def read_materialized_text(self, snapshot, path):
+        require(snapshot is self.state, 'unbound receipt snapshot')
+        if path not in self.state['docs']:
+            raise ResolutionError('receipt Evidence is missing')
+        return self.state['docs'][path], self.state['blobs'][path]
+
+
 def validate_receipt_effects(before, row):
     after, request, response = row['after_state'], row['request'], row['response']
     operation, arguments = request['operation'], request['arguments']
@@ -229,36 +275,49 @@ def validate_receipt_effects(before, row):
     if operation in WRITES and response.get('ok') is True:
         result = response['result']
         require(set(result) == {'applied'} and type(result['applied']) is bool, 'invalid write result')
-        if result['applied']:
-            if operation == 'reconcile_knowledge':
-                _, target = RuntimeSessionBroker._knowledge_candidate(arguments['content'])
-                require(target == READ_PATH, 'write targets an unbound Knowledge owner')
-                require(arguments['content'] == after['docs'][target], 'Knowledge request/output mismatch')
-            else:
-                target = CHECKPOINT_PATH
-                normalized = RuntimeSessionBroker._normalize_learning_checkpoint(arguments['checkpoint'])
-                old = _load_candidate_yaml(before['docs'][target], 'previous Progress')
-                new = _load_candidate_yaml(after['docs'][target], 'next Progress')
-                require(isinstance(old, dict) and isinstance(new, dict), 'invalid Progress payload')
+        old_documents, new_documents = receipt_payloads(before), receipt_payloads(after)
+        target = READ_PATH if operation == 'reconcile_knowledge' else CHECKPOINT_PATH
+        require(arguments['expected_version_token'] == before['blobs'][target], 'owning write token mismatch')
+        old, new = old_documents[target], new_documents[target]
+        require('schema_version' in old and same_record(old['schema_version'], new.get('schema_version')),
+                'owning write changed the fixed schema version')
+        if operation == 'reconcile_knowledge':
+            require(result['applied'], 'Knowledge has no successful unapplied result')
+            _, candidate_target = RuntimeSessionBroker._knowledge_candidate(arguments['content'])
+            require(candidate_target == target, 'write targets an unbound Knowledge owner')
+            require(arguments['content'] == after['docs'][target], 'Knowledge request/output mismatch')
+            broker = object.__new__(RuntimeSessionBroker)
+            broker.provider = ReceiptMemory(before)
+            broker._assert_new_knowledge_evidence_relevant(
+                state=SimpleNamespace(policy=RuntimeCapabilityPolicy(readable_roots=('evidence',))),
+                snapshot=before, current=old, candidate=new)
+        else:
+            normalized = RuntimeSessionBroker._normalize_learning_checkpoint(arguments['checkpoint'])
+            existing = {'milestone': old['current'].get('milestone'),
+                        'return_point': old['resume'].get('return_point'),
+                        'ready_next': old['resume'].get('ready_next')}
+            require(result['applied'] == (not same_record(existing, normalized)),
+                    'checkpoint applied/no-op result contradicts requested payload')
+            milestones = old['milestones']
+            require(all(milestone in milestones for milestone in normalized['milestone']),
+                    'checkpoint names an unknown milestone')
+            return_point = normalized['return_point']
+            if isinstance(return_point, dict) and 'milestone' in return_point:
+                require(isinstance(return_point['milestone'], str) and return_point['milestone']
+                        and return_point['milestone'] in milestones,
+                        'checkpoint return point names an unknown milestone')
+            if result['applied']:
                 expected = copy.deepcopy(old)
-                require(isinstance(expected.get('current'), dict) and isinstance(expected.get('resume'), dict),
-                        'invalid Progress checkpoint sections')
-                milestones = expected.get('milestones')
-                require(isinstance(milestones, dict)
-                        and all(milestone in milestones for milestone in normalized['milestone']),
-                        'checkpoint names an unknown milestone')
-                return_point = normalized['return_point']
-                if isinstance(return_point, dict) and 'milestone' in return_point:
-                    require(isinstance(return_point['milestone'], str) and return_point['milestone']
-                            and return_point['milestone'] in milestones,
-                            'checkpoint return point names an unknown milestone')
                 expected['current']['milestone'] = normalized['milestone']
                 expected['resume']['return_point'] = normalized['return_point']
                 expected['resume']['ready_next'] = normalized['ready_next']
-                for value in (expected, new):
-                    value.pop('revision', None); value.pop('updated_at', None)
-                require(RuntimeSessionBroker._type_sensitive_semantic_equal(expected, new),
-                        'checkpoint request/output mismatch or unrelated Progress change')
+                expected['revision'] = old['revision'] + 1
+                # This synthetic witness runs with the declared pinned clock.
+                expected['updated_at'] = EVENT_TIME
+                require(same_record(expected, new), 'checkpoint request/output or revision mismatch')
+        if result['applied']:
+            RuntimeSessionBroker._assert_semantic_version_transition(ReceiptMemory(before),
+                path=target, document_type=new['document_type'], content=after['docs'][target])
             allowed.add(target)
     for field in ('docs', 'blobs'):
         require(set(before[field]) == set(after[field]), 'receipt changed ' + field + ' inventory')
