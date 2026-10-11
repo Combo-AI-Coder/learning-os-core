@@ -572,36 +572,65 @@ class GitCliProviderTests(unittest.TestCase):
 
     def test_inflight_materialize_cannot_retain_snapshot_after_close(self):
         provider = self.provider()
+        # Real Git setup is not part of the close/materialize race. Complete it
+        # before the entry watchdog, while retaining the actual checkout/tree.
+        binding = provider._binding(self.REPO_ID)
+        checkout = provider._checkout(binding, "main")
+        self.addCleanup(provider._cleanup_checkout_tempdir, checkout[0])
+        entries = provider._tree_entries(checkout[1], checkout[2])
         entered = threading.Event()
         proceed = threading.Event()
+        finished = threading.Event()
         errors = []
+        returned = []
+        snapshot_roots = []
 
         def blocked_materialize_blobs(repo, entries, snapshot):
+            snapshot_roots.append(snapshot)
             entered.set()
-            proceed.wait(timeout=5)
+            if not proceed.wait(timeout=5):
+                raise AssertionError("test did not release materialization")
             (snapshot / "state.txt").write_text(
                 "synthetic\n", encoding="utf-8", newline="\n"
             )
 
-        provider._materialize_blobs = blocked_materialize_blobs
-
         def run_materialize():
             try:
-                provider.materialize(self.REPO_ID, "main")
+                returned.append(provider.materialize(self.REPO_ID, "main"))
             except Exception as exc:
                 errors.append(exc)
+            finally:
+                finished.set()
 
-        worker = threading.Thread(target=run_materialize)
-        worker.start()
-        self.assertTrue(entered.wait(2))
-        provider.close()
-        proceed.set()
-        worker.join(timeout=5)
-        self.assertFalse(worker.is_alive())
+        with (
+            mock.patch.object(provider, "_checkout", return_value=checkout) as checkout_call,
+            mock.patch.object(provider, "_tree_entries", return_value=entries) as tree_call,
+            mock.patch.object(provider, "_materialize_blobs", side_effect=blocked_materialize_blobs),
+        ):
+            worker = threading.Thread(target=run_materialize)
+            worker.start()
+            try:
+                self.assertTrue(
+                    entered.wait(2),
+                    f"materialization barrier not reached; finished={finished.is_set()}, "
+                    f"errors={errors!r}",
+                )
+                provider.close()
+            finally:
+                proceed.set()
+                worker.join(timeout=5)
+                self.assertFalse(worker.is_alive(), "materialization worker did not stop")
+            checkout_call.assert_called_once_with(binding, "main")
+            tree_call.assert_called_once_with(checkout[1], checkout[2])
+        self.assertTrue(finished.is_set())
+        self.assertEqual([], returned)
         self.assertEqual(1, len(errors))
         self.assertIsInstance(errors[0], ResolutionError)
         self.assertIn("closed during materialization", str(errors[0]))
         self.assertEqual([], provider._tempdirs)
+        self.assertEqual(1, len(snapshot_roots))
+        self.assertFalse(snapshot_roots[0].exists())
+        self.assertFalse(Path(checkout[0].name).exists())
 
     def test_materialize_streams_blob_content_instead_of_buffering_it(self):
         provider = self.provider()
