@@ -1,0 +1,3477 @@
+{
+  "status": "passed",
+  "identity": {
+    "canonical_commit": "83f08b016dd51a777ee91c0c4d77c0b85e046e4e",
+    "canonical_tree": "1995f7807375044aa08873e309bee61e704abc3c",
+    "source_manifest_sha256": "9625cd0835ea5686b26edeba2ed41c96602bdff82c0ccce2c04a2017be759fbf",
+    "source_blob_count": 267,
+    "script_sha256": "138ca3758cf1046b3b21c6f2b5179e2bae1c549872c338daf5a3483adc9955dd",
+    "core_test_commit": "9fa989bd743a89a39656ca7654ae3fb86fa9b3c3",
+    "control_test_commit": "72fa6281d9904068d71954e5ac5c46202e625124",
+    "instance_initial_commit": "4bb2f1d1ef266277c532ef828299186269fee045",
+    "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "git": "git version 2.52.0",
+    "pyyaml": "6.0.3",
+    "authority": "fixture-established Main generation 3; no acquisition or takeover",
+    "network": "three fixed absolute local Git bindings; no remote network endpoint"
+  },
+  "cut": {
+    "cut": "after_real_instance_push_success_before_provider_return",
+    "super_git_returned_success": true,
+    "at": "2026-10-10T21:38:09.007260+00:00",
+    "producer_exit": 74,
+    "host_response_emitted": false
+  },
+  "processes": [
+    {
+      "mode": "produce",
+      "started_at": "2026-10-10T21:38:06.968975+00:00",
+      "completed_at": "2026-10-10T21:38:09.038808+00:00",
+      "elapsed_seconds": 2.0699,
+      "returncode": 74,
+      "expected_returncode": 74,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stderr_bytes": 0,
+      "before": {
+        "head": "4bb2f1d1ef266277c532ef828299186269fee045",
+        "tree": "a955661ac567fda263433cad11c10d813c79595f",
+        "blobs": {
+          "README.md": {
+            "sha": "9bf0d5060f9949013f8d122fb9a64a41de43e29f",
+            "mode": "100644"
+          },
+          "config/instance.yaml": {
+            "sha": "f8bd17cbfe96449a14c0d530d48550ab4f4dfbd2",
+            "mode": "100644"
+          },
+          "learner/knowledge/synthetic.yaml": {
+            "sha": "b007b8980c793477a7d7e9090cd427731449f4c8",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches.yaml": {
+            "sha": "1596a0a3225a0c7196c0cdf8bee6fb9b95cbaf09",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches/main/runtime.yaml": {
+            "sha": "bea96e92a77eb244eda28597e290977d13aa8055",
+            "mode": "100644"
+          }
+        },
+        "commits": 1,
+        "parents": [],
+        "changed_paths": [
+          "README.md",
+          "config/instance.yaml",
+          "learner/knowledge/synthetic.yaml",
+          "topics/synthetic/coordination/branches.yaml",
+          "topics/synthetic/coordination/branches/main/runtime.yaml"
+        ],
+        "refs": {
+          "refs/heads/main": "4bb2f1d1ef266277c532ef828299186269fee045"
+        }
+      },
+      "after": {
+        "head": "219f23f1656dc444027e70100c7a02a40864dbbd",
+        "tree": "a4da7be31ab69cd22838fae8718a63807d19c818",
+        "blobs": {
+          "README.md": {
+            "sha": "9bf0d5060f9949013f8d122fb9a64a41de43e29f",
+            "mode": "100644"
+          },
+          "config/instance.yaml": {
+            "sha": "f8bd17cbfe96449a14c0d530d48550ab4f4dfbd2",
+            "mode": "100644"
+          },
+          "evidence/evi-lost-host-ack-001.yaml": {
+            "sha": "09fa5f3fdb6a2f84ef45f28eb269d10952ef632c",
+            "mode": "100644"
+          },
+          "learner/knowledge/synthetic.yaml": {
+            "sha": "b007b8980c793477a7d7e9090cd427731449f4c8",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches.yaml": {
+            "sha": "1596a0a3225a0c7196c0cdf8bee6fb9b95cbaf09",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches/main/runtime.yaml": {
+            "sha": "bea96e92a77eb244eda28597e290977d13aa8055",
+            "mode": "100644"
+          }
+        },
+        "commits": 2,
+        "parents": [
+          "4bb2f1d1ef266277c532ef828299186269fee045"
+        ],
+        "changed_paths": [
+          "evidence/evi-lost-host-ack-001.yaml"
+        ],
+        "refs": {
+          "refs/heads/main": "219f23f1656dc444027e70100c7a02a40864dbbd"
+        }
+      }
+    },
+    {
+      "mode": "read",
+      "started_at": "2026-10-10T21:38:09.081328+00:00",
+      "completed_at": "2026-10-10T21:38:10.498978+00:00",
+      "elapsed_seconds": 1.4177,
+      "returncode": 0,
+      "expected_returncode": 0,
+      "stdout_sha256": "bc333f6803a43647d9e06e29c8c508a3e1fd2b8673f200d8f008bb4397864473",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 1292,
+      "stderr_bytes": 0,
+      "before": {
+        "head": "219f23f1656dc444027e70100c7a02a40864dbbd",
+        "tree": "a4da7be31ab69cd22838fae8718a63807d19c818",
+        "blobs": {
+          "README.md": {
+            "sha": "9bf0d5060f9949013f8d122fb9a64a41de43e29f",
+            "mode": "100644"
+          },
+          "config/instance.yaml": {
+            "sha": "f8bd17cbfe96449a14c0d530d48550ab4f4dfbd2",
+            "mode": "100644"
+          },
+          "evidence/evi-lost-host-ack-001.yaml": {
+            "sha": "09fa5f3fdb6a2f84ef45f28eb269d10952ef632c",
+            "mode": "100644"
+          },
+          "learner/knowledge/synthetic.yaml": {
+            "sha": "b007b8980c793477a7d7e9090cd427731449f4c8",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches.yaml": {
+            "sha": "1596a0a3225a0c7196c0cdf8bee6fb9b95cbaf09",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches/main/runtime.yaml": {
+            "sha": "bea96e92a77eb244eda28597e290977d13aa8055",
+            "mode": "100644"
+          }
+        },
+        "commits": 2,
+        "parents": [
+          "4bb2f1d1ef266277c532ef828299186269fee045"
+        ],
+        "changed_paths": [
+          "evidence/evi-lost-host-ack-001.yaml"
+        ],
+        "refs": {
+          "refs/heads/main": "219f23f1656dc444027e70100c7a02a40864dbbd"
+        }
+      },
+      "after": {
+        "head": "219f23f1656dc444027e70100c7a02a40864dbbd",
+        "tree": "a4da7be31ab69cd22838fae8718a63807d19c818",
+        "blobs": {
+          "README.md": {
+            "sha": "9bf0d5060f9949013f8d122fb9a64a41de43e29f",
+            "mode": "100644"
+          },
+          "config/instance.yaml": {
+            "sha": "f8bd17cbfe96449a14c0d530d48550ab4f4dfbd2",
+            "mode": "100644"
+          },
+          "evidence/evi-lost-host-ack-001.yaml": {
+            "sha": "09fa5f3fdb6a2f84ef45f28eb269d10952ef632c",
+            "mode": "100644"
+          },
+          "learner/knowledge/synthetic.yaml": {
+            "sha": "b007b8980c793477a7d7e9090cd427731449f4c8",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches.yaml": {
+            "sha": "1596a0a3225a0c7196c0cdf8bee6fb9b95cbaf09",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches/main/runtime.yaml": {
+            "sha": "bea96e92a77eb244eda28597e290977d13aa8055",
+            "mode": "100644"
+          }
+        },
+        "commits": 2,
+        "parents": [
+          "4bb2f1d1ef266277c532ef828299186269fee045"
+        ],
+        "changed_paths": [
+          "evidence/evi-lost-host-ack-001.yaml"
+        ],
+        "refs": {
+          "refs/heads/main": "219f23f1656dc444027e70100c7a02a40864dbbd"
+        }
+      },
+      "result": {
+        "mode": "read",
+        "discovery": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "discover_learning_evidence",
+          "result": {
+            "recipe_version": "bound-evidence-discovery-v1",
+            "scope": {
+              "topic": "synthetic",
+              "subtopic": "unit"
+            },
+            "coverage": "all_context_matches_in_bounded_snapshot",
+            "evidence": [
+              {
+                "path": "evidence/evi-lost-host-ack-001.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-lost-host-ack-001\nobserved_at: '2026-10-05T00:05:00Z'\nobservation:\n  kind: synthetic\n  summary: synthetic typed capability observation\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\n",
+                "version_token": "09fa5f3fdb6a2f84ef45f28eb269d10952ef632c",
+                "knowledge_references": [
+                  {
+                    "target": {
+                      "type": "capability",
+                      "domain": "synthetic",
+                      "concept": "token-identity",
+                      "capability": "explanation"
+                    },
+                    "knowledge_path": "learner/knowledge/synthetic.yaml",
+                    "reference_status": "not_referenced_by_current_knowledge",
+                    "sides": []
+                  }
+                ]
+              }
+            ],
+            "knowledge_owners": [
+              {
+                "path": "learner/knowledge/synthetic.yaml",
+                "state": "present",
+                "version_token": "b007b8980c793477a7d7e9090cd427731449f4c8"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "mode": "retry",
+      "started_at": "2026-10-10T21:38:10.533192+00:00",
+      "completed_at": "2026-10-10T21:38:12.757604+00:00",
+      "elapsed_seconds": 2.2244,
+      "returncode": 0,
+      "expected_returncode": 0,
+      "stdout_sha256": "75aa505e3403522abfcccdbdb514a7d9ee9c282b42ebda11d86ecf15a5f840ef",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 1406,
+      "stderr_bytes": 0,
+      "before": {
+        "head": "219f23f1656dc444027e70100c7a02a40864dbbd",
+        "tree": "a4da7be31ab69cd22838fae8718a63807d19c818",
+        "blobs": {
+          "README.md": {
+            "sha": "9bf0d5060f9949013f8d122fb9a64a41de43e29f",
+            "mode": "100644"
+          },
+          "config/instance.yaml": {
+            "sha": "f8bd17cbfe96449a14c0d530d48550ab4f4dfbd2",
+            "mode": "100644"
+          },
+          "evidence/evi-lost-host-ack-001.yaml": {
+            "sha": "09fa5f3fdb6a2f84ef45f28eb269d10952ef632c",
+            "mode": "100644"
+          },
+          "learner/knowledge/synthetic.yaml": {
+            "sha": "b007b8980c793477a7d7e9090cd427731449f4c8",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches.yaml": {
+            "sha": "1596a0a3225a0c7196c0cdf8bee6fb9b95cbaf09",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches/main/runtime.yaml": {
+            "sha": "bea96e92a77eb244eda28597e290977d13aa8055",
+            "mode": "100644"
+          }
+        },
+        "commits": 2,
+        "parents": [
+          "4bb2f1d1ef266277c532ef828299186269fee045"
+        ],
+        "changed_paths": [
+          "evidence/evi-lost-host-ack-001.yaml"
+        ],
+        "refs": {
+          "refs/heads/main": "219f23f1656dc444027e70100c7a02a40864dbbd"
+        }
+      },
+      "after": {
+        "head": "219f23f1656dc444027e70100c7a02a40864dbbd",
+        "tree": "a4da7be31ab69cd22838fae8718a63807d19c818",
+        "blobs": {
+          "README.md": {
+            "sha": "9bf0d5060f9949013f8d122fb9a64a41de43e29f",
+            "mode": "100644"
+          },
+          "config/instance.yaml": {
+            "sha": "f8bd17cbfe96449a14c0d530d48550ab4f4dfbd2",
+            "mode": "100644"
+          },
+          "evidence/evi-lost-host-ack-001.yaml": {
+            "sha": "09fa5f3fdb6a2f84ef45f28eb269d10952ef632c",
+            "mode": "100644"
+          },
+          "learner/knowledge/synthetic.yaml": {
+            "sha": "b007b8980c793477a7d7e9090cd427731449f4c8",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches.yaml": {
+            "sha": "1596a0a3225a0c7196c0cdf8bee6fb9b95cbaf09",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches/main/runtime.yaml": {
+            "sha": "bea96e92a77eb244eda28597e290977d13aa8055",
+            "mode": "100644"
+          }
+        },
+        "commits": 2,
+        "parents": [
+          "4bb2f1d1ef266277c532ef828299186269fee045"
+        ],
+        "changed_paths": [
+          "evidence/evi-lost-host-ack-001.yaml"
+        ],
+        "refs": {
+          "refs/heads/main": "219f23f1656dc444027e70100c7a02a40864dbbd"
+        }
+      },
+      "result": {
+        "mode": "retry",
+        "discovery": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "discover_learning_evidence",
+          "result": {
+            "recipe_version": "bound-evidence-discovery-v1",
+            "scope": {
+              "topic": "synthetic",
+              "subtopic": "unit"
+            },
+            "coverage": "all_context_matches_in_bounded_snapshot",
+            "evidence": [
+              {
+                "path": "evidence/evi-lost-host-ack-001.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-lost-host-ack-001\nobserved_at: '2026-10-05T00:05:00Z'\nobservation:\n  kind: synthetic\n  summary: synthetic typed capability observation\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\n",
+                "version_token": "09fa5f3fdb6a2f84ef45f28eb269d10952ef632c",
+                "knowledge_references": [
+                  {
+                    "target": {
+                      "type": "capability",
+                      "domain": "synthetic",
+                      "concept": "token-identity",
+                      "capability": "explanation"
+                    },
+                    "knowledge_path": "learner/knowledge/synthetic.yaml",
+                    "reference_status": "not_referenced_by_current_knowledge",
+                    "sides": []
+                  }
+                ]
+              }
+            ],
+            "knowledge_owners": [
+              {
+                "path": "learner/knowledge/synthetic.yaml",
+                "state": "present",
+                "version_token": "b007b8980c793477a7d7e9090cd427731449f4c8"
+              }
+            ]
+          }
+        },
+        "response": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "create_evidence",
+          "result": {
+            "applied": false
+          }
+        }
+      }
+    },
+    {
+      "mode": "reconcile",
+      "started_at": "2026-10-10T21:38:12.791011+00:00",
+      "completed_at": "2026-10-10T21:38:15.511287+00:00",
+      "elapsed_seconds": 2.7203,
+      "returncode": 0,
+      "expected_returncode": 0,
+      "stdout_sha256": "9a5862f48efc110098c50e2907d9773bf384da0c55388fe251c64466cbf680c2",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 1774,
+      "stderr_bytes": 0,
+      "before": {
+        "head": "219f23f1656dc444027e70100c7a02a40864dbbd",
+        "tree": "a4da7be31ab69cd22838fae8718a63807d19c818",
+        "blobs": {
+          "README.md": {
+            "sha": "9bf0d5060f9949013f8d122fb9a64a41de43e29f",
+            "mode": "100644"
+          },
+          "config/instance.yaml": {
+            "sha": "f8bd17cbfe96449a14c0d530d48550ab4f4dfbd2",
+            "mode": "100644"
+          },
+          "evidence/evi-lost-host-ack-001.yaml": {
+            "sha": "09fa5f3fdb6a2f84ef45f28eb269d10952ef632c",
+            "mode": "100644"
+          },
+          "learner/knowledge/synthetic.yaml": {
+            "sha": "b007b8980c793477a7d7e9090cd427731449f4c8",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches.yaml": {
+            "sha": "1596a0a3225a0c7196c0cdf8bee6fb9b95cbaf09",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches/main/runtime.yaml": {
+            "sha": "bea96e92a77eb244eda28597e290977d13aa8055",
+            "mode": "100644"
+          }
+        },
+        "commits": 2,
+        "parents": [
+          "4bb2f1d1ef266277c532ef828299186269fee045"
+        ],
+        "changed_paths": [
+          "evidence/evi-lost-host-ack-001.yaml"
+        ],
+        "refs": {
+          "refs/heads/main": "219f23f1656dc444027e70100c7a02a40864dbbd"
+        }
+      },
+      "after": {
+        "head": "ec4e277e54f231eee8dbdaf2756fe1355787ea71",
+        "tree": "5b978399669acde4953e3e6ccf28c5a95f994dca",
+        "blobs": {
+          "README.md": {
+            "sha": "9bf0d5060f9949013f8d122fb9a64a41de43e29f",
+            "mode": "100644"
+          },
+          "config/instance.yaml": {
+            "sha": "f8bd17cbfe96449a14c0d530d48550ab4f4dfbd2",
+            "mode": "100644"
+          },
+          "evidence/evi-lost-host-ack-001.yaml": {
+            "sha": "09fa5f3fdb6a2f84ef45f28eb269d10952ef632c",
+            "mode": "100644"
+          },
+          "learner/knowledge/synthetic.yaml": {
+            "sha": "5ac6b13802bc06261857f32b99ee6d10e65c1edc",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches.yaml": {
+            "sha": "1596a0a3225a0c7196c0cdf8bee6fb9b95cbaf09",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches/main/runtime.yaml": {
+            "sha": "bea96e92a77eb244eda28597e290977d13aa8055",
+            "mode": "100644"
+          }
+        },
+        "commits": 3,
+        "parents": [
+          "219f23f1656dc444027e70100c7a02a40864dbbd"
+        ],
+        "changed_paths": [
+          "learner/knowledge/synthetic.yaml"
+        ],
+        "refs": {
+          "refs/heads/main": "ec4e277e54f231eee8dbdaf2756fe1355787ea71"
+        }
+      },
+      "result": {
+        "mode": "reconcile",
+        "discovery": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "discover_learning_evidence",
+          "result": {
+            "recipe_version": "bound-evidence-discovery-v1",
+            "scope": {
+              "topic": "synthetic",
+              "subtopic": "unit"
+            },
+            "coverage": "all_context_matches_in_bounded_snapshot",
+            "evidence": [
+              {
+                "path": "evidence/evi-lost-host-ack-001.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-lost-host-ack-001\nobserved_at: '2026-10-05T00:05:00Z'\nobservation:\n  kind: synthetic\n  summary: synthetic typed capability observation\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\n",
+                "version_token": "09fa5f3fdb6a2f84ef45f28eb269d10952ef632c",
+                "knowledge_references": [
+                  {
+                    "target": {
+                      "type": "capability",
+                      "domain": "synthetic",
+                      "concept": "token-identity",
+                      "capability": "explanation"
+                    },
+                    "knowledge_path": "learner/knowledge/synthetic.yaml",
+                    "reference_status": "not_referenced_by_current_knowledge",
+                    "sides": []
+                  }
+                ]
+              }
+            ],
+            "knowledge_owners": [
+              {
+                "path": "learner/knowledge/synthetic.yaml",
+                "state": "present",
+                "version_token": "b007b8980c793477a7d7e9090cd427731449f4c8"
+              }
+            ]
+          }
+        },
+        "read": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "read_learning_context",
+          "result": {
+            "documents": [
+              {
+                "path": "learner/knowledge/synthetic.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: learner_knowledge\nrevision: 1\ndomain: synthetic\nconcepts: {}\n",
+                "version_token": "b007b8980c793477a7d7e9090cd427731449f4c8"
+              }
+            ],
+            "missing_optional": []
+          }
+        },
+        "response": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "reconcile_knowledge",
+          "result": {
+            "applied": true
+          }
+        }
+      }
+    },
+    {
+      "mode": "read",
+      "started_at": "2026-10-10T21:38:15.552355+00:00",
+      "completed_at": "2026-10-10T21:38:17.072135+00:00",
+      "elapsed_seconds": 1.5198,
+      "returncode": 0,
+      "expected_returncode": 0,
+      "stdout_sha256": "e174f8d6b87557a2204c5988bae10ec268ba5dabe4b489f50a8574a95198bbb6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 1276,
+      "stderr_bytes": 0,
+      "before": {
+        "head": "ec4e277e54f231eee8dbdaf2756fe1355787ea71",
+        "tree": "5b978399669acde4953e3e6ccf28c5a95f994dca",
+        "blobs": {
+          "README.md": {
+            "sha": "9bf0d5060f9949013f8d122fb9a64a41de43e29f",
+            "mode": "100644"
+          },
+          "config/instance.yaml": {
+            "sha": "f8bd17cbfe96449a14c0d530d48550ab4f4dfbd2",
+            "mode": "100644"
+          },
+          "evidence/evi-lost-host-ack-001.yaml": {
+            "sha": "09fa5f3fdb6a2f84ef45f28eb269d10952ef632c",
+            "mode": "100644"
+          },
+          "learner/knowledge/synthetic.yaml": {
+            "sha": "5ac6b13802bc06261857f32b99ee6d10e65c1edc",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches.yaml": {
+            "sha": "1596a0a3225a0c7196c0cdf8bee6fb9b95cbaf09",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches/main/runtime.yaml": {
+            "sha": "bea96e92a77eb244eda28597e290977d13aa8055",
+            "mode": "100644"
+          }
+        },
+        "commits": 3,
+        "parents": [
+          "219f23f1656dc444027e70100c7a02a40864dbbd"
+        ],
+        "changed_paths": [
+          "learner/knowledge/synthetic.yaml"
+        ],
+        "refs": {
+          "refs/heads/main": "ec4e277e54f231eee8dbdaf2756fe1355787ea71"
+        }
+      },
+      "after": {
+        "head": "ec4e277e54f231eee8dbdaf2756fe1355787ea71",
+        "tree": "5b978399669acde4953e3e6ccf28c5a95f994dca",
+        "blobs": {
+          "README.md": {
+            "sha": "9bf0d5060f9949013f8d122fb9a64a41de43e29f",
+            "mode": "100644"
+          },
+          "config/instance.yaml": {
+            "sha": "f8bd17cbfe96449a14c0d530d48550ab4f4dfbd2",
+            "mode": "100644"
+          },
+          "evidence/evi-lost-host-ack-001.yaml": {
+            "sha": "09fa5f3fdb6a2f84ef45f28eb269d10952ef632c",
+            "mode": "100644"
+          },
+          "learner/knowledge/synthetic.yaml": {
+            "sha": "5ac6b13802bc06261857f32b99ee6d10e65c1edc",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches.yaml": {
+            "sha": "1596a0a3225a0c7196c0cdf8bee6fb9b95cbaf09",
+            "mode": "100644"
+          },
+          "topics/synthetic/coordination/branches/main/runtime.yaml": {
+            "sha": "bea96e92a77eb244eda28597e290977d13aa8055",
+            "mode": "100644"
+          }
+        },
+        "commits": 3,
+        "parents": [
+          "219f23f1656dc444027e70100c7a02a40864dbbd"
+        ],
+        "changed_paths": [
+          "learner/knowledge/synthetic.yaml"
+        ],
+        "refs": {
+          "refs/heads/main": "ec4e277e54f231eee8dbdaf2756fe1355787ea71"
+        }
+      },
+      "result": {
+        "mode": "read",
+        "discovery": {
+          "surface_version": "v4",
+          "ok": true,
+          "operation": "discover_learning_evidence",
+          "result": {
+            "recipe_version": "bound-evidence-discovery-v1",
+            "scope": {
+              "topic": "synthetic",
+              "subtopic": "unit"
+            },
+            "coverage": "all_context_matches_in_bounded_snapshot",
+            "evidence": [
+              {
+                "path": "evidence/evi-lost-host-ack-001.yaml",
+                "content": "schema_version: '0.3'\ndocument_type: evidence\nid: evi-lost-host-ack-001\nobserved_at: '2026-10-05T00:05:00Z'\nobservation:\n  kind: synthetic\n  summary: synthetic typed capability observation\ninterpretation:\n  direction: support\n  diagnosticity: medium\n  novelty: medium\n  confidence: medium\ntargets:\n- type: capability\n  domain: synthetic\n  concept: token-identity\n  capability: explanation\ncontext:\n  topic: synthetic\n  subtopic: unit\n",
+                "version_token": "09fa5f3fdb6a2f84ef45f28eb269d10952ef632c",
+                "knowledge_references": [
+                  {
+                    "target": {
+                      "type": "capability",
+                      "domain": "synthetic",
+                      "concept": "token-identity",
+                      "capability": "explanation"
+                    },
+                    "knowledge_path": "learner/knowledge/synthetic.yaml",
+                    "reference_status": "referenced",
+                    "sides": [
+                      "support"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "knowledge_owners": [
+              {
+                "path": "learner/knowledge/synthetic.yaml",
+                "state": "present",
+                "version_token": "5ac6b13802bc06261857f32b99ee6d10e65c1edc"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "evidence_payload_sha256": "7d0ecece9cb32b9be4678a74d92d9b2a020ee4df71a464a72757028f2234edef",
+  "knowledge_after_sha256": "69481a34ac7db808b97f0b02a5e1a588a95016eb35491c48dc13888da4a9e26f",
+  "initial_protected": {
+    "core": {
+      "head": "9fa989bd743a89a39656ca7654ae3fb86fa9b3c3",
+      "tree": "1995f7807375044aa08873e309bee61e704abc3c",
+      "blobs": {
+        ".github/workflows/validate.yml": {
+          "sha": "f5739499c9166e323df954a83dee38f53b86d83b",
+          "mode": "100644"
+        },
+        ".gitignore": {
+          "sha": "7a60b85e148f80966a550e5ab6a762a907c69ca6",
+          "mode": "100644"
+        },
+        "AGENTS.md": {
+          "sha": "c5f05e0b9e2f81b4c1d6e4c9629a467c02fd3fac",
+          "mode": "100644"
+        },
+        "README.md": {
+          "sha": "efb7911f3344bc9b1aecee7a0d17cd7f2051c2e0",
+          "mode": "100644"
+        },
+        "config/core.yaml": {
+          "sha": "68b775f2a4b6682e3c414d9699bec003c13a8749",
+          "mode": "100644"
+        },
+        "docs/audits/2026-10-02-intake-and-git-context.md": {
+          "sha": "811e0746a1ab1a288c8b716ea69dc632569ac552",
+          "mode": "100644"
+        },
+        "docs/audits/2026-10-02-rest-provider.md": {
+          "sha": "a26022e6b299c8f71fb3f00819c4e822c46a8dc8",
+          "mode": "100644"
+        },
+        "docs/audits/2026-10-03-rest-text-admission.md": {
+          "sha": "4b8b80ac010d317d50af9f283fa348af220874e6",
+          "mode": "100644"
+        },
+        "docs/audits/2026-10-03-session-input-admission.md": {
+          "sha": "06006bb14d469918c2819fb3f4e9e845d9ab0537",
+          "mode": "100644"
+        },
+        "docs/evaluations/.gitattributes": {
+          "sha": "32daa1bac12b87d243a8805719e15cecf853db64",
+          "mode": "100644"
+        },
+        "docs/evaluations/core19-intake-controls-plan.md": {
+          "sha": "bdce546ca8d0d6c94fd1eec84cc0bceaa99d95d9",
+          "mode": "100644"
+        },
+        "docs/evaluations/core19-intake-controls-results.md": {
+          "sha": "0a704a5620054ba70bbd2d6b51e3dea125f6570a",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-answer-closure-results.md": {
+          "sha": "b07c2a6b443338865640ff23e72f229b885b129b",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-application-v2-plan.md": {
+          "sha": "cff3e0a7eb70eb13c968f78545c50a53201291e9",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-autonomous-correction-results.md": {
+          "sha": "349b8617fe04bada16fab8bf3d8a3ca55ea42f1d",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-cold-resume-results.md": {
+          "sha": "e95d88b9d9ec3824fcc5d895dddacc9fdb34851c",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-constrained-recovery-results.md": {
+          "sha": "59c929e568d8d89fed3cc097883c5f37d4196bdf",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-context-selection-results.md": {
+          "sha": "c127e2f1f31d1db14b6f2d592984d02bd6d4b67a",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-correction-propagation-plan.md": {
+          "sha": "84fac2be346e4a8d0da93399451c1105537d6311",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-correction-propagation-results.md": {
+          "sha": "bfdf14f2d2e1e73bb429367ed5401c22daf2eeef",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-diagnostic-repair-plan.md": {
+          "sha": "223c8633a42b40dc89b3579880b790d891fd7b76",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-diagnostic-repair-results.md": {
+          "sha": "78aa9e2f18442425209cdbcaf1872223b45394f5",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-interruption-recovery-plan.md": {
+          "sha": "422c496e81583dd0ad8883532e2639643cc1bafe",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-interruption-recovery-results.md": {
+          "sha": "fa1b84ad93de8c31d408d45a0cbd9effb431f3b3",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-state-sensitivity-results.md": {
+          "sha": "6877cf1207d8be67d6d54fc9fbd387f955fd3c8a",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-withdrawn-support-plan.md": {
+          "sha": "0ff7e883cbff85851b4b046c5bf5a0356ae62120",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-withdrawn-support-results.md": {
+          "sha": "8f50b79283cb3be0cc389ff8a222c66d09fa0656",
+          "mode": "100644"
+        },
+        "docs/product-direction.md": {
+          "sha": "017521652c87122fcd41347a115d09e62bf706ce",
+          "mode": "100644"
+        },
+        "docs/reference-host.md": {
+          "sha": "52d0c6f70d7e4229ddcf8884f6183cfb56461fe9",
+          "mode": "100644"
+        },
+        "docs/research/2026-10-06-longitudinal-learner-state-evidence.md": {
+          "sha": "0b661a7cdd1fa9c9bff545fff223f1f84b061628",
+          "mode": "100644"
+        },
+        "domains/_template/curriculum.yaml": {
+          "sha": "4c3ca429a2b6d3510fbb2dabddb26df049c04bc2",
+          "mode": "100644"
+        },
+        "domains/modern-language-models/curriculum.yaml": {
+          "sha": "fcfff853835eba26b17218f502a638ab1d15a1f4",
+          "mode": "100644"
+        },
+        "domains/modern-language-models/probes.md": {
+          "sha": "ea9de9b2409bb988dcc9bb08be959d94bedbe0e2",
+          "mode": "100644"
+        },
+        "protocol/continuity-policy.md": {
+          "sha": "89bf920d7261c69d0e5df887e5911c138df57a9b",
+          "mode": "100644"
+        },
+        "protocol/conversation-naming-policy.md": {
+          "sha": "edf29731a111a25f3bcef0436b5d43220a3eb6b8",
+          "mode": "100644"
+        },
+        "protocol/coordination-policy.md": {
+          "sha": "387dd9be2092b5d4dc021eda8bd6d3fa59446058",
+          "mode": "100644"
+        },
+        "protocol/curriculum-policy.md": {
+          "sha": "d6950dabcaa2cb0bc544d12c8fb4aff2d76b0768",
+          "mode": "100644"
+        },
+        "protocol/deployment-runtime.md": {
+          "sha": "6c7890f364fb559aee7db7a0c71fe8a6e397acfb",
+          "mode": "100644"
+        },
+        "protocol/evidence-classification.md": {
+          "sha": "a2a3eaa925584a5e21b0c0712a176cc22ed2ff68",
+          "mode": "100644"
+        },
+        "protocol/evidence-integration.md": {
+          "sha": "cf1bd44cb25fc9f2569ccfc09ad442021b001af0",
+          "mode": "100644"
+        },
+        "protocol/execution-policy.md": {
+          "sha": "295e5848cfa596c2797426de6f725ba834996870",
+          "mode": "100644"
+        },
+        "protocol/new-topic-start.md": {
+          "sha": "a7ee907027b448ddc819ad6a3a4bc465b6e945e9",
+          "mode": "100644"
+        },
+        "protocol/persistence-policy.md": {
+          "sha": "1cd32f0e03226830086af44fff7d4a753edb8020",
+          "mode": "100644"
+        },
+        "protocol/repository-governance-policy.md": {
+          "sha": "636f92798f3a5362bb71385c0aa82f3dd71a55c4",
+          "mode": "100644"
+        },
+        "protocol/runtime-bootstrap.md": {
+          "sha": "5431df78d830ddc6b106d2f020cef71172858067",
+          "mode": "100644"
+        },
+        "protocol/runtime-core.md": {
+          "sha": "112ef3984211024656789a9add874dd60313f044",
+          "mode": "100644"
+        },
+        "protocol/schema.md": {
+          "sha": "4a39409b520c491b0d55421fa8dcfb87a298c63e",
+          "mode": "100644"
+        },
+        "protocol/teaching-decision.md": {
+          "sha": "463a39b6be00a75d6282a46b3bbb56e1bf034f1f",
+          "mode": "100644"
+        },
+        "requirements-dev.txt": {
+          "sha": "1910948f82d7b228755552cd3f5b343cebbca412",
+          "mode": "100644"
+        },
+        "scripts/evaluate_diagnostic_repair.py": {
+          "sha": "eceece4411d93275b41b2a5279b9067f6728601a",
+          "mode": "100644"
+        },
+        "scripts/evaluate_state_sensitivity.py": {
+          "sha": "e5c9a3aea6b2fa2c88be8ddf6ff03352011166ff",
+          "mode": "100644"
+        },
+        "scripts/intake_policy.py": {
+          "sha": "44d169b32ba0e5115f348ea6e2dd7336e667ed89",
+          "mode": "100644"
+        },
+        "scripts/reference_host.py": {
+          "sha": "c997a5a15c96392576f32113c3f13f6ec7aabbf5",
+          "mode": "100644"
+        },
+        "scripts/runtime_adapter.py": {
+          "sha": "57e63c663b4b5212b8c85a0a8ce36ea4089823be",
+          "mode": "100644"
+        },
+        "scripts/runtime_broker.py": {
+          "sha": "6923214960afce30c945289c3a9dd4e3a9d908cb",
+          "mode": "100644"
+        },
+        "scripts/validate_learning_os.py": {
+          "sha": "54b4529c5c59281af0163d94c29626214fffeaed",
+          "mode": "100755"
+        },
+        "tests/.gitattributes": {
+          "sha": "af3384a301a185b7aa741a5da026715041e6bb3f",
+          "mode": "100644"
+        },
+        "tests/answer_closure_fixture.py": {
+          "sha": "7217d62b213493e25da96ff07036c83287258962",
+          "mode": "100644"
+        },
+        "tests/autonomous_correction_fixture.py": {
+          "sha": "20ae19fd2d0311b6db2d426336aef7b76472dade",
+          "mode": "100644"
+        },
+        "tests/cold_resume_fixture.py": {
+          "sha": "eda1d5950298e568423a993560827b91843457a2",
+          "mode": "100644"
+        },
+        "tests/constrained_recovery_fixture.py": {
+          "sha": "4c4ef68d185ebc6a56b22b7336986159e34e683f",
+          "mode": "100644"
+        },
+        "tests/context_selection_fixture.py": {
+          "sha": "4919cf509e3db19eb3236cab150dcd04c5473300",
+          "mode": "100644"
+        },
+        "tests/correction_propagation_fixture.py": {
+          "sha": "ec621b00c435940e04b7882368c9135667da8207",
+          "mode": "100644"
+        },
+        "tests/diagnostic_repair_fixture.py": {
+          "sha": "609fc0b821f5f1fd4c838e3b123dff9c08cbe6a2",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/consumer-packet.json": {
+          "sha": "72f77bd3ec6111c637fd6f1511f0e2ff3d46b414",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/consumer-response.json": {
+          "sha": "d45ed7d90e0391282c28b1e680fe9bba974aaf35",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/mechanical-replay.json": {
+          "sha": "7b4b5659e6701e6e871eab76aff8f8ce88774d67",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/policy-snapshot.json": {
+          "sha": "dffa6c29819cf7a10b1b03bc96b7069caa86c450",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/prospective-manifest.json": {
+          "sha": "ab7110a32fbccea94fe85b2ff2d129c6e590a66f",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/semantic-review.json": {
+          "sha": "ac1de1800b9ee438d41838463755da264922c3ed",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/successor-freeze.json": {
+          "sha": "8a37258c3b1a109163027cb254f1ab4ee33c6906",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/successor-packet.json": {
+          "sha": "c22a4ad3b08c832a5ed9789d4e06b8096b2f2e1f",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/successor-response.json": {
+          "sha": "dc7cb88bf6d48cdd9e5cc1a4f91e81cbf4a0e68e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/.gitattributes": {
+          "sha": "2d9a2df200785205b7cd7f3fbff6586a54454cde",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/elm-b-packet.json": {
+          "sha": "50de23f4b26a124f9075d13a3feb0deafe98ec91",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/elm-b-response.json": {
+          "sha": "58818c650802847eaead60b35e886adf6bdd295a",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/elm-b-trajectory.json": {
+          "sha": "5a0e7e7dc29e603dc6d2eb6ad2d6eb5fa2f0c803",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/elm-c-packet.json": {
+          "sha": "90a164927d72b0702a056d2e2edbe4f0dcd3e62d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/elm-c-response.json": {
+          "sha": "76865d9785a7f32c6e6c86d5a992c5f01a17c761",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/elm-c-trajectory.json": {
+          "sha": "b34f951c3cbe9d96340349f51579894530e0c5c3",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/elm-post-state.json": {
+          "sha": "46f68c3f9cac915351b383eb611346a1a6b86315",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/elm-successor-recovery.json": {
+          "sha": "8d59d4eab8414dd079a9111922235c5c59a2fb30",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/initial-provider-calls.json": {
+          "sha": "a38b72fa1739d64413e75000201c53da705885ef",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/initial-provider-state.json": {
+          "sha": "fdbfc345d7f8d4d6811b4a711d7e61d58a5d35b6",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/mechanical-exact-replay.json": {
+          "sha": "57e066cad457fd5bf047157b4ba977c8ac37d0b8",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/mechanical-invariants.json": {
+          "sha": "6f60613780a3e7bca0f0aa6a9ffea328072d0b34",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/pine-b-packet.json": {
+          "sha": "7444e8bd516523784082fbb09a76b1c54eefb67e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/pine-b-response.json": {
+          "sha": "fd9215ba692eadd3c3b20baa92dd15feca08381b",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/pine-b-trajectory.json": {
+          "sha": "afc2ae4dfb23a87362d83143da9355cfdd786ad0",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/pine-c-packet.json": {
+          "sha": "ab30e561a5b5509a322fcfe2120023a586aae864",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/pine-c-response.json": {
+          "sha": "eff154ad6b383e6b9e38f56c2631721d9a5cb6b8",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/pine-c-trajectory.json": {
+          "sha": "3326f75fcf28085b2a4d2b4eb599097de5da0e91",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/pine-post-state.json": {
+          "sha": "4031a20cf95d4854947baf5291e53fe532987bd8",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/pine-successor-recovery.json": {
+          "sha": "7ba9f1a857471cf72040fd71c53b4de119a68b7f",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/preparation-attempt-1.json": {
+          "sha": "49038c95871d94949a68fae48381cc7cd55fcdda",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/prospective-freeze.json": {
+          "sha": "cbb0b86dd3de452f84c6864b548ef31719afe807",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/prospective-plan.json": {
+          "sha": "3656f9c5159c6e540a1466827357fbd6d3e21ba0",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/publication-manifest.json": {
+          "sha": "f6e5c96a3fcf5fcb9ee69a9324a9762d3be93d6b",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/reed-b-packet.json": {
+          "sha": "f83cfc19a645e6824c1ce7c65f567e0c1bb897e1",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/reed-b-response.json": {
+          "sha": "9cf5cc1564541c594a26e93050c9bd9890545b12",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/reed-b-trajectory.json": {
+          "sha": "fbe57fbc9789423dee67042d53c92c0f85cc44a8",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/reed-c-packet.json": {
+          "sha": "3033ad664ee1a628e40e322d10e7de467cc13e0f",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/reed-c-response.json": {
+          "sha": "9b64a3ebe5c886e2d438e20215cbab7472b1f51d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/reed-c-trajectory.json": {
+          "sha": "c7d68ce0b7d20cd46c209a689bd2b00c8e7ce89d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/reed-post-state.json": {
+          "sha": "b6170535bcc9e9086082fc94a9d1abe5ec926634",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/reed-successor-recovery.json": {
+          "sha": "17f75428acc3886a2d5179544f2332795b477a93",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/semantic-review-final.json": {
+          "sha": "12a68b0a08606888ca91e7e30ae101efb29c9fc1",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/.gitattributes": {
+          "sha": "fa1385d99a319b43c06f5309d1aae9fdd3adea46",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/baseline-response.json": {
+          "sha": "dfca3de7ec9383acc0eb012cb769c8b8bb423318",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/baseline-state.json": {
+          "sha": "6d3f34255699321d3987df9cd48119ffd0f2f5b4",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/baseline-trajectory.json": {
+          "sha": "051c02902eb62f87e8baac3e92e05691e46c3f9a",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/first-packet.json": {
+          "sha": "469e89c321a434403a891e29d5d842516b90846e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/input-provenance.json": {
+          "sha": "7a60b5b60c60a8b332a622ca7fb08d4f2e44c375",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/mechanical-exact-replay.json": {
+          "sha": "1190c26b9e531883cbe2795a8ea5e78c69cc5b4b",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/preparation-provenance.json": {
+          "sha": "e475483545651e03cf1e8d7ac511c4ecbb41156c",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/prospective-freeze.json": {
+          "sha": "e5cdcaeeea010e60a094d8fa24fbf7487dfd37ee",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/prospective-method-review.json": {
+          "sha": "0e3819ab0141d76816509f8dfd89e8b10e299e00",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/prospective-plan.json": {
+          "sha": "8acccb534254753f41a906c9f73303b5c08b8dfb",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/publication-manifest.json": {
+          "sha": "898e3837fa0cd76fff68d710c3e70e8721ab5407",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/report-post-state.json": {
+          "sha": "91bf95c6014d318a638b0ffb4de715cd0c016608",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/report-response.json": {
+          "sha": "1c73c476d4c4b43d08e51073c2bc1738c2f9f247",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/report-state.json": {
+          "sha": "cf2925b3553580c78ca23c2ac27746b6bcca2354",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/report-trajectory.json": {
+          "sha": "abee72122a73c353fd34ca26c788a1a90f4fa09e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/semantic-method-review.json": {
+          "sha": "db5d758c2dfe2555adfba47f9070f40db6e4763a",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/successor-packet.json": {
+          "sha": "9105ce4945cf81ead877c73e1e9bade5c20a28c9",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/successor-response.json": {
+          "sha": "a459222752a92269cd0efb51030db5d57ba4911c",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/successor-trajectory.json": {
+          "sha": "6542b99a50452e30690770ce7ce0b2cf5ae5bb66",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/successor-trigger-provenance.json": {
+          "sha": "c90dc092457775b04a0ec64d127f55c158c2461d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/.gitattributes": {
+          "sha": "e72a965b68671a0d77df0a2f25f49ad0980a40b4",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/alpha-packet.json": {
+          "sha": "0ffbede4a42898c3453b3bc0e639531850d0f176",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/alpha-response.json": {
+          "sha": "0128937c9ccc676f6582614b193c5d556b0b92ee",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/artifact-manifest.json": {
+          "sha": "ff09b16d758935506bbdf4916309646bafeb113d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/beta-packet.json": {
+          "sha": "b5c67db74543c90b15bd9fcfa8fa550adc3a4b91",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/beta-response.json": {
+          "sha": "47e31320bc88fbdb28bea5021b335f919cd22f32",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/mechanical-replay.json": {
+          "sha": "11413296dde2f673e342c43b4edc2263411a341f",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/prospective-plan.json": {
+          "sha": "eb16c2df3816daac96d2b0ec629a33b401125b05",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/semantic-review.json": {
+          "sha": "13bdd1b459e9da312927cd33964342baa372b162",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/successor-packet.json": {
+          "sha": "c168494d0d30db3a65000e9016d6340149daebd8",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/successor-plan.json": {
+          "sha": "69d5725c3ff78207dde0e63e21c6164fb3adf6d8",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/successor-response.json": {
+          "sha": "8f5eaf36f37384603befb904eb80da2952e509a9",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/.gitattributes": {
+          "sha": "09341a3a0a406ad76ed056527cc449e77205c033",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/audit-errata.json": {
+          "sha": "c3aa51aeb26d51358536fdcc2b8ae060a5e0f363",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/cedar-packet.json": {
+          "sha": "3128bb4ad782658e4d2266c3bea14864dcda6043",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/cedar-response.json": {
+          "sha": "c6179f44349a0daebf71dfa2cbd29eea893c9bbb",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/complementary-review.json": {
+          "sha": "d45df0e6a6e7d99fdb04aec3961adbf72cff606e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/consumer-bindings.json": {
+          "sha": "cce689c55fc66359ffb9757033b64affe1d3df52",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/exact-replay.json": {
+          "sha": "a3a751c96d1ef7a6a41657519724794129664799",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/initial-preparation-failure.json": {
+          "sha": "ca4e2586ae52b23d633cdf6bc12c0b87e5489fa7",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/initial-prospective-plan.json": {
+          "sha": "c76e32cd3ecc31599b38f5427c063878a581035c",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/iris-packet.json": {
+          "sha": "54ecf01acee162c37f86f5c2f6d8fcaa21d382b7",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/iris-response.json": {
+          "sha": "4aaa20fbade45529b280f29d301cb96eb05a09ed",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/juniper-packet.json": {
+          "sha": "92f331d8f33dce38166f874780ff9d6f8946c953",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/juniper-response.json": {
+          "sha": "b38b29d55cf5cc1c4b086482947685307f8eef07",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/laurel-packet.json": {
+          "sha": "54ecf01acee162c37f86f5c2f6d8fcaa21d382b7",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/maple-packet.json": {
+          "sha": "39c128bc3ea50d4ae3429564d057af9b7201e201",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/maple-response.json": {
+          "sha": "bd060aa5e892245d13feeddd9fe4c38c10624878",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/mechanical-input-check.json": {
+          "sha": "0f49e3f5ea0a95e877108120f05ee960ef0f3355",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/preconsumer-manifest.json": {
+          "sha": "60f14c7974d6e120e8cd1fbc8ebe50647635929c",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/predispatch-clock-receipt.json": {
+          "sha": "d94c398d26e4c493f8a12df298c356f0082824c7",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/prospective-plan.json": {
+          "sha": "ce0183b093882598209aaaea5ae2ffde02288bd4",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/publication-manifest.json": {
+          "sha": "56f697f64f0477e5ad750edec5ef4f5939ebe2d1",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/result-summary.json": {
+          "sha": "3cef83cc7363a66b247da0d26079de66a140330a",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/scope-clarifications.json": {
+          "sha": "93f568542803597706eb74954a0087da800f7878",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/.gitattributes": {
+          "sha": "2d9a2df200785205b7cd7f3fbff6586a54454cde",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/baseline-response.json": {
+          "sha": "83cba2c7ba98f360f11ebc683e48b104d9ecb151",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/baseline-trajectory.json": {
+          "sha": "4a6c82201588e4e0de9b17f88150abb72ad807ff",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/common-packet.json": {
+          "sha": "0ee391253c55442a3dfee01d7578b908e1bacfb8",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/input-provenance.json": {
+          "sha": "e5d37072379c37fc63d7646a824005770739ea99",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/irrelevant-preparation.json": {
+          "sha": "511a52c545a4e13fcfae83651a56f3d1d65ddf0e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/irrelevant-response.json": {
+          "sha": "a2a16dd08015f857034fb241dd2d60f583fbe9ab",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/irrelevant-trajectory.json": {
+          "sha": "4f2610095ec56ae57a83e5d2af42f2aee8ea8b4a",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/mechanical-exact-replay.json": {
+          "sha": "c37a19903a05dcfa1af13444b9bde2cb078f9db0",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/method-change-record.json": {
+          "sha": "dcafc000867c5dff23cc1c73f2b4db4d746561e4",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/preparation-diagnostics.json": {
+          "sha": "8da597cd26c1b5aae165c0e41e8509e037076a07",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/prospective-freeze.json": {
+          "sha": "e7071d07f1fd8c2b5eabe2ccd0894d13b39e1c92",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/prospective-method-review.json": {
+          "sha": "ea66cfe8560a9e843f4a050c0c56514d8d38a30e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/prospective-plan.json": {
+          "sha": "cc995fda50112f483ff7509a2d4a7724a6a868c9",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/publication-manifest.json": {
+          "sha": "5baa4b4892e51bba36f2af783b14108b4196d5f4",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/relevant-response.json": {
+          "sha": "47437e661e249b4f58f6fa3846eda2c741fc5c1a",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/relevant-trajectory.json": {
+          "sha": "6cc4f56b0315ae96f75cf6591c2898c821b2af6e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/semantic-method-review.json": {
+          "sha": "f9acaba7a71446347dcb424fc2a1c826810ac151",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/source-state-bindings.json": {
+          "sha": "1dfbcccee87ceda456649e039698904052b2bf0c",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/c01-packet.json": {
+          "sha": "4dcf7710e90d92e6de3369ccf0a56412b7cfe9cf",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/c01-response.json": {
+          "sha": "e95937394a170693010724f551736629f3421216",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/c02-packet.json": {
+          "sha": "2ff161cbf81e311bbe23f58e0f131c9a57005e69",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/c02-response.json": {
+          "sha": "16d495478b65b2e31bbe1f5fd0b632201bb9d976",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/c03-packet.json": {
+          "sha": "6d922af8979a58db789b1d28f695d6052923237f",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/c03-response.json": {
+          "sha": "603eecf693cbfa542f839ee075d85a6a3471e92e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/c04-packet.json": {
+          "sha": "145c03334d3cd13693632435ed3a329468172eec",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/c04-response.json": {
+          "sha": "575631d39c51cace7c892d961371587c159a3dad",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/mechanical-replay.json": {
+          "sha": "a9624be4c15c49946f97109441456783f945fa7d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/policy-snapshot.json": {
+          "sha": "e024232a84008894eca6b0d018f3f2206c672ed1",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/prospective-manifest.json": {
+          "sha": "18387458c101fb4651cd8e5c7831e442c7054eec",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/semantic-review.json": {
+          "sha": "7fe7a1288f1441d465920c330e666ed9e291ca7d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/successor-receipt.json": {
+          "sha": "2d8b7fc0b6ef5ddffe86019cd6dbca8811dc1a4b",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/adversarial-review.json": {
+          "sha": "9d66522f02a187f444ada030791186d0b81ef04f",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/candidate1-exporter.py.txt": {
+          "sha": "07821b0b2ef2c599a63667334fbfd325df5a33b0",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/candidate2-exporter.py.txt": {
+          "sha": "7ddadfa8664a12eb8b82313ba4f26e2442be56ac",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/candidate3-reproduction-exporter.py.txt": {
+          "sha": "609fc0b821f5f1fd4c838e3b123dff9c08cbe6a2",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-SHA256SUMS": {
+          "sha": "1b2bd767d739b926d3fe47c6e8a7be0eb9f666db",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd01.json": {
+          "sha": "cad4a8be43113debe25702b4ad42e00ab6f1de98",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd02.json": {
+          "sha": "a19081fa50c4f7f43f0087dc4f369b8b776efff6",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd03.json": {
+          "sha": "30cfbb7b8cfc5e3f60b3304343ac4637bb7d21ae",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd04.json": {
+          "sha": "5e7b649cbefc29df9f0360b72fede9f1449ea43b",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd05.json": {
+          "sha": "0e935956838a993a29de0e0f1fd4d5a8aa1d66b6",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd06.json": {
+          "sha": "45ba7c8f9724c43ba9489578d1680073214ce846",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-freeze.json": {
+          "sha": "9781dfe67b8cd8e7b4aaf5dd992dedf1703267d6",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-oracles.json": {
+          "sha": "c77d3286f62738f6eff2f3b4e4416ebb54b2dd54",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/manifest.json": {
+          "sha": "6b699a0ca0bd5b5d2e64cff60a9c37d0af7a5980",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/observations.json": {
+          "sha": "1177d5d74fdadbeb6e8ed753d3ea742e21213945",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/prospective-manifest.json": {
+          "sha": "277377d6421dfb1ee766e07f5b72e71b9f5826ae",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/prospective-observations.json": {
+          "sha": "8439cf5600fe44d5ed9fff1282e53e1e05f2a51d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/teaching-decision-v0.4-candidate.md": {
+          "sha": "abf8b1a4bd2e0f0992edf65b6aa16bc74b020db5",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-observations.json": {
+          "sha": "0170e4a041669cbc58eac140f3721d0cb0762119",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-policy-history/teaching-decision-v0.3.md": {
+          "sha": "8d88d2b630ba5dc6b32733c76985d02fe0d1a344",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-run-manifest.json": {
+          "sha": "1651531677b68f4c0697982e28ebe1e6c2615f00",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-source-history/test_correction_propagation-v3.py.txt": {
+          "sha": "ab3c6dbba6a090dda0e2e85c2297694f53be6e60",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/boundaries-packet.json": {
+          "sha": "8bc474814efd660e72c54082564726e8f66069ef",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/boundaries-response.json": {
+          "sha": "1ff37149e933808141029e76b868d4d2112c51e1",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/counterexample-review.json": {
+          "sha": "a31479b93dc1199c2c95c1f1951e15d524ba53f6",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/mechanical-replay.json": {
+          "sha": "bfa76fc8c19ba2893ca3d3d8c9ad7861c0c97cfb",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/policy-snapshot.json": {
+          "sha": "5cd0c0ef17cd40365ecfad4612d344f58fbe7d89",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/prospective-manifest.json": {
+          "sha": "7e57fd9206fda1531c98ac81f4915e696ab82643",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/remediation-manifest.json": {
+          "sha": "e8b7ca13d38db0c475ef5d8c92367f46f18a1e2d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/remediation-packet.json": {
+          "sha": "d799c0cf7195a6675e76b2e145992bfaa7ca7caa",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/remediation-policy-snapshot.json": {
+          "sha": "4d38ff70b8991f9b10d7b39606e287bd175f4d1f",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/remediation-replay.json": {
+          "sha": "8bb4e56e19c76babe0e1116734f98cf750df9ac3",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/remediation-response.json": {
+          "sha": "80acd84e7da775b482dcd3867ff22c011278807e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/remediation-semantic-review.json": {
+          "sha": "b5b13e3e6ce4793c1f5a944c5bd68bea289f67f9",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/semantic-review.json": {
+          "sha": "4bb434630697dc8d650334dff1496266445015fb",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/structured-packet.json": {
+          "sha": "db24e49a965f38c6a1e7c433ece5f8686bf899d2",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/structured-response.json": {
+          "sha": "84bed97c0625ae385e1d6707347be24a4e43297b",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/successor-packet.json": {
+          "sha": "b43dc982ec928994713764bf014f6371b3061a40",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/successor-receipt.json": {
+          "sha": "beb01a5887b95d5edeff4d6c8e1f669d0aa0bdf5",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/successor-response.json": {
+          "sha": "c8ae5ed7faf078ff5e3a6524ef43e03cdc71b16e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/summary-packet.json": {
+          "sha": "6312ab0b6955abf6047dca2cae571141e95f1495",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/summary-response.json": {
+          "sha": "7832cd58d9adf28398b77073fc4003319971782c",
+          "mode": "100644"
+        },
+        "tests/host_replay_compatibility.py": {
+          "sha": "45948a8eb53ced49da150a8ee9b5e5941da3156b",
+          "mode": "100644"
+        },
+        "tests/intake_controls_fixture.py": {
+          "sha": "eb25ccc28abe4e6b67148633b3d0253e9214c109",
+          "mode": "100644"
+        },
+        "tests/state_sensitivity_fixture.py": {
+          "sha": "58643cab89086c761566038e331e4bd742075d43",
+          "mode": "100644"
+        },
+        "tests/test_answer_closure.py": {
+          "sha": "b129f6475fab66059d7d4b48ba35d92491d161ba",
+          "mode": "100644"
+        },
+        "tests/test_autonomous_correction.py": {
+          "sha": "875ad6929351220862a7380ed74ae849f4824dcf",
+          "mode": "100644"
+        },
+        "tests/test_cold_resume.py": {
+          "sha": "91bb1c40932966be2c64198971acbffebcb7c3a9",
+          "mode": "100644"
+        },
+        "tests/test_collaboration_boundary.py": {
+          "sha": "1c2c1a5783540b8bf93a1afafbaa99f4062a7423",
+          "mode": "100644"
+        },
+        "tests/test_constrained_recovery.py": {
+          "sha": "2d91a0c040cd9fa5aa890ee51d73a23d1d7951ad",
+          "mode": "100644"
+        },
+        "tests/test_context_selection.py": {
+          "sha": "8379dd052617fafa6f87c2ef716ab6c40e8e80d6",
+          "mode": "100644"
+        },
+        "tests/test_core_validator.py": {
+          "sha": "0657559e0fc23c3144ee5705f9cd721215a256d8",
+          "mode": "100644"
+        },
+        "tests/test_correction_propagation.py": {
+          "sha": "95347601925a2802bbb7ca78fcf31efed84850e5",
+          "mode": "100644"
+        },
+        "tests/test_deployment_validator.py": {
+          "sha": "36063b1858026c56a1af8d538c3f5e72c74dce0b",
+          "mode": "100644"
+        },
+        "tests/test_diagnostic_repair.py": {
+          "sha": "97560658bce9d2d7c3206ab7f6e79f03a9dce196",
+          "mode": "100644"
+        },
+        "tests/test_domain_probes.py": {
+          "sha": "1a5ce72f16836dd80c8bdfce18faf28188eb8a1a",
+          "mode": "100644"
+        },
+        "tests/test_evidence_discovery.py": {
+          "sha": "802e7affd4cafbb6f348817a9f3f8ad0199f9094",
+          "mode": "100644"
+        },
+        "tests/test_fixture_checkout.py": {
+          "sha": "62d0328a5d506b55a979e8c4b184b12f1537029c",
+          "mode": "100644"
+        },
+        "tests/test_github_api_provider.py": {
+          "sha": "1f3e5df677098054bad7bef86f11bd9c4e10f25b",
+          "mode": "100644"
+        },
+        "tests/test_host_replay_compatibility.py": {
+          "sha": "17ab62cbadf7fc543958d531dd62b6977b2db825",
+          "mode": "100644"
+        },
+        "tests/test_instance_validator.py": {
+          "sha": "21e4a8db688a5443082fab06ff5cfcefb47b0322",
+          "mode": "100644"
+        },
+        "tests/test_intake_experience.py": {
+          "sha": "20b03b467a8b82838bc99aa05cd7e246304473c4",
+          "mode": "100644"
+        },
+        "tests/test_intake_operations.py": {
+          "sha": "508c0041e6b67a659c42cdc800ee03f9ae883701",
+          "mode": "100644"
+        },
+        "tests/test_intake_policy.py": {
+          "sha": "0bc8d909d116578e0d1f630a17176a105f7daadb",
+          "mode": "100644"
+        },
+        "tests/test_reference_host.py": {
+          "sha": "274e43a6dad69dc21d581e5040ef5ca7ebc75027",
+          "mode": "100644"
+        },
+        "tests/test_rest_text.py": {
+          "sha": "f497fb3a9bfd1a72e6bd053ea227d82ee9f07cf2",
+          "mode": "100644"
+        },
+        "tests/test_runtime_adapter.py": {
+          "sha": "135f48e739534105d446f18fc91c98b514031a67",
+          "mode": "100644"
+        },
+        "tests/test_runtime_broker.py": {
+          "sha": "8c7e9a7f8fd363427ac4c2798e2c0deb667cc59c",
+          "mode": "100644"
+        },
+        "tests/test_state_sensitivity.py": {
+          "sha": "d3360229f22c1d8848f6202b670b35b1f9808f73",
+          "mode": "100644"
+        },
+        "tests/test_validator.py": {
+          "sha": "54faa9efc736fb0d7270c8d55ffc4605248912f5",
+          "mode": "100644"
+        },
+        "tests/test_withdrawn_support.py": {
+          "sha": "ed75d9567ca95cb106e1b2667f6cfa2fc3880d32",
+          "mode": "100644"
+        },
+        "tests/withdrawn_support_fixture.py": {
+          "sha": "5f3e405dcf8546e312cb69a5b557f48bf3135fc1",
+          "mode": "100644"
+        }
+      },
+      "commits": 1,
+      "parents": [],
+      "changed_paths": [
+        ".github/workflows/validate.yml",
+        ".gitignore",
+        "AGENTS.md",
+        "README.md",
+        "config/core.yaml",
+        "docs/audits/2026-10-02-intake-and-git-context.md",
+        "docs/audits/2026-10-02-rest-provider.md",
+        "docs/audits/2026-10-03-rest-text-admission.md",
+        "docs/audits/2026-10-03-session-input-admission.md",
+        "docs/evaluations/.gitattributes",
+        "docs/evaluations/core19-intake-controls-plan.md",
+        "docs/evaluations/core19-intake-controls-results.md",
+        "docs/evaluations/core34-answer-closure-results.md",
+        "docs/evaluations/core34-application-v2-plan.md",
+        "docs/evaluations/core34-autonomous-correction-results.md",
+        "docs/evaluations/core34-cold-resume-results.md",
+        "docs/evaluations/core34-constrained-recovery-results.md",
+        "docs/evaluations/core34-context-selection-results.md",
+        "docs/evaluations/core34-correction-propagation-plan.md",
+        "docs/evaluations/core34-correction-propagation-results.md",
+        "docs/evaluations/core34-diagnostic-repair-plan.md",
+        "docs/evaluations/core34-diagnostic-repair-results.md",
+        "docs/evaluations/core34-interruption-recovery-plan.md",
+        "docs/evaluations/core34-interruption-recovery-results.md",
+        "docs/evaluations/core34-state-sensitivity-results.md",
+        "docs/evaluations/core34-withdrawn-support-plan.md",
+        "docs/evaluations/core34-withdrawn-support-results.md",
+        "docs/product-direction.md",
+        "docs/reference-host.md",
+        "docs/research/2026-10-06-longitudinal-learner-state-evidence.md",
+        "domains/_template/curriculum.yaml",
+        "domains/modern-language-models/curriculum.yaml",
+        "domains/modern-language-models/probes.md",
+        "protocol/continuity-policy.md",
+        "protocol/conversation-naming-policy.md",
+        "protocol/coordination-policy.md",
+        "protocol/curriculum-policy.md",
+        "protocol/deployment-runtime.md",
+        "protocol/evidence-classification.md",
+        "protocol/evidence-integration.md",
+        "protocol/execution-policy.md",
+        "protocol/new-topic-start.md",
+        "protocol/persistence-policy.md",
+        "protocol/repository-governance-policy.md",
+        "protocol/runtime-bootstrap.md",
+        "protocol/runtime-core.md",
+        "protocol/schema.md",
+        "protocol/teaching-decision.md",
+        "requirements-dev.txt",
+        "scripts/evaluate_diagnostic_repair.py",
+        "scripts/evaluate_state_sensitivity.py",
+        "scripts/intake_policy.py",
+        "scripts/reference_host.py",
+        "scripts/runtime_adapter.py",
+        "scripts/runtime_broker.py",
+        "scripts/validate_learning_os.py",
+        "tests/.gitattributes",
+        "tests/answer_closure_fixture.py",
+        "tests/autonomous_correction_fixture.py",
+        "tests/cold_resume_fixture.py",
+        "tests/constrained_recovery_fixture.py",
+        "tests/context_selection_fixture.py",
+        "tests/correction_propagation_fixture.py",
+        "tests/diagnostic_repair_fixture.py",
+        "tests/fixtures/core19-intake/consumer-packet.json",
+        "tests/fixtures/core19-intake/consumer-response.json",
+        "tests/fixtures/core19-intake/mechanical-replay.json",
+        "tests/fixtures/core19-intake/policy-snapshot.json",
+        "tests/fixtures/core19-intake/prospective-manifest.json",
+        "tests/fixtures/core19-intake/semantic-review.json",
+        "tests/fixtures/core19-intake/successor-freeze.json",
+        "tests/fixtures/core19-intake/successor-packet.json",
+        "tests/fixtures/core19-intake/successor-response.json",
+        "tests/fixtures/core34-answer-closure/.gitattributes",
+        "tests/fixtures/core34-answer-closure/elm-b-packet.json",
+        "tests/fixtures/core34-answer-closure/elm-b-response.json",
+        "tests/fixtures/core34-answer-closure/elm-b-trajectory.json",
+        "tests/fixtures/core34-answer-closure/elm-c-packet.json",
+        "tests/fixtures/core34-answer-closure/elm-c-response.json",
+        "tests/fixtures/core34-answer-closure/elm-c-trajectory.json",
+        "tests/fixtures/core34-answer-closure/elm-post-state.json",
+        "tests/fixtures/core34-answer-closure/elm-successor-recovery.json",
+        "tests/fixtures/core34-answer-closure/initial-provider-calls.json",
+        "tests/fixtures/core34-answer-closure/initial-provider-state.json",
+        "tests/fixtures/core34-answer-closure/mechanical-exact-replay.json",
+        "tests/fixtures/core34-answer-closure/mechanical-invariants.json",
+        "tests/fixtures/core34-answer-closure/pine-b-packet.json",
+        "tests/fixtures/core34-answer-closure/pine-b-response.json",
+        "tests/fixtures/core34-answer-closure/pine-b-trajectory.json",
+        "tests/fixtures/core34-answer-closure/pine-c-packet.json",
+        "tests/fixtures/core34-answer-closure/pine-c-response.json",
+        "tests/fixtures/core34-answer-closure/pine-c-trajectory.json",
+        "tests/fixtures/core34-answer-closure/pine-post-state.json",
+        "tests/fixtures/core34-answer-closure/pine-successor-recovery.json",
+        "tests/fixtures/core34-answer-closure/preparation-attempt-1.json",
+        "tests/fixtures/core34-answer-closure/prospective-freeze.json",
+        "tests/fixtures/core34-answer-closure/prospective-plan.json",
+        "tests/fixtures/core34-answer-closure/publication-manifest.json",
+        "tests/fixtures/core34-answer-closure/reed-b-packet.json",
+        "tests/fixtures/core34-answer-closure/reed-b-response.json",
+        "tests/fixtures/core34-answer-closure/reed-b-trajectory.json",
+        "tests/fixtures/core34-answer-closure/reed-c-packet.json",
+        "tests/fixtures/core34-answer-closure/reed-c-response.json",
+        "tests/fixtures/core34-answer-closure/reed-c-trajectory.json",
+        "tests/fixtures/core34-answer-closure/reed-post-state.json",
+        "tests/fixtures/core34-answer-closure/reed-successor-recovery.json",
+        "tests/fixtures/core34-answer-closure/semantic-review-final.json",
+        "tests/fixtures/core34-autonomous-correction/.gitattributes",
+        "tests/fixtures/core34-autonomous-correction/baseline-response.json",
+        "tests/fixtures/core34-autonomous-correction/baseline-state.json",
+        "tests/fixtures/core34-autonomous-correction/baseline-trajectory.json",
+        "tests/fixtures/core34-autonomous-correction/first-packet.json",
+        "tests/fixtures/core34-autonomous-correction/input-provenance.json",
+        "tests/fixtures/core34-autonomous-correction/mechanical-exact-replay.json",
+        "tests/fixtures/core34-autonomous-correction/preparation-provenance.json",
+        "tests/fixtures/core34-autonomous-correction/prospective-freeze.json",
+        "tests/fixtures/core34-autonomous-correction/prospective-method-review.json",
+        "tests/fixtures/core34-autonomous-correction/prospective-plan.json",
+        "tests/fixtures/core34-autonomous-correction/publication-manifest.json",
+        "tests/fixtures/core34-autonomous-correction/report-post-state.json",
+        "tests/fixtures/core34-autonomous-correction/report-response.json",
+        "tests/fixtures/core34-autonomous-correction/report-state.json",
+        "tests/fixtures/core34-autonomous-correction/report-trajectory.json",
+        "tests/fixtures/core34-autonomous-correction/semantic-method-review.json",
+        "tests/fixtures/core34-autonomous-correction/successor-packet.json",
+        "tests/fixtures/core34-autonomous-correction/successor-response.json",
+        "tests/fixtures/core34-autonomous-correction/successor-trajectory.json",
+        "tests/fixtures/core34-autonomous-correction/successor-trigger-provenance.json",
+        "tests/fixtures/core34-cold-resume/.gitattributes",
+        "tests/fixtures/core34-cold-resume/alpha-packet.json",
+        "tests/fixtures/core34-cold-resume/alpha-response.json",
+        "tests/fixtures/core34-cold-resume/artifact-manifest.json",
+        "tests/fixtures/core34-cold-resume/beta-packet.json",
+        "tests/fixtures/core34-cold-resume/beta-response.json",
+        "tests/fixtures/core34-cold-resume/mechanical-replay.json",
+        "tests/fixtures/core34-cold-resume/prospective-plan.json",
+        "tests/fixtures/core34-cold-resume/semantic-review.json",
+        "tests/fixtures/core34-cold-resume/successor-packet.json",
+        "tests/fixtures/core34-cold-resume/successor-plan.json",
+        "tests/fixtures/core34-cold-resume/successor-response.json",
+        "tests/fixtures/core34-constrained-recovery/.gitattributes",
+        "tests/fixtures/core34-constrained-recovery/audit-errata.json",
+        "tests/fixtures/core34-constrained-recovery/cedar-packet.json",
+        "tests/fixtures/core34-constrained-recovery/cedar-response.json",
+        "tests/fixtures/core34-constrained-recovery/complementary-review.json",
+        "tests/fixtures/core34-constrained-recovery/consumer-bindings.json",
+        "tests/fixtures/core34-constrained-recovery/exact-replay.json",
+        "tests/fixtures/core34-constrained-recovery/initial-preparation-failure.json",
+        "tests/fixtures/core34-constrained-recovery/initial-prospective-plan.json",
+        "tests/fixtures/core34-constrained-recovery/iris-packet.json",
+        "tests/fixtures/core34-constrained-recovery/iris-response.json",
+        "tests/fixtures/core34-constrained-recovery/juniper-packet.json",
+        "tests/fixtures/core34-constrained-recovery/juniper-response.json",
+        "tests/fixtures/core34-constrained-recovery/laurel-packet.json",
+        "tests/fixtures/core34-constrained-recovery/maple-packet.json",
+        "tests/fixtures/core34-constrained-recovery/maple-response.json",
+        "tests/fixtures/core34-constrained-recovery/mechanical-input-check.json",
+        "tests/fixtures/core34-constrained-recovery/preconsumer-manifest.json",
+        "tests/fixtures/core34-constrained-recovery/predispatch-clock-receipt.json",
+        "tests/fixtures/core34-constrained-recovery/prospective-plan.json",
+        "tests/fixtures/core34-constrained-recovery/publication-manifest.json",
+        "tests/fixtures/core34-constrained-recovery/result-summary.json",
+        "tests/fixtures/core34-constrained-recovery/scope-clarifications.json",
+        "tests/fixtures/core34-context-selection/.gitattributes",
+        "tests/fixtures/core34-context-selection/baseline-response.json",
+        "tests/fixtures/core34-context-selection/baseline-trajectory.json",
+        "tests/fixtures/core34-context-selection/common-packet.json",
+        "tests/fixtures/core34-context-selection/input-provenance.json",
+        "tests/fixtures/core34-context-selection/irrelevant-preparation.json",
+        "tests/fixtures/core34-context-selection/irrelevant-response.json",
+        "tests/fixtures/core34-context-selection/irrelevant-trajectory.json",
+        "tests/fixtures/core34-context-selection/mechanical-exact-replay.json",
+        "tests/fixtures/core34-context-selection/method-change-record.json",
+        "tests/fixtures/core34-context-selection/preparation-diagnostics.json",
+        "tests/fixtures/core34-context-selection/prospective-freeze.json",
+        "tests/fixtures/core34-context-selection/prospective-method-review.json",
+        "tests/fixtures/core34-context-selection/prospective-plan.json",
+        "tests/fixtures/core34-context-selection/publication-manifest.json",
+        "tests/fixtures/core34-context-selection/relevant-response.json",
+        "tests/fixtures/core34-context-selection/relevant-trajectory.json",
+        "tests/fixtures/core34-context-selection/semantic-method-review.json",
+        "tests/fixtures/core34-context-selection/source-state-bindings.json",
+        "tests/fixtures/core34-correction/c01-packet.json",
+        "tests/fixtures/core34-correction/c01-response.json",
+        "tests/fixtures/core34-correction/c02-packet.json",
+        "tests/fixtures/core34-correction/c02-response.json",
+        "tests/fixtures/core34-correction/c03-packet.json",
+        "tests/fixtures/core34-correction/c03-response.json",
+        "tests/fixtures/core34-correction/c04-packet.json",
+        "tests/fixtures/core34-correction/c04-response.json",
+        "tests/fixtures/core34-correction/mechanical-replay.json",
+        "tests/fixtures/core34-correction/policy-snapshot.json",
+        "tests/fixtures/core34-correction/prospective-manifest.json",
+        "tests/fixtures/core34-correction/semantic-review.json",
+        "tests/fixtures/core34-correction/successor-receipt.json",
+        "tests/fixtures/core34-diagnostic-repair/adversarial-review.json",
+        "tests/fixtures/core34-diagnostic-repair/candidate1-exporter.py.txt",
+        "tests/fixtures/core34-diagnostic-repair/candidate2-exporter.py.txt",
+        "tests/fixtures/core34-diagnostic-repair/candidate3-reproduction-exporter.py.txt",
+        "tests/fixtures/core34-diagnostic-repair/heldout-SHA256SUMS",
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd01.json",
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd02.json",
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd03.json",
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd04.json",
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd05.json",
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd06.json",
+        "tests/fixtures/core34-diagnostic-repair/heldout-freeze.json",
+        "tests/fixtures/core34-diagnostic-repair/heldout-oracles.json",
+        "tests/fixtures/core34-diagnostic-repair/manifest.json",
+        "tests/fixtures/core34-diagnostic-repair/observations.json",
+        "tests/fixtures/core34-diagnostic-repair/prospective-manifest.json",
+        "tests/fixtures/core34-diagnostic-repair/prospective-observations.json",
+        "tests/fixtures/core34-diagnostic-repair/teaching-decision-v0.4-candidate.md",
+        "tests/fixtures/core34-observations.json",
+        "tests/fixtures/core34-policy-history/teaching-decision-v0.3.md",
+        "tests/fixtures/core34-run-manifest.json",
+        "tests/fixtures/core34-source-history/test_correction_propagation-v3.py.txt",
+        "tests/fixtures/core34-withdrawn-support/boundaries-packet.json",
+        "tests/fixtures/core34-withdrawn-support/boundaries-response.json",
+        "tests/fixtures/core34-withdrawn-support/counterexample-review.json",
+        "tests/fixtures/core34-withdrawn-support/mechanical-replay.json",
+        "tests/fixtures/core34-withdrawn-support/policy-snapshot.json",
+        "tests/fixtures/core34-withdrawn-support/prospective-manifest.json",
+        "tests/fixtures/core34-withdrawn-support/remediation-manifest.json",
+        "tests/fixtures/core34-withdrawn-support/remediation-packet.json",
+        "tests/fixtures/core34-withdrawn-support/remediation-policy-snapshot.json",
+        "tests/fixtures/core34-withdrawn-support/remediation-replay.json",
+        "tests/fixtures/core34-withdrawn-support/remediation-response.json",
+        "tests/fixtures/core34-withdrawn-support/remediation-semantic-review.json",
+        "tests/fixtures/core34-withdrawn-support/semantic-review.json",
+        "tests/fixtures/core34-withdrawn-support/structured-packet.json",
+        "tests/fixtures/core34-withdrawn-support/structured-response.json",
+        "tests/fixtures/core34-withdrawn-support/successor-packet.json",
+        "tests/fixtures/core34-withdrawn-support/successor-receipt.json",
+        "tests/fixtures/core34-withdrawn-support/successor-response.json",
+        "tests/fixtures/core34-withdrawn-support/summary-packet.json",
+        "tests/fixtures/core34-withdrawn-support/summary-response.json",
+        "tests/host_replay_compatibility.py",
+        "tests/intake_controls_fixture.py",
+        "tests/state_sensitivity_fixture.py",
+        "tests/test_answer_closure.py",
+        "tests/test_autonomous_correction.py",
+        "tests/test_cold_resume.py",
+        "tests/test_collaboration_boundary.py",
+        "tests/test_constrained_recovery.py",
+        "tests/test_context_selection.py",
+        "tests/test_core_validator.py",
+        "tests/test_correction_propagation.py",
+        "tests/test_deployment_validator.py",
+        "tests/test_diagnostic_repair.py",
+        "tests/test_domain_probes.py",
+        "tests/test_evidence_discovery.py",
+        "tests/test_fixture_checkout.py",
+        "tests/test_github_api_provider.py",
+        "tests/test_host_replay_compatibility.py",
+        "tests/test_instance_validator.py",
+        "tests/test_intake_experience.py",
+        "tests/test_intake_operations.py",
+        "tests/test_intake_policy.py",
+        "tests/test_reference_host.py",
+        "tests/test_rest_text.py",
+        "tests/test_runtime_adapter.py",
+        "tests/test_runtime_broker.py",
+        "tests/test_state_sensitivity.py",
+        "tests/test_validator.py",
+        "tests/test_withdrawn_support.py",
+        "tests/withdrawn_support_fixture.py"
+      ],
+      "refs": {
+        "refs/heads/main": "9fa989bd743a89a39656ca7654ae3fb86fa9b3c3"
+      }
+    },
+    "control": {
+      "head": "72fa6281d9904068d71954e5ac5c46202e625124",
+      "tree": "b9f289be7ea5ebbb5ffdf0538c5276a06a87f083",
+      "blobs": {
+        "deployment.yaml": {
+          "sha": "352d512d31483db17ff272c2cc72824a44dfa43f",
+          "mode": "100644"
+        }
+      },
+      "commits": 1,
+      "parents": [],
+      "changed_paths": [
+        "deployment.yaml"
+      ],
+      "refs": {
+        "refs/heads/main": "72fa6281d9904068d71954e5ac5c46202e625124"
+      }
+    }
+  },
+  "final_protected": {
+    "core": {
+      "head": "9fa989bd743a89a39656ca7654ae3fb86fa9b3c3",
+      "tree": "1995f7807375044aa08873e309bee61e704abc3c",
+      "blobs": {
+        ".github/workflows/validate.yml": {
+          "sha": "f5739499c9166e323df954a83dee38f53b86d83b",
+          "mode": "100644"
+        },
+        ".gitignore": {
+          "sha": "7a60b85e148f80966a550e5ab6a762a907c69ca6",
+          "mode": "100644"
+        },
+        "AGENTS.md": {
+          "sha": "c5f05e0b9e2f81b4c1d6e4c9629a467c02fd3fac",
+          "mode": "100644"
+        },
+        "README.md": {
+          "sha": "efb7911f3344bc9b1aecee7a0d17cd7f2051c2e0",
+          "mode": "100644"
+        },
+        "config/core.yaml": {
+          "sha": "68b775f2a4b6682e3c414d9699bec003c13a8749",
+          "mode": "100644"
+        },
+        "docs/audits/2026-10-02-intake-and-git-context.md": {
+          "sha": "811e0746a1ab1a288c8b716ea69dc632569ac552",
+          "mode": "100644"
+        },
+        "docs/audits/2026-10-02-rest-provider.md": {
+          "sha": "a26022e6b299c8f71fb3f00819c4e822c46a8dc8",
+          "mode": "100644"
+        },
+        "docs/audits/2026-10-03-rest-text-admission.md": {
+          "sha": "4b8b80ac010d317d50af9f283fa348af220874e6",
+          "mode": "100644"
+        },
+        "docs/audits/2026-10-03-session-input-admission.md": {
+          "sha": "06006bb14d469918c2819fb3f4e9e845d9ab0537",
+          "mode": "100644"
+        },
+        "docs/evaluations/.gitattributes": {
+          "sha": "32daa1bac12b87d243a8805719e15cecf853db64",
+          "mode": "100644"
+        },
+        "docs/evaluations/core19-intake-controls-plan.md": {
+          "sha": "bdce546ca8d0d6c94fd1eec84cc0bceaa99d95d9",
+          "mode": "100644"
+        },
+        "docs/evaluations/core19-intake-controls-results.md": {
+          "sha": "0a704a5620054ba70bbd2d6b51e3dea125f6570a",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-answer-closure-results.md": {
+          "sha": "b07c2a6b443338865640ff23e72f229b885b129b",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-application-v2-plan.md": {
+          "sha": "cff3e0a7eb70eb13c968f78545c50a53201291e9",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-autonomous-correction-results.md": {
+          "sha": "349b8617fe04bada16fab8bf3d8a3ca55ea42f1d",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-cold-resume-results.md": {
+          "sha": "e95d88b9d9ec3824fcc5d895dddacc9fdb34851c",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-constrained-recovery-results.md": {
+          "sha": "59c929e568d8d89fed3cc097883c5f37d4196bdf",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-context-selection-results.md": {
+          "sha": "c127e2f1f31d1db14b6f2d592984d02bd6d4b67a",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-correction-propagation-plan.md": {
+          "sha": "84fac2be346e4a8d0da93399451c1105537d6311",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-correction-propagation-results.md": {
+          "sha": "bfdf14f2d2e1e73bb429367ed5401c22daf2eeef",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-diagnostic-repair-plan.md": {
+          "sha": "223c8633a42b40dc89b3579880b790d891fd7b76",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-diagnostic-repair-results.md": {
+          "sha": "78aa9e2f18442425209cdbcaf1872223b45394f5",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-interruption-recovery-plan.md": {
+          "sha": "422c496e81583dd0ad8883532e2639643cc1bafe",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-interruption-recovery-results.md": {
+          "sha": "fa1b84ad93de8c31d408d45a0cbd9effb431f3b3",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-state-sensitivity-results.md": {
+          "sha": "6877cf1207d8be67d6d54fc9fbd387f955fd3c8a",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-withdrawn-support-plan.md": {
+          "sha": "0ff7e883cbff85851b4b046c5bf5a0356ae62120",
+          "mode": "100644"
+        },
+        "docs/evaluations/core34-withdrawn-support-results.md": {
+          "sha": "8f50b79283cb3be0cc389ff8a222c66d09fa0656",
+          "mode": "100644"
+        },
+        "docs/product-direction.md": {
+          "sha": "017521652c87122fcd41347a115d09e62bf706ce",
+          "mode": "100644"
+        },
+        "docs/reference-host.md": {
+          "sha": "52d0c6f70d7e4229ddcf8884f6183cfb56461fe9",
+          "mode": "100644"
+        },
+        "docs/research/2026-10-06-longitudinal-learner-state-evidence.md": {
+          "sha": "0b661a7cdd1fa9c9bff545fff223f1f84b061628",
+          "mode": "100644"
+        },
+        "domains/_template/curriculum.yaml": {
+          "sha": "4c3ca429a2b6d3510fbb2dabddb26df049c04bc2",
+          "mode": "100644"
+        },
+        "domains/modern-language-models/curriculum.yaml": {
+          "sha": "fcfff853835eba26b17218f502a638ab1d15a1f4",
+          "mode": "100644"
+        },
+        "domains/modern-language-models/probes.md": {
+          "sha": "ea9de9b2409bb988dcc9bb08be959d94bedbe0e2",
+          "mode": "100644"
+        },
+        "protocol/continuity-policy.md": {
+          "sha": "89bf920d7261c69d0e5df887e5911c138df57a9b",
+          "mode": "100644"
+        },
+        "protocol/conversation-naming-policy.md": {
+          "sha": "edf29731a111a25f3bcef0436b5d43220a3eb6b8",
+          "mode": "100644"
+        },
+        "protocol/coordination-policy.md": {
+          "sha": "387dd9be2092b5d4dc021eda8bd6d3fa59446058",
+          "mode": "100644"
+        },
+        "protocol/curriculum-policy.md": {
+          "sha": "d6950dabcaa2cb0bc544d12c8fb4aff2d76b0768",
+          "mode": "100644"
+        },
+        "protocol/deployment-runtime.md": {
+          "sha": "6c7890f364fb559aee7db7a0c71fe8a6e397acfb",
+          "mode": "100644"
+        },
+        "protocol/evidence-classification.md": {
+          "sha": "a2a3eaa925584a5e21b0c0712a176cc22ed2ff68",
+          "mode": "100644"
+        },
+        "protocol/evidence-integration.md": {
+          "sha": "cf1bd44cb25fc9f2569ccfc09ad442021b001af0",
+          "mode": "100644"
+        },
+        "protocol/execution-policy.md": {
+          "sha": "295e5848cfa596c2797426de6f725ba834996870",
+          "mode": "100644"
+        },
+        "protocol/new-topic-start.md": {
+          "sha": "a7ee907027b448ddc819ad6a3a4bc465b6e945e9",
+          "mode": "100644"
+        },
+        "protocol/persistence-policy.md": {
+          "sha": "1cd32f0e03226830086af44fff7d4a753edb8020",
+          "mode": "100644"
+        },
+        "protocol/repository-governance-policy.md": {
+          "sha": "636f92798f3a5362bb71385c0aa82f3dd71a55c4",
+          "mode": "100644"
+        },
+        "protocol/runtime-bootstrap.md": {
+          "sha": "5431df78d830ddc6b106d2f020cef71172858067",
+          "mode": "100644"
+        },
+        "protocol/runtime-core.md": {
+          "sha": "112ef3984211024656789a9add874dd60313f044",
+          "mode": "100644"
+        },
+        "protocol/schema.md": {
+          "sha": "4a39409b520c491b0d55421fa8dcfb87a298c63e",
+          "mode": "100644"
+        },
+        "protocol/teaching-decision.md": {
+          "sha": "463a39b6be00a75d6282a46b3bbb56e1bf034f1f",
+          "mode": "100644"
+        },
+        "requirements-dev.txt": {
+          "sha": "1910948f82d7b228755552cd3f5b343cebbca412",
+          "mode": "100644"
+        },
+        "scripts/evaluate_diagnostic_repair.py": {
+          "sha": "eceece4411d93275b41b2a5279b9067f6728601a",
+          "mode": "100644"
+        },
+        "scripts/evaluate_state_sensitivity.py": {
+          "sha": "e5c9a3aea6b2fa2c88be8ddf6ff03352011166ff",
+          "mode": "100644"
+        },
+        "scripts/intake_policy.py": {
+          "sha": "44d169b32ba0e5115f348ea6e2dd7336e667ed89",
+          "mode": "100644"
+        },
+        "scripts/reference_host.py": {
+          "sha": "c997a5a15c96392576f32113c3f13f6ec7aabbf5",
+          "mode": "100644"
+        },
+        "scripts/runtime_adapter.py": {
+          "sha": "57e63c663b4b5212b8c85a0a8ce36ea4089823be",
+          "mode": "100644"
+        },
+        "scripts/runtime_broker.py": {
+          "sha": "6923214960afce30c945289c3a9dd4e3a9d908cb",
+          "mode": "100644"
+        },
+        "scripts/validate_learning_os.py": {
+          "sha": "54b4529c5c59281af0163d94c29626214fffeaed",
+          "mode": "100755"
+        },
+        "tests/.gitattributes": {
+          "sha": "af3384a301a185b7aa741a5da026715041e6bb3f",
+          "mode": "100644"
+        },
+        "tests/answer_closure_fixture.py": {
+          "sha": "7217d62b213493e25da96ff07036c83287258962",
+          "mode": "100644"
+        },
+        "tests/autonomous_correction_fixture.py": {
+          "sha": "20ae19fd2d0311b6db2d426336aef7b76472dade",
+          "mode": "100644"
+        },
+        "tests/cold_resume_fixture.py": {
+          "sha": "eda1d5950298e568423a993560827b91843457a2",
+          "mode": "100644"
+        },
+        "tests/constrained_recovery_fixture.py": {
+          "sha": "4c4ef68d185ebc6a56b22b7336986159e34e683f",
+          "mode": "100644"
+        },
+        "tests/context_selection_fixture.py": {
+          "sha": "4919cf509e3db19eb3236cab150dcd04c5473300",
+          "mode": "100644"
+        },
+        "tests/correction_propagation_fixture.py": {
+          "sha": "ec621b00c435940e04b7882368c9135667da8207",
+          "mode": "100644"
+        },
+        "tests/diagnostic_repair_fixture.py": {
+          "sha": "609fc0b821f5f1fd4c838e3b123dff9c08cbe6a2",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/consumer-packet.json": {
+          "sha": "72f77bd3ec6111c637fd6f1511f0e2ff3d46b414",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/consumer-response.json": {
+          "sha": "d45ed7d90e0391282c28b1e680fe9bba974aaf35",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/mechanical-replay.json": {
+          "sha": "7b4b5659e6701e6e871eab76aff8f8ce88774d67",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/policy-snapshot.json": {
+          "sha": "dffa6c29819cf7a10b1b03bc96b7069caa86c450",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/prospective-manifest.json": {
+          "sha": "ab7110a32fbccea94fe85b2ff2d129c6e590a66f",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/semantic-review.json": {
+          "sha": "ac1de1800b9ee438d41838463755da264922c3ed",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/successor-freeze.json": {
+          "sha": "8a37258c3b1a109163027cb254f1ab4ee33c6906",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/successor-packet.json": {
+          "sha": "c22a4ad3b08c832a5ed9789d4e06b8096b2f2e1f",
+          "mode": "100644"
+        },
+        "tests/fixtures/core19-intake/successor-response.json": {
+          "sha": "dc7cb88bf6d48cdd9e5cc1a4f91e81cbf4a0e68e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/.gitattributes": {
+          "sha": "2d9a2df200785205b7cd7f3fbff6586a54454cde",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/elm-b-packet.json": {
+          "sha": "50de23f4b26a124f9075d13a3feb0deafe98ec91",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/elm-b-response.json": {
+          "sha": "58818c650802847eaead60b35e886adf6bdd295a",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/elm-b-trajectory.json": {
+          "sha": "5a0e7e7dc29e603dc6d2eb6ad2d6eb5fa2f0c803",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/elm-c-packet.json": {
+          "sha": "90a164927d72b0702a056d2e2edbe4f0dcd3e62d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/elm-c-response.json": {
+          "sha": "76865d9785a7f32c6e6c86d5a992c5f01a17c761",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/elm-c-trajectory.json": {
+          "sha": "b34f951c3cbe9d96340349f51579894530e0c5c3",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/elm-post-state.json": {
+          "sha": "46f68c3f9cac915351b383eb611346a1a6b86315",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/elm-successor-recovery.json": {
+          "sha": "8d59d4eab8414dd079a9111922235c5c59a2fb30",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/initial-provider-calls.json": {
+          "sha": "a38b72fa1739d64413e75000201c53da705885ef",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/initial-provider-state.json": {
+          "sha": "fdbfc345d7f8d4d6811b4a711d7e61d58a5d35b6",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/mechanical-exact-replay.json": {
+          "sha": "57e066cad457fd5bf047157b4ba977c8ac37d0b8",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/mechanical-invariants.json": {
+          "sha": "6f60613780a3e7bca0f0aa6a9ffea328072d0b34",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/pine-b-packet.json": {
+          "sha": "7444e8bd516523784082fbb09a76b1c54eefb67e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/pine-b-response.json": {
+          "sha": "fd9215ba692eadd3c3b20baa92dd15feca08381b",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/pine-b-trajectory.json": {
+          "sha": "afc2ae4dfb23a87362d83143da9355cfdd786ad0",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/pine-c-packet.json": {
+          "sha": "ab30e561a5b5509a322fcfe2120023a586aae864",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/pine-c-response.json": {
+          "sha": "eff154ad6b383e6b9e38f56c2631721d9a5cb6b8",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/pine-c-trajectory.json": {
+          "sha": "3326f75fcf28085b2a4d2b4eb599097de5da0e91",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/pine-post-state.json": {
+          "sha": "4031a20cf95d4854947baf5291e53fe532987bd8",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/pine-successor-recovery.json": {
+          "sha": "7ba9f1a857471cf72040fd71c53b4de119a68b7f",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/preparation-attempt-1.json": {
+          "sha": "49038c95871d94949a68fae48381cc7cd55fcdda",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/prospective-freeze.json": {
+          "sha": "cbb0b86dd3de452f84c6864b548ef31719afe807",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/prospective-plan.json": {
+          "sha": "3656f9c5159c6e540a1466827357fbd6d3e21ba0",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/publication-manifest.json": {
+          "sha": "f6e5c96a3fcf5fcb9ee69a9324a9762d3be93d6b",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/reed-b-packet.json": {
+          "sha": "f83cfc19a645e6824c1ce7c65f567e0c1bb897e1",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/reed-b-response.json": {
+          "sha": "9cf5cc1564541c594a26e93050c9bd9890545b12",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/reed-b-trajectory.json": {
+          "sha": "fbe57fbc9789423dee67042d53c92c0f85cc44a8",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/reed-c-packet.json": {
+          "sha": "3033ad664ee1a628e40e322d10e7de467cc13e0f",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/reed-c-response.json": {
+          "sha": "9b64a3ebe5c886e2d438e20215cbab7472b1f51d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/reed-c-trajectory.json": {
+          "sha": "c7d68ce0b7d20cd46c209a689bd2b00c8e7ce89d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/reed-post-state.json": {
+          "sha": "b6170535bcc9e9086082fc94a9d1abe5ec926634",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/reed-successor-recovery.json": {
+          "sha": "17f75428acc3886a2d5179544f2332795b477a93",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-answer-closure/semantic-review-final.json": {
+          "sha": "12a68b0a08606888ca91e7e30ae101efb29c9fc1",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/.gitattributes": {
+          "sha": "fa1385d99a319b43c06f5309d1aae9fdd3adea46",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/baseline-response.json": {
+          "sha": "dfca3de7ec9383acc0eb012cb769c8b8bb423318",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/baseline-state.json": {
+          "sha": "6d3f34255699321d3987df9cd48119ffd0f2f5b4",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/baseline-trajectory.json": {
+          "sha": "051c02902eb62f87e8baac3e92e05691e46c3f9a",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/first-packet.json": {
+          "sha": "469e89c321a434403a891e29d5d842516b90846e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/input-provenance.json": {
+          "sha": "7a60b5b60c60a8b332a622ca7fb08d4f2e44c375",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/mechanical-exact-replay.json": {
+          "sha": "1190c26b9e531883cbe2795a8ea5e78c69cc5b4b",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/preparation-provenance.json": {
+          "sha": "e475483545651e03cf1e8d7ac511c4ecbb41156c",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/prospective-freeze.json": {
+          "sha": "e5cdcaeeea010e60a094d8fa24fbf7487dfd37ee",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/prospective-method-review.json": {
+          "sha": "0e3819ab0141d76816509f8dfd89e8b10e299e00",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/prospective-plan.json": {
+          "sha": "8acccb534254753f41a906c9f73303b5c08b8dfb",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/publication-manifest.json": {
+          "sha": "898e3837fa0cd76fff68d710c3e70e8721ab5407",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/report-post-state.json": {
+          "sha": "91bf95c6014d318a638b0ffb4de715cd0c016608",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/report-response.json": {
+          "sha": "1c73c476d4c4b43d08e51073c2bc1738c2f9f247",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/report-state.json": {
+          "sha": "cf2925b3553580c78ca23c2ac27746b6bcca2354",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/report-trajectory.json": {
+          "sha": "abee72122a73c353fd34ca26c788a1a90f4fa09e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/semantic-method-review.json": {
+          "sha": "db5d758c2dfe2555adfba47f9070f40db6e4763a",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/successor-packet.json": {
+          "sha": "9105ce4945cf81ead877c73e1e9bade5c20a28c9",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/successor-response.json": {
+          "sha": "a459222752a92269cd0efb51030db5d57ba4911c",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/successor-trajectory.json": {
+          "sha": "6542b99a50452e30690770ce7ce0b2cf5ae5bb66",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-autonomous-correction/successor-trigger-provenance.json": {
+          "sha": "c90dc092457775b04a0ec64d127f55c158c2461d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/.gitattributes": {
+          "sha": "e72a965b68671a0d77df0a2f25f49ad0980a40b4",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/alpha-packet.json": {
+          "sha": "0ffbede4a42898c3453b3bc0e639531850d0f176",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/alpha-response.json": {
+          "sha": "0128937c9ccc676f6582614b193c5d556b0b92ee",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/artifact-manifest.json": {
+          "sha": "ff09b16d758935506bbdf4916309646bafeb113d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/beta-packet.json": {
+          "sha": "b5c67db74543c90b15bd9fcfa8fa550adc3a4b91",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/beta-response.json": {
+          "sha": "47e31320bc88fbdb28bea5021b335f919cd22f32",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/mechanical-replay.json": {
+          "sha": "11413296dde2f673e342c43b4edc2263411a341f",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/prospective-plan.json": {
+          "sha": "eb16c2df3816daac96d2b0ec629a33b401125b05",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/semantic-review.json": {
+          "sha": "13bdd1b459e9da312927cd33964342baa372b162",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/successor-packet.json": {
+          "sha": "c168494d0d30db3a65000e9016d6340149daebd8",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/successor-plan.json": {
+          "sha": "69d5725c3ff78207dde0e63e21c6164fb3adf6d8",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-cold-resume/successor-response.json": {
+          "sha": "8f5eaf36f37384603befb904eb80da2952e509a9",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/.gitattributes": {
+          "sha": "09341a3a0a406ad76ed056527cc449e77205c033",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/audit-errata.json": {
+          "sha": "c3aa51aeb26d51358536fdcc2b8ae060a5e0f363",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/cedar-packet.json": {
+          "sha": "3128bb4ad782658e4d2266c3bea14864dcda6043",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/cedar-response.json": {
+          "sha": "c6179f44349a0daebf71dfa2cbd29eea893c9bbb",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/complementary-review.json": {
+          "sha": "d45df0e6a6e7d99fdb04aec3961adbf72cff606e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/consumer-bindings.json": {
+          "sha": "cce689c55fc66359ffb9757033b64affe1d3df52",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/exact-replay.json": {
+          "sha": "a3a751c96d1ef7a6a41657519724794129664799",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/initial-preparation-failure.json": {
+          "sha": "ca4e2586ae52b23d633cdf6bc12c0b87e5489fa7",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/initial-prospective-plan.json": {
+          "sha": "c76e32cd3ecc31599b38f5427c063878a581035c",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/iris-packet.json": {
+          "sha": "54ecf01acee162c37f86f5c2f6d8fcaa21d382b7",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/iris-response.json": {
+          "sha": "4aaa20fbade45529b280f29d301cb96eb05a09ed",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/juniper-packet.json": {
+          "sha": "92f331d8f33dce38166f874780ff9d6f8946c953",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/juniper-response.json": {
+          "sha": "b38b29d55cf5cc1c4b086482947685307f8eef07",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/laurel-packet.json": {
+          "sha": "54ecf01acee162c37f86f5c2f6d8fcaa21d382b7",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/maple-packet.json": {
+          "sha": "39c128bc3ea50d4ae3429564d057af9b7201e201",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/maple-response.json": {
+          "sha": "bd060aa5e892245d13feeddd9fe4c38c10624878",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/mechanical-input-check.json": {
+          "sha": "0f49e3f5ea0a95e877108120f05ee960ef0f3355",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/preconsumer-manifest.json": {
+          "sha": "60f14c7974d6e120e8cd1fbc8ebe50647635929c",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/predispatch-clock-receipt.json": {
+          "sha": "d94c398d26e4c493f8a12df298c356f0082824c7",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/prospective-plan.json": {
+          "sha": "ce0183b093882598209aaaea5ae2ffde02288bd4",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/publication-manifest.json": {
+          "sha": "56f697f64f0477e5ad750edec5ef4f5939ebe2d1",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/result-summary.json": {
+          "sha": "3cef83cc7363a66b247da0d26079de66a140330a",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-constrained-recovery/scope-clarifications.json": {
+          "sha": "93f568542803597706eb74954a0087da800f7878",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/.gitattributes": {
+          "sha": "2d9a2df200785205b7cd7f3fbff6586a54454cde",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/baseline-response.json": {
+          "sha": "83cba2c7ba98f360f11ebc683e48b104d9ecb151",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/baseline-trajectory.json": {
+          "sha": "4a6c82201588e4e0de9b17f88150abb72ad807ff",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/common-packet.json": {
+          "sha": "0ee391253c55442a3dfee01d7578b908e1bacfb8",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/input-provenance.json": {
+          "sha": "e5d37072379c37fc63d7646a824005770739ea99",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/irrelevant-preparation.json": {
+          "sha": "511a52c545a4e13fcfae83651a56f3d1d65ddf0e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/irrelevant-response.json": {
+          "sha": "a2a16dd08015f857034fb241dd2d60f583fbe9ab",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/irrelevant-trajectory.json": {
+          "sha": "4f2610095ec56ae57a83e5d2af42f2aee8ea8b4a",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/mechanical-exact-replay.json": {
+          "sha": "c37a19903a05dcfa1af13444b9bde2cb078f9db0",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/method-change-record.json": {
+          "sha": "dcafc000867c5dff23cc1c73f2b4db4d746561e4",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/preparation-diagnostics.json": {
+          "sha": "8da597cd26c1b5aae165c0e41e8509e037076a07",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/prospective-freeze.json": {
+          "sha": "e7071d07f1fd8c2b5eabe2ccd0894d13b39e1c92",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/prospective-method-review.json": {
+          "sha": "ea66cfe8560a9e843f4a050c0c56514d8d38a30e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/prospective-plan.json": {
+          "sha": "cc995fda50112f483ff7509a2d4a7724a6a868c9",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/publication-manifest.json": {
+          "sha": "5baa4b4892e51bba36f2af783b14108b4196d5f4",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/relevant-response.json": {
+          "sha": "47437e661e249b4f58f6fa3846eda2c741fc5c1a",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/relevant-trajectory.json": {
+          "sha": "6cc4f56b0315ae96f75cf6591c2898c821b2af6e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/semantic-method-review.json": {
+          "sha": "f9acaba7a71446347dcb424fc2a1c826810ac151",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-context-selection/source-state-bindings.json": {
+          "sha": "1dfbcccee87ceda456649e039698904052b2bf0c",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/c01-packet.json": {
+          "sha": "4dcf7710e90d92e6de3369ccf0a56412b7cfe9cf",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/c01-response.json": {
+          "sha": "e95937394a170693010724f551736629f3421216",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/c02-packet.json": {
+          "sha": "2ff161cbf81e311bbe23f58e0f131c9a57005e69",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/c02-response.json": {
+          "sha": "16d495478b65b2e31bbe1f5fd0b632201bb9d976",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/c03-packet.json": {
+          "sha": "6d922af8979a58db789b1d28f695d6052923237f",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/c03-response.json": {
+          "sha": "603eecf693cbfa542f839ee075d85a6a3471e92e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/c04-packet.json": {
+          "sha": "145c03334d3cd13693632435ed3a329468172eec",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/c04-response.json": {
+          "sha": "575631d39c51cace7c892d961371587c159a3dad",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/mechanical-replay.json": {
+          "sha": "a9624be4c15c49946f97109441456783f945fa7d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/policy-snapshot.json": {
+          "sha": "e024232a84008894eca6b0d018f3f2206c672ed1",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/prospective-manifest.json": {
+          "sha": "18387458c101fb4651cd8e5c7831e442c7054eec",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/semantic-review.json": {
+          "sha": "7fe7a1288f1441d465920c330e666ed9e291ca7d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-correction/successor-receipt.json": {
+          "sha": "2d8b7fc0b6ef5ddffe86019cd6dbca8811dc1a4b",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/adversarial-review.json": {
+          "sha": "9d66522f02a187f444ada030791186d0b81ef04f",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/candidate1-exporter.py.txt": {
+          "sha": "07821b0b2ef2c599a63667334fbfd325df5a33b0",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/candidate2-exporter.py.txt": {
+          "sha": "7ddadfa8664a12eb8b82313ba4f26e2442be56ac",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/candidate3-reproduction-exporter.py.txt": {
+          "sha": "609fc0b821f5f1fd4c838e3b123dff9c08cbe6a2",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-SHA256SUMS": {
+          "sha": "1b2bd767d739b926d3fe47c6e8a7be0eb9f666db",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd01.json": {
+          "sha": "cad4a8be43113debe25702b4ad42e00ab6f1de98",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd02.json": {
+          "sha": "a19081fa50c4f7f43f0087dc4f369b8b776efff6",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd03.json": {
+          "sha": "30cfbb7b8cfc5e3f60b3304343ac4637bb7d21ae",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd04.json": {
+          "sha": "5e7b649cbefc29df9f0360b72fede9f1449ea43b",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd05.json": {
+          "sha": "0e935956838a993a29de0e0f1fd4d5a8aa1d66b6",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd06.json": {
+          "sha": "45ba7c8f9724c43ba9489578d1680073214ce846",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-freeze.json": {
+          "sha": "9781dfe67b8cd8e7b4aaf5dd992dedf1703267d6",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/heldout-oracles.json": {
+          "sha": "c77d3286f62738f6eff2f3b4e4416ebb54b2dd54",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/manifest.json": {
+          "sha": "6b699a0ca0bd5b5d2e64cff60a9c37d0af7a5980",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/observations.json": {
+          "sha": "1177d5d74fdadbeb6e8ed753d3ea742e21213945",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/prospective-manifest.json": {
+          "sha": "277377d6421dfb1ee766e07f5b72e71b9f5826ae",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/prospective-observations.json": {
+          "sha": "8439cf5600fe44d5ed9fff1282e53e1e05f2a51d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-diagnostic-repair/teaching-decision-v0.4-candidate.md": {
+          "sha": "abf8b1a4bd2e0f0992edf65b6aa16bc74b020db5",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-observations.json": {
+          "sha": "0170e4a041669cbc58eac140f3721d0cb0762119",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-policy-history/teaching-decision-v0.3.md": {
+          "sha": "8d88d2b630ba5dc6b32733c76985d02fe0d1a344",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-run-manifest.json": {
+          "sha": "1651531677b68f4c0697982e28ebe1e6c2615f00",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-source-history/test_correction_propagation-v3.py.txt": {
+          "sha": "ab3c6dbba6a090dda0e2e85c2297694f53be6e60",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/boundaries-packet.json": {
+          "sha": "8bc474814efd660e72c54082564726e8f66069ef",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/boundaries-response.json": {
+          "sha": "1ff37149e933808141029e76b868d4d2112c51e1",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/counterexample-review.json": {
+          "sha": "a31479b93dc1199c2c95c1f1951e15d524ba53f6",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/mechanical-replay.json": {
+          "sha": "bfa76fc8c19ba2893ca3d3d8c9ad7861c0c97cfb",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/policy-snapshot.json": {
+          "sha": "5cd0c0ef17cd40365ecfad4612d344f58fbe7d89",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/prospective-manifest.json": {
+          "sha": "7e57fd9206fda1531c98ac81f4915e696ab82643",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/remediation-manifest.json": {
+          "sha": "e8b7ca13d38db0c475ef5d8c92367f46f18a1e2d",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/remediation-packet.json": {
+          "sha": "d799c0cf7195a6675e76b2e145992bfaa7ca7caa",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/remediation-policy-snapshot.json": {
+          "sha": "4d38ff70b8991f9b10d7b39606e287bd175f4d1f",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/remediation-replay.json": {
+          "sha": "8bb4e56e19c76babe0e1116734f98cf750df9ac3",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/remediation-response.json": {
+          "sha": "80acd84e7da775b482dcd3867ff22c011278807e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/remediation-semantic-review.json": {
+          "sha": "b5b13e3e6ce4793c1f5a944c5bd68bea289f67f9",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/semantic-review.json": {
+          "sha": "4bb434630697dc8d650334dff1496266445015fb",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/structured-packet.json": {
+          "sha": "db24e49a965f38c6a1e7c433ece5f8686bf899d2",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/structured-response.json": {
+          "sha": "84bed97c0625ae385e1d6707347be24a4e43297b",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/successor-packet.json": {
+          "sha": "b43dc982ec928994713764bf014f6371b3061a40",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/successor-receipt.json": {
+          "sha": "beb01a5887b95d5edeff4d6c8e1f669d0aa0bdf5",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/successor-response.json": {
+          "sha": "c8ae5ed7faf078ff5e3a6524ef43e03cdc71b16e",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/summary-packet.json": {
+          "sha": "6312ab0b6955abf6047dca2cae571141e95f1495",
+          "mode": "100644"
+        },
+        "tests/fixtures/core34-withdrawn-support/summary-response.json": {
+          "sha": "7832cd58d9adf28398b77073fc4003319971782c",
+          "mode": "100644"
+        },
+        "tests/host_replay_compatibility.py": {
+          "sha": "45948a8eb53ced49da150a8ee9b5e5941da3156b",
+          "mode": "100644"
+        },
+        "tests/intake_controls_fixture.py": {
+          "sha": "eb25ccc28abe4e6b67148633b3d0253e9214c109",
+          "mode": "100644"
+        },
+        "tests/state_sensitivity_fixture.py": {
+          "sha": "58643cab89086c761566038e331e4bd742075d43",
+          "mode": "100644"
+        },
+        "tests/test_answer_closure.py": {
+          "sha": "b129f6475fab66059d7d4b48ba35d92491d161ba",
+          "mode": "100644"
+        },
+        "tests/test_autonomous_correction.py": {
+          "sha": "875ad6929351220862a7380ed74ae849f4824dcf",
+          "mode": "100644"
+        },
+        "tests/test_cold_resume.py": {
+          "sha": "91bb1c40932966be2c64198971acbffebcb7c3a9",
+          "mode": "100644"
+        },
+        "tests/test_collaboration_boundary.py": {
+          "sha": "1c2c1a5783540b8bf93a1afafbaa99f4062a7423",
+          "mode": "100644"
+        },
+        "tests/test_constrained_recovery.py": {
+          "sha": "2d91a0c040cd9fa5aa890ee51d73a23d1d7951ad",
+          "mode": "100644"
+        },
+        "tests/test_context_selection.py": {
+          "sha": "8379dd052617fafa6f87c2ef716ab6c40e8e80d6",
+          "mode": "100644"
+        },
+        "tests/test_core_validator.py": {
+          "sha": "0657559e0fc23c3144ee5705f9cd721215a256d8",
+          "mode": "100644"
+        },
+        "tests/test_correction_propagation.py": {
+          "sha": "95347601925a2802bbb7ca78fcf31efed84850e5",
+          "mode": "100644"
+        },
+        "tests/test_deployment_validator.py": {
+          "sha": "36063b1858026c56a1af8d538c3f5e72c74dce0b",
+          "mode": "100644"
+        },
+        "tests/test_diagnostic_repair.py": {
+          "sha": "97560658bce9d2d7c3206ab7f6e79f03a9dce196",
+          "mode": "100644"
+        },
+        "tests/test_domain_probes.py": {
+          "sha": "1a5ce72f16836dd80c8bdfce18faf28188eb8a1a",
+          "mode": "100644"
+        },
+        "tests/test_evidence_discovery.py": {
+          "sha": "802e7affd4cafbb6f348817a9f3f8ad0199f9094",
+          "mode": "100644"
+        },
+        "tests/test_fixture_checkout.py": {
+          "sha": "62d0328a5d506b55a979e8c4b184b12f1537029c",
+          "mode": "100644"
+        },
+        "tests/test_github_api_provider.py": {
+          "sha": "1f3e5df677098054bad7bef86f11bd9c4e10f25b",
+          "mode": "100644"
+        },
+        "tests/test_host_replay_compatibility.py": {
+          "sha": "17ab62cbadf7fc543958d531dd62b6977b2db825",
+          "mode": "100644"
+        },
+        "tests/test_instance_validator.py": {
+          "sha": "21e4a8db688a5443082fab06ff5cfcefb47b0322",
+          "mode": "100644"
+        },
+        "tests/test_intake_experience.py": {
+          "sha": "20b03b467a8b82838bc99aa05cd7e246304473c4",
+          "mode": "100644"
+        },
+        "tests/test_intake_operations.py": {
+          "sha": "508c0041e6b67a659c42cdc800ee03f9ae883701",
+          "mode": "100644"
+        },
+        "tests/test_intake_policy.py": {
+          "sha": "0bc8d909d116578e0d1f630a17176a105f7daadb",
+          "mode": "100644"
+        },
+        "tests/test_reference_host.py": {
+          "sha": "274e43a6dad69dc21d581e5040ef5ca7ebc75027",
+          "mode": "100644"
+        },
+        "tests/test_rest_text.py": {
+          "sha": "f497fb3a9bfd1a72e6bd053ea227d82ee9f07cf2",
+          "mode": "100644"
+        },
+        "tests/test_runtime_adapter.py": {
+          "sha": "135f48e739534105d446f18fc91c98b514031a67",
+          "mode": "100644"
+        },
+        "tests/test_runtime_broker.py": {
+          "sha": "8c7e9a7f8fd363427ac4c2798e2c0deb667cc59c",
+          "mode": "100644"
+        },
+        "tests/test_state_sensitivity.py": {
+          "sha": "d3360229f22c1d8848f6202b670b35b1f9808f73",
+          "mode": "100644"
+        },
+        "tests/test_validator.py": {
+          "sha": "54faa9efc736fb0d7270c8d55ffc4605248912f5",
+          "mode": "100644"
+        },
+        "tests/test_withdrawn_support.py": {
+          "sha": "ed75d9567ca95cb106e1b2667f6cfa2fc3880d32",
+          "mode": "100644"
+        },
+        "tests/withdrawn_support_fixture.py": {
+          "sha": "5f3e405dcf8546e312cb69a5b557f48bf3135fc1",
+          "mode": "100644"
+        }
+      },
+      "commits": 1,
+      "parents": [],
+      "changed_paths": [
+        ".github/workflows/validate.yml",
+        ".gitignore",
+        "AGENTS.md",
+        "README.md",
+        "config/core.yaml",
+        "docs/audits/2026-10-02-intake-and-git-context.md",
+        "docs/audits/2026-10-02-rest-provider.md",
+        "docs/audits/2026-10-03-rest-text-admission.md",
+        "docs/audits/2026-10-03-session-input-admission.md",
+        "docs/evaluations/.gitattributes",
+        "docs/evaluations/core19-intake-controls-plan.md",
+        "docs/evaluations/core19-intake-controls-results.md",
+        "docs/evaluations/core34-answer-closure-results.md",
+        "docs/evaluations/core34-application-v2-plan.md",
+        "docs/evaluations/core34-autonomous-correction-results.md",
+        "docs/evaluations/core34-cold-resume-results.md",
+        "docs/evaluations/core34-constrained-recovery-results.md",
+        "docs/evaluations/core34-context-selection-results.md",
+        "docs/evaluations/core34-correction-propagation-plan.md",
+        "docs/evaluations/core34-correction-propagation-results.md",
+        "docs/evaluations/core34-diagnostic-repair-plan.md",
+        "docs/evaluations/core34-diagnostic-repair-results.md",
+        "docs/evaluations/core34-interruption-recovery-plan.md",
+        "docs/evaluations/core34-interruption-recovery-results.md",
+        "docs/evaluations/core34-state-sensitivity-results.md",
+        "docs/evaluations/core34-withdrawn-support-plan.md",
+        "docs/evaluations/core34-withdrawn-support-results.md",
+        "docs/product-direction.md",
+        "docs/reference-host.md",
+        "docs/research/2026-10-06-longitudinal-learner-state-evidence.md",
+        "domains/_template/curriculum.yaml",
+        "domains/modern-language-models/curriculum.yaml",
+        "domains/modern-language-models/probes.md",
+        "protocol/continuity-policy.md",
+        "protocol/conversation-naming-policy.md",
+        "protocol/coordination-policy.md",
+        "protocol/curriculum-policy.md",
+        "protocol/deployment-runtime.md",
+        "protocol/evidence-classification.md",
+        "protocol/evidence-integration.md",
+        "protocol/execution-policy.md",
+        "protocol/new-topic-start.md",
+        "protocol/persistence-policy.md",
+        "protocol/repository-governance-policy.md",
+        "protocol/runtime-bootstrap.md",
+        "protocol/runtime-core.md",
+        "protocol/schema.md",
+        "protocol/teaching-decision.md",
+        "requirements-dev.txt",
+        "scripts/evaluate_diagnostic_repair.py",
+        "scripts/evaluate_state_sensitivity.py",
+        "scripts/intake_policy.py",
+        "scripts/reference_host.py",
+        "scripts/runtime_adapter.py",
+        "scripts/runtime_broker.py",
+        "scripts/validate_learning_os.py",
+        "tests/.gitattributes",
+        "tests/answer_closure_fixture.py",
+        "tests/autonomous_correction_fixture.py",
+        "tests/cold_resume_fixture.py",
+        "tests/constrained_recovery_fixture.py",
+        "tests/context_selection_fixture.py",
+        "tests/correction_propagation_fixture.py",
+        "tests/diagnostic_repair_fixture.py",
+        "tests/fixtures/core19-intake/consumer-packet.json",
+        "tests/fixtures/core19-intake/consumer-response.json",
+        "tests/fixtures/core19-intake/mechanical-replay.json",
+        "tests/fixtures/core19-intake/policy-snapshot.json",
+        "tests/fixtures/core19-intake/prospective-manifest.json",
+        "tests/fixtures/core19-intake/semantic-review.json",
+        "tests/fixtures/core19-intake/successor-freeze.json",
+        "tests/fixtures/core19-intake/successor-packet.json",
+        "tests/fixtures/core19-intake/successor-response.json",
+        "tests/fixtures/core34-answer-closure/.gitattributes",
+        "tests/fixtures/core34-answer-closure/elm-b-packet.json",
+        "tests/fixtures/core34-answer-closure/elm-b-response.json",
+        "tests/fixtures/core34-answer-closure/elm-b-trajectory.json",
+        "tests/fixtures/core34-answer-closure/elm-c-packet.json",
+        "tests/fixtures/core34-answer-closure/elm-c-response.json",
+        "tests/fixtures/core34-answer-closure/elm-c-trajectory.json",
+        "tests/fixtures/core34-answer-closure/elm-post-state.json",
+        "tests/fixtures/core34-answer-closure/elm-successor-recovery.json",
+        "tests/fixtures/core34-answer-closure/initial-provider-calls.json",
+        "tests/fixtures/core34-answer-closure/initial-provider-state.json",
+        "tests/fixtures/core34-answer-closure/mechanical-exact-replay.json",
+        "tests/fixtures/core34-answer-closure/mechanical-invariants.json",
+        "tests/fixtures/core34-answer-closure/pine-b-packet.json",
+        "tests/fixtures/core34-answer-closure/pine-b-response.json",
+        "tests/fixtures/core34-answer-closure/pine-b-trajectory.json",
+        "tests/fixtures/core34-answer-closure/pine-c-packet.json",
+        "tests/fixtures/core34-answer-closure/pine-c-response.json",
+        "tests/fixtures/core34-answer-closure/pine-c-trajectory.json",
+        "tests/fixtures/core34-answer-closure/pine-post-state.json",
+        "tests/fixtures/core34-answer-closure/pine-successor-recovery.json",
+        "tests/fixtures/core34-answer-closure/preparation-attempt-1.json",
+        "tests/fixtures/core34-answer-closure/prospective-freeze.json",
+        "tests/fixtures/core34-answer-closure/prospective-plan.json",
+        "tests/fixtures/core34-answer-closure/publication-manifest.json",
+        "tests/fixtures/core34-answer-closure/reed-b-packet.json",
+        "tests/fixtures/core34-answer-closure/reed-b-response.json",
+        "tests/fixtures/core34-answer-closure/reed-b-trajectory.json",
+        "tests/fixtures/core34-answer-closure/reed-c-packet.json",
+        "tests/fixtures/core34-answer-closure/reed-c-response.json",
+        "tests/fixtures/core34-answer-closure/reed-c-trajectory.json",
+        "tests/fixtures/core34-answer-closure/reed-post-state.json",
+        "tests/fixtures/core34-answer-closure/reed-successor-recovery.json",
+        "tests/fixtures/core34-answer-closure/semantic-review-final.json",
+        "tests/fixtures/core34-autonomous-correction/.gitattributes",
+        "tests/fixtures/core34-autonomous-correction/baseline-response.json",
+        "tests/fixtures/core34-autonomous-correction/baseline-state.json",
+        "tests/fixtures/core34-autonomous-correction/baseline-trajectory.json",
+        "tests/fixtures/core34-autonomous-correction/first-packet.json",
+        "tests/fixtures/core34-autonomous-correction/input-provenance.json",
+        "tests/fixtures/core34-autonomous-correction/mechanical-exact-replay.json",
+        "tests/fixtures/core34-autonomous-correction/preparation-provenance.json",
+        "tests/fixtures/core34-autonomous-correction/prospective-freeze.json",
+        "tests/fixtures/core34-autonomous-correction/prospective-method-review.json",
+        "tests/fixtures/core34-autonomous-correction/prospective-plan.json",
+        "tests/fixtures/core34-autonomous-correction/publication-manifest.json",
+        "tests/fixtures/core34-autonomous-correction/report-post-state.json",
+        "tests/fixtures/core34-autonomous-correction/report-response.json",
+        "tests/fixtures/core34-autonomous-correction/report-state.json",
+        "tests/fixtures/core34-autonomous-correction/report-trajectory.json",
+        "tests/fixtures/core34-autonomous-correction/semantic-method-review.json",
+        "tests/fixtures/core34-autonomous-correction/successor-packet.json",
+        "tests/fixtures/core34-autonomous-correction/successor-response.json",
+        "tests/fixtures/core34-autonomous-correction/successor-trajectory.json",
+        "tests/fixtures/core34-autonomous-correction/successor-trigger-provenance.json",
+        "tests/fixtures/core34-cold-resume/.gitattributes",
+        "tests/fixtures/core34-cold-resume/alpha-packet.json",
+        "tests/fixtures/core34-cold-resume/alpha-response.json",
+        "tests/fixtures/core34-cold-resume/artifact-manifest.json",
+        "tests/fixtures/core34-cold-resume/beta-packet.json",
+        "tests/fixtures/core34-cold-resume/beta-response.json",
+        "tests/fixtures/core34-cold-resume/mechanical-replay.json",
+        "tests/fixtures/core34-cold-resume/prospective-plan.json",
+        "tests/fixtures/core34-cold-resume/semantic-review.json",
+        "tests/fixtures/core34-cold-resume/successor-packet.json",
+        "tests/fixtures/core34-cold-resume/successor-plan.json",
+        "tests/fixtures/core34-cold-resume/successor-response.json",
+        "tests/fixtures/core34-constrained-recovery/.gitattributes",
+        "tests/fixtures/core34-constrained-recovery/audit-errata.json",
+        "tests/fixtures/core34-constrained-recovery/cedar-packet.json",
+        "tests/fixtures/core34-constrained-recovery/cedar-response.json",
+        "tests/fixtures/core34-constrained-recovery/complementary-review.json",
+        "tests/fixtures/core34-constrained-recovery/consumer-bindings.json",
+        "tests/fixtures/core34-constrained-recovery/exact-replay.json",
+        "tests/fixtures/core34-constrained-recovery/initial-preparation-failure.json",
+        "tests/fixtures/core34-constrained-recovery/initial-prospective-plan.json",
+        "tests/fixtures/core34-constrained-recovery/iris-packet.json",
+        "tests/fixtures/core34-constrained-recovery/iris-response.json",
+        "tests/fixtures/core34-constrained-recovery/juniper-packet.json",
+        "tests/fixtures/core34-constrained-recovery/juniper-response.json",
+        "tests/fixtures/core34-constrained-recovery/laurel-packet.json",
+        "tests/fixtures/core34-constrained-recovery/maple-packet.json",
+        "tests/fixtures/core34-constrained-recovery/maple-response.json",
+        "tests/fixtures/core34-constrained-recovery/mechanical-input-check.json",
+        "tests/fixtures/core34-constrained-recovery/preconsumer-manifest.json",
+        "tests/fixtures/core34-constrained-recovery/predispatch-clock-receipt.json",
+        "tests/fixtures/core34-constrained-recovery/prospective-plan.json",
+        "tests/fixtures/core34-constrained-recovery/publication-manifest.json",
+        "tests/fixtures/core34-constrained-recovery/result-summary.json",
+        "tests/fixtures/core34-constrained-recovery/scope-clarifications.json",
+        "tests/fixtures/core34-context-selection/.gitattributes",
+        "tests/fixtures/core34-context-selection/baseline-response.json",
+        "tests/fixtures/core34-context-selection/baseline-trajectory.json",
+        "tests/fixtures/core34-context-selection/common-packet.json",
+        "tests/fixtures/core34-context-selection/input-provenance.json",
+        "tests/fixtures/core34-context-selection/irrelevant-preparation.json",
+        "tests/fixtures/core34-context-selection/irrelevant-response.json",
+        "tests/fixtures/core34-context-selection/irrelevant-trajectory.json",
+        "tests/fixtures/core34-context-selection/mechanical-exact-replay.json",
+        "tests/fixtures/core34-context-selection/method-change-record.json",
+        "tests/fixtures/core34-context-selection/preparation-diagnostics.json",
+        "tests/fixtures/core34-context-selection/prospective-freeze.json",
+        "tests/fixtures/core34-context-selection/prospective-method-review.json",
+        "tests/fixtures/core34-context-selection/prospective-plan.json",
+        "tests/fixtures/core34-context-selection/publication-manifest.json",
+        "tests/fixtures/core34-context-selection/relevant-response.json",
+        "tests/fixtures/core34-context-selection/relevant-trajectory.json",
+        "tests/fixtures/core34-context-selection/semantic-method-review.json",
+        "tests/fixtures/core34-context-selection/source-state-bindings.json",
+        "tests/fixtures/core34-correction/c01-packet.json",
+        "tests/fixtures/core34-correction/c01-response.json",
+        "tests/fixtures/core34-correction/c02-packet.json",
+        "tests/fixtures/core34-correction/c02-response.json",
+        "tests/fixtures/core34-correction/c03-packet.json",
+        "tests/fixtures/core34-correction/c03-response.json",
+        "tests/fixtures/core34-correction/c04-packet.json",
+        "tests/fixtures/core34-correction/c04-response.json",
+        "tests/fixtures/core34-correction/mechanical-replay.json",
+        "tests/fixtures/core34-correction/policy-snapshot.json",
+        "tests/fixtures/core34-correction/prospective-manifest.json",
+        "tests/fixtures/core34-correction/semantic-review.json",
+        "tests/fixtures/core34-correction/successor-receipt.json",
+        "tests/fixtures/core34-diagnostic-repair/adversarial-review.json",
+        "tests/fixtures/core34-diagnostic-repair/candidate1-exporter.py.txt",
+        "tests/fixtures/core34-diagnostic-repair/candidate2-exporter.py.txt",
+        "tests/fixtures/core34-diagnostic-repair/candidate3-reproduction-exporter.py.txt",
+        "tests/fixtures/core34-diagnostic-repair/heldout-SHA256SUMS",
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd01.json",
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd02.json",
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd03.json",
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd04.json",
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd05.json",
+        "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd06.json",
+        "tests/fixtures/core34-diagnostic-repair/heldout-freeze.json",
+        "tests/fixtures/core34-diagnostic-repair/heldout-oracles.json",
+        "tests/fixtures/core34-diagnostic-repair/manifest.json",
+        "tests/fixtures/core34-diagnostic-repair/observations.json",
+        "tests/fixtures/core34-diagnostic-repair/prospective-manifest.json",
+        "tests/fixtures/core34-diagnostic-repair/prospective-observations.json",
+        "tests/fixtures/core34-diagnostic-repair/teaching-decision-v0.4-candidate.md",
+        "tests/fixtures/core34-observations.json",
+        "tests/fixtures/core34-policy-history/teaching-decision-v0.3.md",
+        "tests/fixtures/core34-run-manifest.json",
+        "tests/fixtures/core34-source-history/test_correction_propagation-v3.py.txt",
+        "tests/fixtures/core34-withdrawn-support/boundaries-packet.json",
+        "tests/fixtures/core34-withdrawn-support/boundaries-response.json",
+        "tests/fixtures/core34-withdrawn-support/counterexample-review.json",
+        "tests/fixtures/core34-withdrawn-support/mechanical-replay.json",
+        "tests/fixtures/core34-withdrawn-support/policy-snapshot.json",
+        "tests/fixtures/core34-withdrawn-support/prospective-manifest.json",
+        "tests/fixtures/core34-withdrawn-support/remediation-manifest.json",
+        "tests/fixtures/core34-withdrawn-support/remediation-packet.json",
+        "tests/fixtures/core34-withdrawn-support/remediation-policy-snapshot.json",
+        "tests/fixtures/core34-withdrawn-support/remediation-replay.json",
+        "tests/fixtures/core34-withdrawn-support/remediation-response.json",
+        "tests/fixtures/core34-withdrawn-support/remediation-semantic-review.json",
+        "tests/fixtures/core34-withdrawn-support/semantic-review.json",
+        "tests/fixtures/core34-withdrawn-support/structured-packet.json",
+        "tests/fixtures/core34-withdrawn-support/structured-response.json",
+        "tests/fixtures/core34-withdrawn-support/successor-packet.json",
+        "tests/fixtures/core34-withdrawn-support/successor-receipt.json",
+        "tests/fixtures/core34-withdrawn-support/successor-response.json",
+        "tests/fixtures/core34-withdrawn-support/summary-packet.json",
+        "tests/fixtures/core34-withdrawn-support/summary-response.json",
+        "tests/host_replay_compatibility.py",
+        "tests/intake_controls_fixture.py",
+        "tests/state_sensitivity_fixture.py",
+        "tests/test_answer_closure.py",
+        "tests/test_autonomous_correction.py",
+        "tests/test_cold_resume.py",
+        "tests/test_collaboration_boundary.py",
+        "tests/test_constrained_recovery.py",
+        "tests/test_context_selection.py",
+        "tests/test_core_validator.py",
+        "tests/test_correction_propagation.py",
+        "tests/test_deployment_validator.py",
+        "tests/test_diagnostic_repair.py",
+        "tests/test_domain_probes.py",
+        "tests/test_evidence_discovery.py",
+        "tests/test_fixture_checkout.py",
+        "tests/test_github_api_provider.py",
+        "tests/test_host_replay_compatibility.py",
+        "tests/test_instance_validator.py",
+        "tests/test_intake_experience.py",
+        "tests/test_intake_operations.py",
+        "tests/test_intake_policy.py",
+        "tests/test_reference_host.py",
+        "tests/test_rest_text.py",
+        "tests/test_runtime_adapter.py",
+        "tests/test_runtime_broker.py",
+        "tests/test_state_sensitivity.py",
+        "tests/test_validator.py",
+        "tests/test_withdrawn_support.py",
+        "tests/withdrawn_support_fixture.py"
+      ],
+      "refs": {
+        "refs/heads/main": "9fa989bd743a89a39656ca7654ae3fb86fa9b3c3"
+      }
+    },
+    "control": {
+      "head": "72fa6281d9904068d71954e5ac5c46202e625124",
+      "tree": "b9f289be7ea5ebbb5ffdf0538c5276a06a87f083",
+      "blobs": {
+        "deployment.yaml": {
+          "sha": "352d512d31483db17ff272c2cc72824a44dfa43f",
+          "mode": "100644"
+        }
+      },
+      "commits": 1,
+      "parents": [],
+      "changed_paths": [
+        "deployment.yaml"
+      ],
+      "refs": {
+        "refs/heads/main": "72fa6281d9904068d71954e5ac5c46202e625124"
+      }
+    }
+  },
+  "final_instance": {
+    "head": "ec4e277e54f231eee8dbdaf2756fe1355787ea71",
+    "tree": "5b978399669acde4953e3e6ccf28c5a95f994dca",
+    "blobs": {
+      "README.md": {
+        "sha": "9bf0d5060f9949013f8d122fb9a64a41de43e29f",
+        "mode": "100644"
+      },
+      "config/instance.yaml": {
+        "sha": "f8bd17cbfe96449a14c0d530d48550ab4f4dfbd2",
+        "mode": "100644"
+      },
+      "evidence/evi-lost-host-ack-001.yaml": {
+        "sha": "09fa5f3fdb6a2f84ef45f28eb269d10952ef632c",
+        "mode": "100644"
+      },
+      "learner/knowledge/synthetic.yaml": {
+        "sha": "5ac6b13802bc06261857f32b99ee6d10e65c1edc",
+        "mode": "100644"
+      },
+      "topics/synthetic/coordination/branches.yaml": {
+        "sha": "1596a0a3225a0c7196c0cdf8bee6fb9b95cbaf09",
+        "mode": "100644"
+      },
+      "topics/synthetic/coordination/branches/main/runtime.yaml": {
+        "sha": "bea96e92a77eb244eda28597e290977d13aa8055",
+        "mode": "100644"
+      }
+    },
+    "commits": 3,
+    "parents": [
+      "219f23f1656dc444027e70100c7a02a40864dbbd"
+    ],
+    "changed_paths": [
+      "learner/knowledge/synthetic.yaml"
+    ],
+    "refs": {
+      "refs/heads/main": "ec4e277e54f231eee8dbdaf2756fe1355787ea71"
+    }
+  },
+  "claim": "local Git commit survived producer loss before host acknowledgement; fresh discovery, identical-payload no-op retry and one Knowledge reconciliation",
+  "limits": [
+    "scripted deterministic seam, not blind/model behavior",
+    "not Git-inflight crash, power loss or network acknowledgement failure",
+    "separate per-process gates, no shared admission/drain proof",
+    "no live Host/learner, deployment, teaching benefit or global exactly-once guarantee",
+    "output files bounded for acceptance after each process; not a hard disk-write cap",
+    "source fixture constructor and observer share expected payload; Git state read independently"
+  ]
+}
