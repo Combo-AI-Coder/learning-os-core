@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "purpose": "recoverability archive of one already completed synthetic witness; no new experimental run",
+  "original_result_owner": "https://github.com/Combo-AI-Coder/learning-os-core/issues/34#issuecomment-6102461208",
+  "canonical_source": {
+    "repository": "Combo-AI-Coder/learning-os-core",
+    "commit": "83f08b016dd51a777ee91c0c4d77c0b85e046e4e",
+    "tree": "1995f7807375044aa08873e309bee61e704abc3c",
+    "tracked_files": 267,
+    "source_bytes": 4339026,
+    "vendored": false
+  },
+  "original_package_manifest": {
+    "sha256": "6d60e78bafa1b1bb68cb2f91e17f5c39a867f41fbb56340a52d6334e3d31dd3b",
+    "bytes": 3700,
+    "artifact_count": 22
+  },
+  "included_original_files": 17,
+  "included_original_bytes": 227768,
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 5236,
+      "sha256": "c423b319f11774185206ed8e3bca382bc8cec14212b8c402d81609f07bae4516",
+      "git_blob_sha": "fa55ffc489ea0f1ae758b76661167ea562cfc604",
+      "role": "new_archive_scope_and_replay_notes"
+    },
+    {
+      "path": "evidence/canonical-core-validation.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "role": "unchanged_original_artifact"
+    },
+    {
+      "path": "evidence/canonical-core-validation.stdout",
+      "bytes": 36,
+      "sha256": "e50e403fe9fc06b1decbc41522890bfb9f405b0acaf8642520294ea88ca6e66d",
+      "git_blob_sha": "7f3133aae4d691ffd7c844b628e005a3a33a4c36",
+      "role": "unchanged_original_artifact"
+    },
+    {
+      "path": "evidence/run-01/01-produce/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "role": "unchanged_original_artifact"
+    },
+    {
+      "path": "evidence/run-01/01-produce/stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "role": "unchanged_original_artifact"
+    },
+    {
+      "path": "evidence/run-01/02-read/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "role": "unchanged_original_artifact"
+    },
+    {
+      "path": "evidence/run-01/02-read/stdout",
+      "bytes": 1292,
+      "sha256": "bc333f6803a43647d9e06e29c8c508a3e1fd2b8673f200d8f008bb4397864473",
+      "git_blob_sha": "e7e9401cdd1887459f7c4c0cacfecd3f75196d4e",
+      "role": "unchanged_original_artifact"
+    },
+    {
+      "path": "evidence/run-01/03-retry/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "role": "unchanged_original_artifact"
+    },
+    {
+      "path": "evidence/run-01/03-retry/stdout",
+      "bytes": 1406,
+      "sha256": "75aa505e3403522abfcccdbdb514a7d9ee9c282b42ebda11d86ecf15a5f840ef",
+      "git_blob_sha": "e992da762c7775052e0513a3984ad43aecd1dcb4",
+      "role": "unchanged_original_artifact"
+    },
+    {
+      "path": "evidence/run-01/04-reconcile/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "role": "unchanged_original_artifact"
+    },
+    {
+      "path": "evidence/run-01/04-reconcile/stdout",
+      "bytes": 1774,
+      "sha256": "9a5862f48efc110098c50e2907d9773bf384da0c55388fe251c64466cbf680c2",
+      "git_blob_sha": "82575b9a52a685674936a9af8127f36f8210463b",
+      "role": "unchanged_original_artifact"
+    },
+    {
+      "path": "evidence/run-01/05-read/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "role": "unchanged_original_artifact"
+    },
+    {
+      "path": "evidence/run-01/05-read/stdout",
+      "bytes": 1276,
+      "sha256": "e174f8d6b87557a2204c5988bae10ec268ba5dabe4b489f50a8574a95198bbb6",
+      "git_blob_sha": "7888e8c5777e4d51c1e7103889cf05399f384475",
+      "role": "unchanged_original_artifact"
+    },
+    {
+      "path": "evidence/run-01/result.json",
+      "bytes": 151632,
+      "sha256": "023d1caec843f57efeae32be37042027b15175d1f80ed6db8bd129e006646f96",
+      "git_blob_sha": "a9ee9bbf5b627334488b2671eb592936f6d5ddd9",
+      "role": "unchanged_original_artifact"
+    },
+    {
+      "path": "evidence/run-01-controller.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "role": "unchanged_original_artifact"
+    },
+    {
+      "path": "evidence/run-01-controller.stdout",
+      "bytes": 126,
+      "sha256": "c066d483e7086abafe2a84bea614c2fc31fc9bbaa383d5eca533d9362368ac15",
+      "git_blob_sha": "0f918ff55fab9b9af9f58ef1729287172d06a2c3",
+      "role": "unchanged_original_artifact"
+    },
+    {
+      "path": "evidence/source-manifest.json",
+      "bytes": 51760,
+      "sha256": "9625cd0835ea5686b26edeba2ed41c96602bdff82c0ccce2c04a2017be759fbf",
+      "git_blob_sha": "434d541d72766793d378ebb41d610a7b6cdb4951",
+      "role": "unchanged_original_artifact"
+    },
+    {
+      "path": "lost_ack_probe.py",
+      "bytes": 18466,
+      "sha256": "138ca3758cf1046b3b21c6f2b5179e2bae1c549872c338daf5a3483adc9955dd",
+      "git_blob_sha": "a8c46dd2bcf148bbad02cb833b177c1488097118",
+      "role": "unchanged_original_artifact"
+    }
+  ],
+  "omitted_original_artifacts": [
+    {
+      "path": "REPORT.md",
+      "sha256": "b760047a3f9d3b87aaf4175b4ddba02564739ed233863b37b5b7a404f5b1b976",
+      "bytes": 10701,
+      "reason": "Historical narrative remains retained locally; README.md supplies minimized current packaging, scope, replay and limits without altering original results."
+    },
+    {
+      "path": "evidence/canonical-tree.bin",
+      "sha256": "3cbd57e31883e68b63bcb534a631d0257df86c4345f80661635340fe3454f0be",
+      "bytes": 28162,
+      "reason": "Exact canonical upstream commit/tree and retained per-file source manifest replace duplicate raw tree serialization."
+    },
+    {
+      "path": "evidence/run-01/process-records.json",
+      "sha256": "e3b5b0b9e930a3f08ba37528536726fc2d67fb9a23e9fde894e635cdfd4c4690",
+      "bytes": 23635,
+      "reason": "Exact JSON value equals retained result.json.processes."
+    },
+    {
+      "path": "evidence/run-01/injection-receipt.json",
+      "sha256": "996e7c7b45429ab9a01591c8d445203b44bc159cdb07befb1587054df53ff0f0",
+      "bytes": 210,
+      "reason": "Exact JSON value equals retained result.json.cut."
+    },
+    {
+      "path": "evidence/run-01/source-runtime-identity.json",
+      "sha256": "6098174ab00676b13407ec84b2bb71a49fd1435603aae81f205ae096707844d0",
+      "bytes": 841,
+      "reason": "Exact JSON value equals retained result.json.identity."
+    }
+  ],
+  "not_archived": [
+    "267 already-public source blobs; materialize exact upstream commit for replay",
+    "temporary bare Git repositories, seed checkouts and crash leftovers",
+    "fixture marker reconstructed by unchanged script",
+    "unlisted local syntax-check output; no retained raw syntax-check claim"
+  ],
+  "manifest_self_hash": "not included recursively; final published Git blob/commit supplies integrity",
+  "verification_scope": "byte/hash and JSON-equivalence inspection only; packaged replay has not been executed"
+}

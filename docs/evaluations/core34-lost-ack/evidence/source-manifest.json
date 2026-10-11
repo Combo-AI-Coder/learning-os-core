@@ -1,0 +1,1610 @@
+{
+  "canonical_commit": "83f08b016dd51a777ee91c0c4d77c0b85e046e4e",
+  "canonical_tree": "1995f7807375044aa08873e309bee61e704abc3c",
+  "reconstructed_baseline_commit": "52d7fe2337c54cff2679184ecb42b0260fc26898",
+  "reconstruction_is_not_canonical_history": true,
+  "files": [
+    {
+      "path": ".github/workflows/validate.yml",
+      "mode": "100644",
+      "git_blob_sha": "f5739499c9166e323df954a83dee38f53b86d83b",
+      "bytes": 5866
+    },
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "git_blob_sha": "7a60b85e148f80966a550e5ab6a762a907c69ca6",
+      "bytes": 19
+    },
+    {
+      "path": "AGENTS.md",
+      "mode": "100644",
+      "git_blob_sha": "c5f05e0b9e2f81b4c1d6e4c9629a467c02fd3fac",
+      "bytes": 1786
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "git_blob_sha": "efb7911f3344bc9b1aecee7a0d17cd7f2051c2e0",
+      "bytes": 5338
+    },
+    {
+      "path": "config/core.yaml",
+      "mode": "100644",
+      "git_blob_sha": "68b775f2a4b6682e3c414d9699bec003c13a8749",
+      "bytes": 11489
+    },
+    {
+      "path": "docs/audits/2026-10-02-intake-and-git-context.md",
+      "mode": "100644",
+      "git_blob_sha": "811e0746a1ab1a288c8b716ea69dc632569ac552",
+      "bytes": 5844
+    },
+    {
+      "path": "docs/audits/2026-10-02-rest-provider.md",
+      "mode": "100644",
+      "git_blob_sha": "a26022e6b299c8f71fb3f00819c4e822c46a8dc8",
+      "bytes": 2985
+    },
+    {
+      "path": "docs/audits/2026-10-03-rest-text-admission.md",
+      "mode": "100644",
+      "git_blob_sha": "4b8b80ac010d317d50af9f283fa348af220874e6",
+      "bytes": 2197
+    },
+    {
+      "path": "docs/audits/2026-10-03-session-input-admission.md",
+      "mode": "100644",
+      "git_blob_sha": "06006bb14d469918c2819fb3f4e9e845d9ab0537",
+      "bytes": 2648
+    },
+    {
+      "path": "docs/evaluations/.gitattributes",
+      "mode": "100644",
+      "git_blob_sha": "32daa1bac12b87d243a8805719e15cecf853db64",
+      "bytes": 173
+    },
+    {
+      "path": "docs/evaluations/core19-intake-controls-plan.md",
+      "mode": "100644",
+      "git_blob_sha": "bdce546ca8d0d6c94fd1eec84cc0bceaa99d95d9",
+      "bytes": 2060
+    },
+    {
+      "path": "docs/evaluations/core19-intake-controls-results.md",
+      "mode": "100644",
+      "git_blob_sha": "0a704a5620054ba70bbd2d6b51e3dea125f6570a",
+      "bytes": 9543
+    },
+    {
+      "path": "docs/evaluations/core34-answer-closure-results.md",
+      "mode": "100644",
+      "git_blob_sha": "b07c2a6b443338865640ff23e72f229b885b129b",
+      "bytes": 9821
+    },
+    {
+      "path": "docs/evaluations/core34-application-v2-plan.md",
+      "mode": "100644",
+      "git_blob_sha": "cff3e0a7eb70eb13c968f78545c50a53201291e9",
+      "bytes": 5371
+    },
+    {
+      "path": "docs/evaluations/core34-autonomous-correction-results.md",
+      "mode": "100644",
+      "git_blob_sha": "349b8617fe04bada16fab8bf3d8a3ca55ea42f1d",
+      "bytes": 11406
+    },
+    {
+      "path": "docs/evaluations/core34-cold-resume-results.md",
+      "mode": "100644",
+      "git_blob_sha": "e95d88b9d9ec3824fcc5d895dddacc9fdb34851c",
+      "bytes": 6460
+    },
+    {
+      "path": "docs/evaluations/core34-constrained-recovery-results.md",
+      "mode": "100644",
+      "git_blob_sha": "59c929e568d8d89fed3cc097883c5f37d4196bdf",
+      "bytes": 9526
+    },
+    {
+      "path": "docs/evaluations/core34-context-selection-results.md",
+      "mode": "100644",
+      "git_blob_sha": "c127e2f1f31d1db14b6f2d592984d02bd6d4b67a",
+      "bytes": 10716
+    },
+    {
+      "path": "docs/evaluations/core34-correction-propagation-plan.md",
+      "mode": "100644",
+      "git_blob_sha": "84fac2be346e4a8d0da93399451c1105537d6311",
+      "bytes": 4911
+    },
+    {
+      "path": "docs/evaluations/core34-correction-propagation-results.md",
+      "mode": "100644",
+      "git_blob_sha": "bfdf14f2d2e1e73bb429367ed5401c22daf2eeef",
+      "bytes": 7594
+    },
+    {
+      "path": "docs/evaluations/core34-diagnostic-repair-plan.md",
+      "mode": "100644",
+      "git_blob_sha": "223c8633a42b40dc89b3579880b790d891fd7b76",
+      "bytes": 7921
+    },
+    {
+      "path": "docs/evaluations/core34-diagnostic-repair-results.md",
+      "mode": "100644",
+      "git_blob_sha": "78aa9e2f18442425209cdbcaf1872223b45394f5",
+      "bytes": 9944
+    },
+    {
+      "path": "docs/evaluations/core34-interruption-recovery-plan.md",
+      "mode": "100644",
+      "git_blob_sha": "422c496e81583dd0ad8883532e2639643cc1bafe",
+      "bytes": 4368
+    },
+    {
+      "path": "docs/evaluations/core34-interruption-recovery-results.md",
+      "mode": "100644",
+      "git_blob_sha": "fa1b84ad93de8c31d408d45a0cbd9effb431f3b3",
+      "bytes": 5368
+    },
+    {
+      "path": "docs/evaluations/core34-state-sensitivity-results.md",
+      "mode": "100644",
+      "git_blob_sha": "6877cf1207d8be67d6d54fc9fbd387f955fd3c8a",
+      "bytes": 9801
+    },
+    {
+      "path": "docs/evaluations/core34-withdrawn-support-plan.md",
+      "mode": "100644",
+      "git_blob_sha": "0ff7e883cbff85851b4b046c5bf5a0356ae62120",
+      "bytes": 3792
+    },
+    {
+      "path": "docs/evaluations/core34-withdrawn-support-results.md",
+      "mode": "100644",
+      "git_blob_sha": "8f50b79283cb3be0cc389ff8a222c66d09fa0656",
+      "bytes": 12224
+    },
+    {
+      "path": "docs/product-direction.md",
+      "mode": "100644",
+      "git_blob_sha": "017521652c87122fcd41347a115d09e62bf706ce",
+      "bytes": 8580
+    },
+    {
+      "path": "docs/reference-host.md",
+      "mode": "100644",
+      "git_blob_sha": "52d0c6f70d7e4229ddcf8884f6183cfb56461fe9",
+      "bytes": 10780
+    },
+    {
+      "path": "docs/research/2026-10-06-longitudinal-learner-state-evidence.md",
+      "mode": "100644",
+      "git_blob_sha": "0b661a7cdd1fa9c9bff545fff223f1f84b061628",
+      "bytes": 21807
+    },
+    {
+      "path": "domains/_template/curriculum.yaml",
+      "mode": "100644",
+      "git_blob_sha": "4c3ca429a2b6d3510fbb2dabddb26df049c04bc2",
+      "bytes": 1765
+    },
+    {
+      "path": "domains/modern-language-models/curriculum.yaml",
+      "mode": "100644",
+      "git_blob_sha": "fcfff853835eba26b17218f502a638ab1d15a1f4",
+      "bytes": 9737
+    },
+    {
+      "path": "domains/modern-language-models/probes.md",
+      "mode": "100644",
+      "git_blob_sha": "ea9de9b2409bb988dcc9bb08be959d94bedbe0e2",
+      "bytes": 10444
+    },
+    {
+      "path": "protocol/continuity-policy.md",
+      "mode": "100644",
+      "git_blob_sha": "89bf920d7261c69d0e5df887e5911c138df57a9b",
+      "bytes": 10564
+    },
+    {
+      "path": "protocol/conversation-naming-policy.md",
+      "mode": "100644",
+      "git_blob_sha": "edf29731a111a25f3bcef0436b5d43220a3eb6b8",
+      "bytes": 8892
+    },
+    {
+      "path": "protocol/coordination-policy.md",
+      "mode": "100644",
+      "git_blob_sha": "387dd9be2092b5d4dc021eda8bd6d3fa59446058",
+      "bytes": 7724
+    },
+    {
+      "path": "protocol/curriculum-policy.md",
+      "mode": "100644",
+      "git_blob_sha": "d6950dabcaa2cb0bc544d12c8fb4aff2d76b0768",
+      "bytes": 10125
+    },
+    {
+      "path": "protocol/deployment-runtime.md",
+      "mode": "100644",
+      "git_blob_sha": "6c7890f364fb559aee7db7a0c71fe8a6e397acfb",
+      "bytes": 29841
+    },
+    {
+      "path": "protocol/evidence-classification.md",
+      "mode": "100644",
+      "git_blob_sha": "a2a3eaa925584a5e21b0c0712a176cc22ed2ff68",
+      "bytes": 3270
+    },
+    {
+      "path": "protocol/evidence-integration.md",
+      "mode": "100644",
+      "git_blob_sha": "cf1bd44cb25fc9f2569ccfc09ad442021b001af0",
+      "bytes": 5630
+    },
+    {
+      "path": "protocol/execution-policy.md",
+      "mode": "100644",
+      "git_blob_sha": "295e5848cfa596c2797426de6f725ba834996870",
+      "bytes": 7510
+    },
+    {
+      "path": "protocol/new-topic-start.md",
+      "mode": "100644",
+      "git_blob_sha": "a7ee907027b448ddc819ad6a3a4bc465b6e945e9",
+      "bytes": 8339
+    },
+    {
+      "path": "protocol/persistence-policy.md",
+      "mode": "100644",
+      "git_blob_sha": "1cd32f0e03226830086af44fff7d4a753edb8020",
+      "bytes": 10207
+    },
+    {
+      "path": "protocol/repository-governance-policy.md",
+      "mode": "100644",
+      "git_blob_sha": "636f92798f3a5362bb71385c0aa82f3dd71a55c4",
+      "bytes": 7599
+    },
+    {
+      "path": "protocol/runtime-bootstrap.md",
+      "mode": "100644",
+      "git_blob_sha": "5431df78d830ddc6b106d2f020cef71172858067",
+      "bytes": 4968
+    },
+    {
+      "path": "protocol/runtime-core.md",
+      "mode": "100644",
+      "git_blob_sha": "112ef3984211024656789a9add874dd60313f044",
+      "bytes": 6733
+    },
+    {
+      "path": "protocol/schema.md",
+      "mode": "100644",
+      "git_blob_sha": "4a39409b520c491b0d55421fa8dcfb87a298c63e",
+      "bytes": 40422
+    },
+    {
+      "path": "protocol/teaching-decision.md",
+      "mode": "100644",
+      "git_blob_sha": "463a39b6be00a75d6282a46b3bbb56e1bf034f1f",
+      "bytes": 10407
+    },
+    {
+      "path": "requirements-dev.txt",
+      "mode": "100644",
+      "git_blob_sha": "1910948f82d7b228755552cd3f5b343cebbca412",
+      "bytes": 15
+    },
+    {
+      "path": "scripts/evaluate_diagnostic_repair.py",
+      "mode": "100644",
+      "git_blob_sha": "eceece4411d93275b41b2a5279b9067f6728601a",
+      "bytes": 1817
+    },
+    {
+      "path": "scripts/evaluate_state_sensitivity.py",
+      "mode": "100644",
+      "git_blob_sha": "e5c9a3aea6b2fa2c88be8ddf6ff03352011166ff",
+      "bytes": 2695
+    },
+    {
+      "path": "scripts/intake_policy.py",
+      "mode": "100644",
+      "git_blob_sha": "44d169b32ba0e5115f348ea6e2dd7336e667ed89",
+      "bytes": 2658
+    },
+    {
+      "path": "scripts/reference_host.py",
+      "mode": "100644",
+      "git_blob_sha": "c997a5a15c96392576f32113c3f13f6ec7aabbf5",
+      "bytes": 12197
+    },
+    {
+      "path": "scripts/runtime_adapter.py",
+      "mode": "100644",
+      "git_blob_sha": "57e63c663b4b5212b8c85a0a8ce36ea4089823be",
+      "bytes": 110438
+    },
+    {
+      "path": "scripts/runtime_broker.py",
+      "mode": "100644",
+      "git_blob_sha": "6923214960afce30c945289c3a9dd4e3a9d908cb",
+      "bytes": 148973
+    },
+    {
+      "path": "scripts/validate_learning_os.py",
+      "mode": "100755",
+      "git_blob_sha": "54b4529c5c59281af0163d94c29626214fffeaed",
+      "bytes": 120437
+    },
+    {
+      "path": "tests/.gitattributes",
+      "mode": "100644",
+      "git_blob_sha": "af3384a301a185b7aa741a5da026715041e6bb3f",
+      "bytes": 435
+    },
+    {
+      "path": "tests/answer_closure_fixture.py",
+      "mode": "100644",
+      "git_blob_sha": "7217d62b213493e25da96ff07036c83287258962",
+      "bytes": 16237
+    },
+    {
+      "path": "tests/autonomous_correction_fixture.py",
+      "mode": "100644",
+      "git_blob_sha": "20ae19fd2d0311b6db2d426336aef7b76472dade",
+      "bytes": 42073
+    },
+    {
+      "path": "tests/cold_resume_fixture.py",
+      "mode": "100644",
+      "git_blob_sha": "eda1d5950298e568423a993560827b91843457a2",
+      "bytes": 7856
+    },
+    {
+      "path": "tests/constrained_recovery_fixture.py",
+      "mode": "100644",
+      "git_blob_sha": "4c4ef68d185ebc6a56b22b7336986159e34e683f",
+      "bytes": 12150
+    },
+    {
+      "path": "tests/context_selection_fixture.py",
+      "mode": "100644",
+      "git_blob_sha": "4919cf509e3db19eb3236cab150dcd04c5473300",
+      "bytes": 21392
+    },
+    {
+      "path": "tests/correction_propagation_fixture.py",
+      "mode": "100644",
+      "git_blob_sha": "ec621b00c435940e04b7882368c9135667da8207",
+      "bytes": 9659
+    },
+    {
+      "path": "tests/diagnostic_repair_fixture.py",
+      "mode": "100644",
+      "git_blob_sha": "609fc0b821f5f1fd4c838e3b123dff9c08cbe6a2",
+      "bytes": 13176
+    },
+    {
+      "path": "tests/fixtures/core19-intake/consumer-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "72f77bd3ec6111c637fd6f1511f0e2ff3d46b414",
+      "bytes": 71126
+    },
+    {
+      "path": "tests/fixtures/core19-intake/consumer-response.json",
+      "mode": "100644",
+      "git_blob_sha": "d45ed7d90e0391282c28b1e680fe9bba974aaf35",
+      "bytes": 11487
+    },
+    {
+      "path": "tests/fixtures/core19-intake/mechanical-replay.json",
+      "mode": "100644",
+      "git_blob_sha": "7b4b5659e6701e6e871eab76aff8f8ce88774d67",
+      "bytes": 12903
+    },
+    {
+      "path": "tests/fixtures/core19-intake/policy-snapshot.json",
+      "mode": "100644",
+      "git_blob_sha": "dffa6c29819cf7a10b1b03bc96b7069caa86c450",
+      "bytes": 60797
+    },
+    {
+      "path": "tests/fixtures/core19-intake/prospective-manifest.json",
+      "mode": "100644",
+      "git_blob_sha": "ab7110a32fbccea94fe85b2ff2d129c6e590a66f",
+      "bytes": 2568
+    },
+    {
+      "path": "tests/fixtures/core19-intake/semantic-review.json",
+      "mode": "100644",
+      "git_blob_sha": "ac1de1800b9ee438d41838463755da264922c3ed",
+      "bytes": 16317
+    },
+    {
+      "path": "tests/fixtures/core19-intake/successor-freeze.json",
+      "mode": "100644",
+      "git_blob_sha": "8a37258c3b1a109163027cb254f1ab4ee33c6906",
+      "bytes": 741
+    },
+    {
+      "path": "tests/fixtures/core19-intake/successor-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "c22a4ad3b08c832a5ed9789d4e06b8096b2f2e1f",
+      "bytes": 67499
+    },
+    {
+      "path": "tests/fixtures/core19-intake/successor-response.json",
+      "mode": "100644",
+      "git_blob_sha": "dc7cb88bf6d48cdd9e5cc1a4f91e81cbf4a0e68e",
+      "bytes": 6148
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/.gitattributes",
+      "mode": "100644",
+      "git_blob_sha": "2d9a2df200785205b7cd7f3fbff6586a54454cde",
+      "bytes": 13
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/elm-b-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "50de23f4b26a124f9075d13a3feb0deafe98ec91",
+      "bytes": 55101
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/elm-b-response.json",
+      "mode": "100644",
+      "git_blob_sha": "58818c650802847eaead60b35e886adf6bdd295a",
+      "bytes": 1348
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/elm-b-trajectory.json",
+      "mode": "100644",
+      "git_blob_sha": "5a0e7e7dc29e603dc6d2eb6ad2d6eb5fa2f0c803",
+      "bytes": 44955
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/elm-c-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "90a164927d72b0702a056d2e2edbe4f0dcd3e62d",
+      "bytes": 58627
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/elm-c-response.json",
+      "mode": "100644",
+      "git_blob_sha": "76865d9785a7f32c6e6c86d5a992c5f01a17c761",
+      "bytes": 1351
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/elm-c-trajectory.json",
+      "mode": "100644",
+      "git_blob_sha": "b34f951c3cbe9d96340349f51579894530e0c5c3",
+      "bytes": 6670
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/elm-post-state.json",
+      "mode": "100644",
+      "git_blob_sha": "46f68c3f9cac915351b383eb611346a1a6b86315",
+      "bytes": 8515
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/elm-successor-recovery.json",
+      "mode": "100644",
+      "git_blob_sha": "8d59d4eab8414dd079a9111922235c5c59a2fb30",
+      "bytes": 19150
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/initial-provider-calls.json",
+      "mode": "100644",
+      "git_blob_sha": "a38b72fa1739d64413e75000201c53da705885ef",
+      "bytes": 9681
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/initial-provider-state.json",
+      "mode": "100644",
+      "git_blob_sha": "fdbfc345d7f8d4d6811b4a711d7e61d58a5d35b6",
+      "bytes": 6234
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/mechanical-exact-replay.json",
+      "mode": "100644",
+      "git_blob_sha": "57e066cad457fd5bf047157b4ba977c8ac37d0b8",
+      "bytes": 4896
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/mechanical-invariants.json",
+      "mode": "100644",
+      "git_blob_sha": "6f60613780a3e7bca0f0aa6a9ffea328072d0b34",
+      "bytes": 3803
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/pine-b-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "7444e8bd516523784082fbb09a76b1c54eefb67e",
+      "bytes": 55066
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/pine-b-response.json",
+      "mode": "100644",
+      "git_blob_sha": "fd9215ba692eadd3c3b20baa92dd15feca08381b",
+      "bytes": 1650
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/pine-b-trajectory.json",
+      "mode": "100644",
+      "git_blob_sha": "afc2ae4dfb23a87362d83143da9355cfdd786ad0",
+      "bytes": 43392
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/pine-c-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "ab30e561a5b5509a322fcfe2120023a586aae864",
+      "bytes": 58215
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/pine-c-response.json",
+      "mode": "100644",
+      "git_blob_sha": "eff154ad6b383e6b9e38f56c2631721d9a5cb6b8",
+      "bytes": 1214
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/pine-c-trajectory.json",
+      "mode": "100644",
+      "git_blob_sha": "3326f75fcf28085b2a4d2b4eb599097de5da0e91",
+      "bytes": 7923
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/pine-post-state.json",
+      "mode": "100644",
+      "git_blob_sha": "4031a20cf95d4854947baf5291e53fe532987bd8",
+      "bytes": 8174
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/pine-successor-recovery.json",
+      "mode": "100644",
+      "git_blob_sha": "7ba9f1a857471cf72040fd71c53b4de119a68b7f",
+      "bytes": 18756
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/preparation-attempt-1.json",
+      "mode": "100644",
+      "git_blob_sha": "49038c95871d94949a68fae48381cc7cd55fcdda",
+      "bytes": 8946
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/prospective-freeze.json",
+      "mode": "100644",
+      "git_blob_sha": "cbb0b86dd3de452f84c6864b548ef31719afe807",
+      "bytes": 1388
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/prospective-plan.json",
+      "mode": "100644",
+      "git_blob_sha": "3656f9c5159c6e540a1466827357fbd6d3e21ba0",
+      "bytes": 10958
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/publication-manifest.json",
+      "mode": "100644",
+      "git_blob_sha": "f6e5c96a3fcf5fcb9ee69a9324a9762d3be93d6b",
+      "bytes": 11632
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/reed-b-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "f83cfc19a645e6824c1ce7c65f567e0c1bb897e1",
+      "bytes": 54970
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/reed-b-response.json",
+      "mode": "100644",
+      "git_blob_sha": "9cf5cc1564541c594a26e93050c9bd9890545b12",
+      "bytes": 1182
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/reed-b-trajectory.json",
+      "mode": "100644",
+      "git_blob_sha": "fbe57fbc9789423dee67042d53c92c0f85cc44a8",
+      "bytes": 21399
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/reed-c-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "3033ad664ee1a628e40e322d10e7de467cc13e0f",
+      "bytes": 55270
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/reed-c-response.json",
+      "mode": "100644",
+      "git_blob_sha": "9b64a3ebe5c886e2d438e20215cbab7472b1f51d",
+      "bytes": 954
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/reed-c-trajectory.json",
+      "mode": "100644",
+      "git_blob_sha": "c7d68ce0b7d20cd46c209a689bd2b00c8e7ce89d",
+      "bytes": 6479
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/reed-post-state.json",
+      "mode": "100644",
+      "git_blob_sha": "b6170535bcc9e9086082fc94a9d1abe5ec926634",
+      "bytes": 7109
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/reed-successor-recovery.json",
+      "mode": "100644",
+      "git_blob_sha": "17f75428acc3886a2d5179544f2332795b477a93",
+      "bytes": 15499
+    },
+    {
+      "path": "tests/fixtures/core34-answer-closure/semantic-review-final.json",
+      "mode": "100644",
+      "git_blob_sha": "12a68b0a08606888ca91e7e30ae101efb29c9fc1",
+      "bytes": 30982
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/.gitattributes",
+      "mode": "100644",
+      "git_blob_sha": "fa1385d99a319b43c06f5309d1aae9fdd3adea46",
+      "bytes": 8
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/baseline-response.json",
+      "mode": "100644",
+      "git_blob_sha": "dfca3de7ec9383acc0eb012cb769c8b8bb423318",
+      "bytes": 1953
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/baseline-state.json",
+      "mode": "100644",
+      "git_blob_sha": "6d3f34255699321d3987df9cd48119ffd0f2f5b4",
+      "bytes": 3980
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/baseline-trajectory.json",
+      "mode": "100644",
+      "git_blob_sha": "051c02902eb62f87e8baac3e92e05691e46c3f9a",
+      "bytes": 26257
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/first-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "469e89c321a434403a891e29d5d842516b90846e",
+      "bytes": 54556
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/input-provenance.json",
+      "mode": "100644",
+      "git_blob_sha": "7a60b5b60c60a8b332a622ca7fb08d4f2e44c375",
+      "bytes": 35209
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/mechanical-exact-replay.json",
+      "mode": "100644",
+      "git_blob_sha": "1190c26b9e531883cbe2795a8ea5e78c69cc5b4b",
+      "bytes": 47557
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/preparation-provenance.json",
+      "mode": "100644",
+      "git_blob_sha": "e475483545651e03cf1e8d7ac511c4ecbb41156c",
+      "bytes": 92016
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/prospective-freeze.json",
+      "mode": "100644",
+      "git_blob_sha": "e5cdcaeeea010e60a094d8fa24fbf7487dfd37ee",
+      "bytes": 8824
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/prospective-method-review.json",
+      "mode": "100644",
+      "git_blob_sha": "0e3819ab0141d76816509f8dfd89e8b10e299e00",
+      "bytes": 12923
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/prospective-plan.json",
+      "mode": "100644",
+      "git_blob_sha": "8acccb534254753f41a906c9f73303b5c08b8dfb",
+      "bytes": 9493
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/publication-manifest.json",
+      "mode": "100644",
+      "git_blob_sha": "898e3837fa0cd76fff68d710c3e70e8721ab5407",
+      "bytes": 10127
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/report-post-state.json",
+      "mode": "100644",
+      "git_blob_sha": "91bf95c6014d318a638b0ffb4de715cd0c016608",
+      "bytes": 4533
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/report-response.json",
+      "mode": "100644",
+      "git_blob_sha": "1c73c476d4c4b43d08e51073c2bc1738c2f9f247",
+      "bytes": 2682
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/report-state.json",
+      "mode": "100644",
+      "git_blob_sha": "cf2925b3553580c78ca23c2ac27746b6bcca2354",
+      "bytes": 4902
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/report-trajectory.json",
+      "mode": "100644",
+      "git_blob_sha": "abee72122a73c353fd34ca26c788a1a90f4fa09e",
+      "bytes": 49186
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/semantic-method-review.json",
+      "mode": "100644",
+      "git_blob_sha": "db5d758c2dfe2555adfba47f9070f40db6e4763a",
+      "bytes": 22197
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/successor-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "9105ce4945cf81ead877c73e1e9bade5c20a28c9",
+      "bytes": 53898
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/successor-response.json",
+      "mode": "100644",
+      "git_blob_sha": "a459222752a92269cd0efb51030db5d57ba4911c",
+      "bytes": 2478
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/successor-trajectory.json",
+      "mode": "100644",
+      "git_blob_sha": "6542b99a50452e30690770ce7ce0b2cf5ae5bb66",
+      "bytes": 29155
+    },
+    {
+      "path": "tests/fixtures/core34-autonomous-correction/successor-trigger-provenance.json",
+      "mode": "100644",
+      "git_blob_sha": "c90dc092457775b04a0ec64d127f55c158c2461d",
+      "bytes": 6993
+    },
+    {
+      "path": "tests/fixtures/core34-cold-resume/.gitattributes",
+      "mode": "100644",
+      "git_blob_sha": "e72a965b68671a0d77df0a2f25f49ad0980a40b4",
+      "bytes": 80
+    },
+    {
+      "path": "tests/fixtures/core34-cold-resume/alpha-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "0ffbede4a42898c3453b3bc0e639531850d0f176",
+      "bytes": 31237
+    },
+    {
+      "path": "tests/fixtures/core34-cold-resume/alpha-response.json",
+      "mode": "100644",
+      "git_blob_sha": "0128937c9ccc676f6582614b193c5d556b0b92ee",
+      "bytes": 1789
+    },
+    {
+      "path": "tests/fixtures/core34-cold-resume/artifact-manifest.json",
+      "mode": "100644",
+      "git_blob_sha": "ff09b16d758935506bbdf4916309646bafeb113d",
+      "bytes": 1123
+    },
+    {
+      "path": "tests/fixtures/core34-cold-resume/beta-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "b5c67db74543c90b15bd9fcfa8fa550adc3a4b91",
+      "bytes": 30299
+    },
+    {
+      "path": "tests/fixtures/core34-cold-resume/beta-response.json",
+      "mode": "100644",
+      "git_blob_sha": "47e31320bc88fbdb28bea5021b335f919cd22f32",
+      "bytes": 814
+    },
+    {
+      "path": "tests/fixtures/core34-cold-resume/mechanical-replay.json",
+      "mode": "100644",
+      "git_blob_sha": "11413296dde2f673e342c43b4edc2263411a341f",
+      "bytes": 7728
+    },
+    {
+      "path": "tests/fixtures/core34-cold-resume/prospective-plan.json",
+      "mode": "100644",
+      "git_blob_sha": "eb16c2df3816daac96d2b0ec629a33b401125b05",
+      "bytes": 1610
+    },
+    {
+      "path": "tests/fixtures/core34-cold-resume/semantic-review.json",
+      "mode": "100644",
+      "git_blob_sha": "13bdd1b459e9da312927cd33964342baa372b162",
+      "bytes": 15539
+    },
+    {
+      "path": "tests/fixtures/core34-cold-resume/successor-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "c168494d0d30db3a65000e9016d6340149daebd8",
+      "bytes": 30832
+    },
+    {
+      "path": "tests/fixtures/core34-cold-resume/successor-plan.json",
+      "mode": "100644",
+      "git_blob_sha": "69d5725c3ff78207dde0e63e21c6164fb3adf6d8",
+      "bytes": 432
+    },
+    {
+      "path": "tests/fixtures/core34-cold-resume/successor-response.json",
+      "mode": "100644",
+      "git_blob_sha": "8f5eaf36f37384603befb904eb80da2952e509a9",
+      "bytes": 927
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/.gitattributes",
+      "mode": "100644",
+      "git_blob_sha": "09341a3a0a406ad76ed056527cc449e77205c033",
+      "bytes": 80
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/audit-errata.json",
+      "mode": "100644",
+      "git_blob_sha": "c3aa51aeb26d51358536fdcc2b8ae060a5e0f363",
+      "bytes": 1196
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/cedar-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "3128bb4ad782658e4d2266c3bea14864dcda6043",
+      "bytes": 38970
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/cedar-response.json",
+      "mode": "100644",
+      "git_blob_sha": "c6179f44349a0daebf71dfa2cbd29eea893c9bbb",
+      "bytes": 2738
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/complementary-review.json",
+      "mode": "100644",
+      "git_blob_sha": "d45df0e6a6e7d99fdb04aec3961adbf72cff606e",
+      "bytes": 11235
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/consumer-bindings.json",
+      "mode": "100644",
+      "git_blob_sha": "cce689c55fc66359ffb9757033b64affe1d3df52",
+      "bytes": 2421
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/exact-replay.json",
+      "mode": "100644",
+      "git_blob_sha": "a3a751c96d1ef7a6a41657519724794129664799",
+      "bytes": 3065
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/initial-preparation-failure.json",
+      "mode": "100644",
+      "git_blob_sha": "ca4e2586ae52b23d633cdf6bc12c0b87e5489fa7",
+      "bytes": 775
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/initial-prospective-plan.json",
+      "mode": "100644",
+      "git_blob_sha": "c76e32cd3ecc31599b38f5427c063878a581035c",
+      "bytes": 4749
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/iris-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "54ecf01acee162c37f86f5c2f6d8fcaa21d382b7",
+      "bytes": 30310
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/iris-response.json",
+      "mode": "100644",
+      "git_blob_sha": "4aaa20fbade45529b280f29d301cb96eb05a09ed",
+      "bytes": 1183
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/juniper-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "92f331d8f33dce38166f874780ff9d6f8946c953",
+      "bytes": 32825
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/juniper-response.json",
+      "mode": "100644",
+      "git_blob_sha": "b38b29d55cf5cc1c4b086482947685307f8eef07",
+      "bytes": 1474
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/laurel-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "54ecf01acee162c37f86f5c2f6d8fcaa21d382b7",
+      "bytes": 30310
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/maple-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "39c128bc3ea50d4ae3429564d057af9b7201e201",
+      "bytes": 36455
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/maple-response.json",
+      "mode": "100644",
+      "git_blob_sha": "bd060aa5e892245d13feeddd9fe4c38c10624878",
+      "bytes": 1102
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/mechanical-input-check.json",
+      "mode": "100644",
+      "git_blob_sha": "0f49e3f5ea0a95e877108120f05ee960ef0f3355",
+      "bytes": 2262
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/preconsumer-manifest.json",
+      "mode": "100644",
+      "git_blob_sha": "60f14c7974d6e120e8cd1fbc8ebe50647635929c",
+      "bytes": 22517
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/predispatch-clock-receipt.json",
+      "mode": "100644",
+      "git_blob_sha": "d94c398d26e4c493f8a12df298c356f0082824c7",
+      "bytes": 561
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/prospective-plan.json",
+      "mode": "100644",
+      "git_blob_sha": "ce0183b093882598209aaaea5ae2ffde02288bd4",
+      "bytes": 5200
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/publication-manifest.json",
+      "mode": "100644",
+      "git_blob_sha": "56f697f64f0477e5ad750edec5ef4f5939ebe2d1",
+      "bytes": 3120
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/result-summary.json",
+      "mode": "100644",
+      "git_blob_sha": "3cef83cc7363a66b247da0d26079de66a140330a",
+      "bytes": 4110
+    },
+    {
+      "path": "tests/fixtures/core34-constrained-recovery/scope-clarifications.json",
+      "mode": "100644",
+      "git_blob_sha": "93f568542803597706eb74954a0087da800f7878",
+      "bytes": 1167
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/.gitattributes",
+      "mode": "100644",
+      "git_blob_sha": "2d9a2df200785205b7cd7f3fbff6586a54454cde",
+      "bytes": 13
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/baseline-response.json",
+      "mode": "100644",
+      "git_blob_sha": "83cba2c7ba98f360f11ebc683e48b104d9ecb151",
+      "bytes": 1660
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/baseline-trajectory.json",
+      "mode": "100644",
+      "git_blob_sha": "4a6c82201588e4e0de9b17f88150abb72ad807ff",
+      "bytes": 19570
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/common-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "0ee391253c55442a3dfee01d7578b908e1bacfb8",
+      "bytes": 46533
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/input-provenance.json",
+      "mode": "100644",
+      "git_blob_sha": "e5d37072379c37fc63d7646a824005770739ea99",
+      "bytes": 33813
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/irrelevant-preparation.json",
+      "mode": "100644",
+      "git_blob_sha": "511a52c545a4e13fcfae83651a56f3d1d65ddf0e",
+      "bytes": 3052
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/irrelevant-response.json",
+      "mode": "100644",
+      "git_blob_sha": "a2a16dd08015f857034fb241dd2d60f583fbe9ab",
+      "bytes": 1858
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/irrelevant-trajectory.json",
+      "mode": "100644",
+      "git_blob_sha": "4f2610095ec56ae57a83e5d2af42f2aee8ea8b4a",
+      "bytes": 21368
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/mechanical-exact-replay.json",
+      "mode": "100644",
+      "git_blob_sha": "c37a19903a05dcfa1af13444b9bde2cb078f9db0",
+      "bytes": 61893
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/method-change-record.json",
+      "mode": "100644",
+      "git_blob_sha": "dcafc000867c5dff23cc1c73f2b4db4d746561e4",
+      "bytes": 8279
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/preparation-diagnostics.json",
+      "mode": "100644",
+      "git_blob_sha": "8da597cd26c1b5aae165c0e41e8509e037076a07",
+      "bytes": 4765
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/prospective-freeze.json",
+      "mode": "100644",
+      "git_blob_sha": "e7071d07f1fd8c2b5eabe2ccd0894d13b39e1c92",
+      "bytes": 11828
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/prospective-method-review.json",
+      "mode": "100644",
+      "git_blob_sha": "ea66cfe8560a9e843f4a050c0c56514d8d38a30e",
+      "bytes": 19713
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/prospective-plan.json",
+      "mode": "100644",
+      "git_blob_sha": "cc995fda50112f483ff7509a2d4a7724a6a868c9",
+      "bytes": 9921
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/publication-manifest.json",
+      "mode": "100644",
+      "git_blob_sha": "5baa4b4892e51bba36f2af783b14108b4196d5f4",
+      "bytes": 10268
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/relevant-response.json",
+      "mode": "100644",
+      "git_blob_sha": "47437e661e249b4f58f6fa3846eda2c741fc5c1a",
+      "bytes": 1619
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/relevant-trajectory.json",
+      "mode": "100644",
+      "git_blob_sha": "6cc4f56b0315ae96f75cf6591c2898c821b2af6e",
+      "bytes": 19237
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/semantic-method-review.json",
+      "mode": "100644",
+      "git_blob_sha": "f9acaba7a71446347dcb424fc2a1c826810ac151",
+      "bytes": 21236
+    },
+    {
+      "path": "tests/fixtures/core34-context-selection/source-state-bindings.json",
+      "mode": "100644",
+      "git_blob_sha": "1dfbcccee87ceda456649e039698904052b2bf0c",
+      "bytes": 597
+    },
+    {
+      "path": "tests/fixtures/core34-correction/c01-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "4dcf7710e90d92e6de3369ccf0a56412b7cfe9cf",
+      "bytes": 23433
+    },
+    {
+      "path": "tests/fixtures/core34-correction/c01-response.json",
+      "mode": "100644",
+      "git_blob_sha": "e95937394a170693010724f551736629f3421216",
+      "bytes": 1622
+    },
+    {
+      "path": "tests/fixtures/core34-correction/c02-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "2ff161cbf81e311bbe23f58e0f131c9a57005e69",
+      "bytes": 24478
+    },
+    {
+      "path": "tests/fixtures/core34-correction/c02-response.json",
+      "mode": "100644",
+      "git_blob_sha": "16d495478b65b2e31bbe1f5fd0b632201bb9d976",
+      "bytes": 2349
+    },
+    {
+      "path": "tests/fixtures/core34-correction/c03-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "6d922af8979a58db789b1d28f695d6052923237f",
+      "bytes": 22495
+    },
+    {
+      "path": "tests/fixtures/core34-correction/c03-response.json",
+      "mode": "100644",
+      "git_blob_sha": "603eecf693cbfa542f839ee075d85a6a3471e92e",
+      "bytes": 871
+    },
+    {
+      "path": "tests/fixtures/core34-correction/c04-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "145c03334d3cd13693632435ed3a329468172eec",
+      "bytes": 23064
+    },
+    {
+      "path": "tests/fixtures/core34-correction/c04-response.json",
+      "mode": "100644",
+      "git_blob_sha": "575631d39c51cace7c892d961371587c159a3dad",
+      "bytes": 897
+    },
+    {
+      "path": "tests/fixtures/core34-correction/mechanical-replay.json",
+      "mode": "100644",
+      "git_blob_sha": "a9624be4c15c49946f97109441456783f945fa7d",
+      "bytes": 9494
+    },
+    {
+      "path": "tests/fixtures/core34-correction/policy-snapshot.json",
+      "mode": "100644",
+      "git_blob_sha": "e024232a84008894eca6b0d018f3f2206c672ed1",
+      "bytes": 19349
+    },
+    {
+      "path": "tests/fixtures/core34-correction/prospective-manifest.json",
+      "mode": "100644",
+      "git_blob_sha": "18387458c101fb4651cd8e5c7831e442c7054eec",
+      "bytes": 2962
+    },
+    {
+      "path": "tests/fixtures/core34-correction/semantic-review.json",
+      "mode": "100644",
+      "git_blob_sha": "7fe7a1288f1441d465920c330e666ed9e291ca7d",
+      "bytes": 3939
+    },
+    {
+      "path": "tests/fixtures/core34-correction/successor-receipt.json",
+      "mode": "100644",
+      "git_blob_sha": "2d8b7fc0b6ef5ddffe86019cd6dbca8811dc1a4b",
+      "bytes": 402
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/adversarial-review.json",
+      "mode": "100644",
+      "git_blob_sha": "9d66522f02a187f444ada030791186d0b81ef04f",
+      "bytes": 43060
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/candidate1-exporter.py.txt",
+      "mode": "100644",
+      "git_blob_sha": "07821b0b2ef2c599a63667334fbfd325df5a33b0",
+      "bytes": 4586
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/candidate2-exporter.py.txt",
+      "mode": "100644",
+      "git_blob_sha": "7ddadfa8664a12eb8b82313ba4f26e2442be56ac",
+      "bytes": 10899
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/candidate3-reproduction-exporter.py.txt",
+      "mode": "100644",
+      "git_blob_sha": "609fc0b821f5f1fd4c838e3b123dff9c08cbe6a2",
+      "bytes": 13176
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/heldout-SHA256SUMS",
+      "mode": "100644",
+      "git_blob_sha": "1b2bd767d739b926d3fe47c6e8a7be0eb9f666db",
+      "bytes": 833
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd01.json",
+      "mode": "100644",
+      "git_blob_sha": "cad4a8be43113debe25702b4ad42e00ab6f1de98",
+      "bytes": 6686
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd02.json",
+      "mode": "100644",
+      "git_blob_sha": "a19081fa50c4f7f43f0087dc4f369b8b776efff6",
+      "bytes": 5247
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd03.json",
+      "mode": "100644",
+      "git_blob_sha": "30cfbb7b8cfc5e3f60b3304343ac4637bb7d21ae",
+      "bytes": 5344
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd04.json",
+      "mode": "100644",
+      "git_blob_sha": "5e7b649cbefc29df9f0360b72fede9f1449ea43b",
+      "bytes": 4989
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd05.json",
+      "mode": "100644",
+      "git_blob_sha": "0e935956838a993a29de0e0f1fd4d5a8aa1d66b6",
+      "bytes": 3998
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/heldout-cases/hd06.json",
+      "mode": "100644",
+      "git_blob_sha": "45ba7c8f9724c43ba9489578d1680073214ce846",
+      "bytes": 6545
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/heldout-freeze.json",
+      "mode": "100644",
+      "git_blob_sha": "9781dfe67b8cd8e7b4aaf5dd992dedf1703267d6",
+      "bytes": 2477
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/heldout-oracles.json",
+      "mode": "100644",
+      "git_blob_sha": "c77d3286f62738f6eff2f3b4e4416ebb54b2dd54",
+      "bytes": 12466
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/manifest.json",
+      "mode": "100644",
+      "git_blob_sha": "6b699a0ca0bd5b5d2e64cff60a9c37d0af7a5980",
+      "bytes": 808
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/observations.json",
+      "mode": "100644",
+      "git_blob_sha": "1177d5d74fdadbeb6e8ed753d3ea742e21213945",
+      "bytes": 4804
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/prospective-manifest.json",
+      "mode": "100644",
+      "git_blob_sha": "277377d6421dfb1ee766e07f5b72e71b9f5826ae",
+      "bytes": 4644
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/prospective-observations.json",
+      "mode": "100644",
+      "git_blob_sha": "8439cf5600fe44d5ed9fff1282e53e1e05f2a51d",
+      "bytes": 34451
+    },
+    {
+      "path": "tests/fixtures/core34-diagnostic-repair/teaching-decision-v0.4-candidate.md",
+      "mode": "100644",
+      "git_blob_sha": "abf8b1a4bd2e0f0992edf65b6aa16bc74b020db5",
+      "bytes": 9820
+    },
+    {
+      "path": "tests/fixtures/core34-observations.json",
+      "mode": "100644",
+      "git_blob_sha": "0170e4a041669cbc58eac140f3721d0cb0762119",
+      "bytes": 50233
+    },
+    {
+      "path": "tests/fixtures/core34-policy-history/teaching-decision-v0.3.md",
+      "mode": "100644",
+      "git_blob_sha": "8d88d2b630ba5dc6b32733c76985d02fe0d1a344",
+      "bytes": 8761
+    },
+    {
+      "path": "tests/fixtures/core34-run-manifest.json",
+      "mode": "100644",
+      "git_blob_sha": "1651531677b68f4c0697982e28ebe1e6c2615f00",
+      "bytes": 4948
+    },
+    {
+      "path": "tests/fixtures/core34-source-history/test_correction_propagation-v3.py.txt",
+      "mode": "100644",
+      "git_blob_sha": "ab3c6dbba6a090dda0e2e85c2297694f53be6e60",
+      "bytes": 11233
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/boundaries-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "8bc474814efd660e72c54082564726e8f66069ef",
+      "bytes": 61633
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/boundaries-response.json",
+      "mode": "100644",
+      "git_blob_sha": "1ff37149e933808141029e76b868d4d2112c51e1",
+      "bytes": 18643
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/counterexample-review.json",
+      "mode": "100644",
+      "git_blob_sha": "a31479b93dc1199c2c95c1f1951e15d524ba53f6",
+      "bytes": 8979
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/mechanical-replay.json",
+      "mode": "100644",
+      "git_blob_sha": "bfa76fc8c19ba2893ca3d3d8c9ad7861c0c97cfb",
+      "bytes": 51047
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/policy-snapshot.json",
+      "mode": "100644",
+      "git_blob_sha": "5cd0c0ef17cd40365ecfad4612d344f58fbe7d89",
+      "bytes": 21835
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/prospective-manifest.json",
+      "mode": "100644",
+      "git_blob_sha": "7e57fd9206fda1531c98ac81f4915e696ab82643",
+      "bytes": 6035
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/remediation-manifest.json",
+      "mode": "100644",
+      "git_blob_sha": "e8b7ca13d38db0c475ef5d8c92367f46f18a1e2d",
+      "bytes": 2831
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/remediation-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "d799c0cf7195a6675e76b2e145992bfaa7ca7caa",
+      "bytes": 38195
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/remediation-policy-snapshot.json",
+      "mode": "100644",
+      "git_blob_sha": "4d38ff70b8991f9b10d7b39606e287bd175f4d1f",
+      "bytes": 31051
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/remediation-replay.json",
+      "mode": "100644",
+      "git_blob_sha": "8bb4e56e19c76babe0e1116734f98cf750df9ac3",
+      "bytes": 5317
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/remediation-response.json",
+      "mode": "100644",
+      "git_blob_sha": "80acd84e7da775b482dcd3867ff22c011278807e",
+      "bytes": 2811
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/remediation-semantic-review.json",
+      "mode": "100644",
+      "git_blob_sha": "b5b13e3e6ce4793c1f5a944c5bd68bea289f67f9",
+      "bytes": 1572
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/semantic-review.json",
+      "mode": "100644",
+      "git_blob_sha": "4bb434630697dc8d650334dff1496266445015fb",
+      "bytes": 12778
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/structured-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "db24e49a965f38c6a1e7c433ece5f8686bf899d2",
+      "bytes": 26142
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/structured-response.json",
+      "mode": "100644",
+      "git_blob_sha": "84bed97c0625ae385e1d6707347be24a4e43297b",
+      "bytes": 1893
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/successor-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "b43dc982ec928994713764bf014f6371b3061a40",
+      "bytes": 25773
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/successor-receipt.json",
+      "mode": "100644",
+      "git_blob_sha": "beb01a5887b95d5edeff4d6c8e1f669d0aa0bdf5",
+      "bytes": 300
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/successor-response.json",
+      "mode": "100644",
+      "git_blob_sha": "c8ae5ed7faf078ff5e3a6524ef43e03cdc71b16e",
+      "bytes": 1195
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/summary-packet.json",
+      "mode": "100644",
+      "git_blob_sha": "6312ab0b6955abf6047dca2cae571141e95f1495",
+      "bytes": 27187
+    },
+    {
+      "path": "tests/fixtures/core34-withdrawn-support/summary-response.json",
+      "mode": "100644",
+      "git_blob_sha": "7832cd58d9adf28398b77073fc4003319971782c",
+      "bytes": 1938
+    },
+    {
+      "path": "tests/host_replay_compatibility.py",
+      "mode": "100644",
+      "git_blob_sha": "45948a8eb53ced49da150a8ee9b5e5941da3156b",
+      "bytes": 2862
+    },
+    {
+      "path": "tests/intake_controls_fixture.py",
+      "mode": "100644",
+      "git_blob_sha": "eb25ccc28abe4e6b67148633b3d0253e9214c109",
+      "bytes": 4958
+    },
+    {
+      "path": "tests/state_sensitivity_fixture.py",
+      "mode": "100644",
+      "git_blob_sha": "58643cab89086c761566038e331e4bd742075d43",
+      "bytes": 21298
+    },
+    {
+      "path": "tests/test_answer_closure.py",
+      "mode": "100644",
+      "git_blob_sha": "b129f6475fab66059d7d4b48ba35d92491d161ba",
+      "bytes": 12544
+    },
+    {
+      "path": "tests/test_autonomous_correction.py",
+      "mode": "100644",
+      "git_blob_sha": "875ad6929351220862a7380ed74ae849f4824dcf",
+      "bytes": 27829
+    },
+    {
+      "path": "tests/test_cold_resume.py",
+      "mode": "100644",
+      "git_blob_sha": "91bb1c40932966be2c64198971acbffebcb7c3a9",
+      "bytes": 6386
+    },
+    {
+      "path": "tests/test_collaboration_boundary.py",
+      "mode": "100644",
+      "git_blob_sha": "1c2c1a5783540b8bf93a1afafbaa99f4062a7423",
+      "bytes": 3118
+    },
+    {
+      "path": "tests/test_constrained_recovery.py",
+      "mode": "100644",
+      "git_blob_sha": "2d91a0c040cd9fa5aa890ee51d73a23d1d7951ad",
+      "bytes": 13094
+    },
+    {
+      "path": "tests/test_context_selection.py",
+      "mode": "100644",
+      "git_blob_sha": "8379dd052617fafa6f87c2ef716ab6c40e8e80d6",
+      "bytes": 10832
+    },
+    {
+      "path": "tests/test_core_validator.py",
+      "mode": "100644",
+      "git_blob_sha": "0657559e0fc23c3144ee5705f9cd721215a256d8",
+      "bytes": 15625
+    },
+    {
+      "path": "tests/test_correction_propagation.py",
+      "mode": "100644",
+      "git_blob_sha": "95347601925a2802bbb7ca78fcf31efed84850e5",
+      "bytes": 11301
+    },
+    {
+      "path": "tests/test_deployment_validator.py",
+      "mode": "100644",
+      "git_blob_sha": "36063b1858026c56a1af8d538c3f5e72c74dce0b",
+      "bytes": 24617
+    },
+    {
+      "path": "tests/test_diagnostic_repair.py",
+      "mode": "100644",
+      "git_blob_sha": "97560658bce9d2d7c3206ab7f6e79f03a9dce196",
+      "bytes": 17496
+    },
+    {
+      "path": "tests/test_domain_probes.py",
+      "mode": "100644",
+      "git_blob_sha": "1a5ce72f16836dd80c8bdfce18faf28188eb8a1a",
+      "bytes": 3381
+    },
+    {
+      "path": "tests/test_evidence_discovery.py",
+      "mode": "100644",
+      "git_blob_sha": "802e7affd4cafbb6f348817a9f3f8ad0199f9094",
+      "bytes": 20888
+    },
+    {
+      "path": "tests/test_fixture_checkout.py",
+      "mode": "100644",
+      "git_blob_sha": "62d0328a5d506b55a979e8c4b184b12f1537029c",
+      "bytes": 5883
+    },
+    {
+      "path": "tests/test_github_api_provider.py",
+      "mode": "100644",
+      "git_blob_sha": "1f3e5df677098054bad7bef86f11bd9c4e10f25b",
+      "bytes": 8021
+    },
+    {
+      "path": "tests/test_host_replay_compatibility.py",
+      "mode": "100644",
+      "git_blob_sha": "17ab62cbadf7fc543958d531dd62b6977b2db825",
+      "bytes": 3209
+    },
+    {
+      "path": "tests/test_instance_validator.py",
+      "mode": "100644",
+      "git_blob_sha": "21e4a8db688a5443082fab06ff5cfcefb47b0322",
+      "bytes": 45007
+    },
+    {
+      "path": "tests/test_intake_experience.py",
+      "mode": "100644",
+      "git_blob_sha": "20b03b467a8b82838bc99aa05cd7e246304473c4",
+      "bytes": 4475
+    },
+    {
+      "path": "tests/test_intake_operations.py",
+      "mode": "100644",
+      "git_blob_sha": "508c0041e6b67a659c42cdc800ee03f9ae883701",
+      "bytes": 14778
+    },
+    {
+      "path": "tests/test_intake_policy.py",
+      "mode": "100644",
+      "git_blob_sha": "0bc8d909d116578e0d1f630a17176a105f7daadb",
+      "bytes": 5227
+    },
+    {
+      "path": "tests/test_reference_host.py",
+      "mode": "100644",
+      "git_blob_sha": "274e43a6dad69dc21d581e5040ef5ca7ebc75027",
+      "bytes": 27159
+    },
+    {
+      "path": "tests/test_rest_text.py",
+      "mode": "100644",
+      "git_blob_sha": "f497fb3a9bfd1a72e6bd053ea227d82ee9f07cf2",
+      "bytes": 3733
+    },
+    {
+      "path": "tests/test_runtime_adapter.py",
+      "mode": "100644",
+      "git_blob_sha": "135f48e739534105d446f18fc91c98b514031a67",
+      "bytes": 98648
+    },
+    {
+      "path": "tests/test_runtime_broker.py",
+      "mode": "100644",
+      "git_blob_sha": "8c7e9a7f8fd363427ac4c2798e2c0deb667cc59c",
+      "bytes": 160866
+    },
+    {
+      "path": "tests/test_state_sensitivity.py",
+      "mode": "100644",
+      "git_blob_sha": "d3360229f22c1d8848f6202b670b35b1f9808f73",
+      "bytes": 17017
+    },
+    {
+      "path": "tests/test_validator.py",
+      "mode": "100644",
+      "git_blob_sha": "54faa9efc736fb0d7270c8d55ffc4605248912f5",
+      "bytes": 38113
+    },
+    {
+      "path": "tests/test_withdrawn_support.py",
+      "mode": "100644",
+      "git_blob_sha": "ed75d9567ca95cb106e1b2667f6cfa2fc3880d32",
+      "bytes": 13580
+    },
+    {
+      "path": "tests/withdrawn_support_fixture.py",
+      "mode": "100644",
+      "git_blob_sha": "5f3e405dcf8546e312cb69a5b557f48bf3135fc1",
+      "bytes": 10367
+    }
+  ]
+}
