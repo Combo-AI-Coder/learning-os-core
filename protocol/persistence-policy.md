@@ -138,6 +138,6 @@ If an important write fails, MUST disclose that durable state was not synchroniz
 
 ## 11. Historical V0.2 learner-project artifacts
 
-Canonical `main` no longer supports V0.2 Domain Goal/Plan/State/Deferred as a runtime learner-project fallback. Learner-project state belongs under `topics/<topic>/`; `domains/<domain>/curriculum.yaml` remains the reusable curriculum home.
+Canonical `main` no longer supports V0.2 Domain Goal/Plan/State/Deferred as a runtime learner-project fallback. Learner-project state belongs under `topics/<topic>/`; reusable curricula remain in **Core** at `domains/<domain>/curriculum.yaml`. In a split Instance, Instance-local curricula belong at `curriculum/local/<domain>/curriculum.yaml`; see the [split Instance canonical storage registry](schema.md#21-v04-split-instance-canonical-storage-registry). These canonical homes do not grant runtime read permission.
 
 Historical V0.2 learner-project artifacts may still appear in Git history or dated handoff documentation for audit/recovery archaeology. They MUST NOT be recreated or dual-written as current learner state.

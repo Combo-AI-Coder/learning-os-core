@@ -49,6 +49,33 @@ Expected broker failures use stable public codes:
 
 Internal repository paths, remotes, commits and credential material are not reflected in those failure envelopes. Unexpected implementation failures remain host-operator exceptions rather than being converted into false success.
 
+## Consumer read arguments and coverage
+
+`read_learning_context` requires a `required_paths` array of path strings and
+accepts an `optional_paths` array (default `[]`). Both are **Instance-relative**
+paths, read from the same bounded snapshot. The
+[split Instance canonical storage registry](../protocol/schema.md#21-v04-split-instance-canonical-storage-registry)
+defines document homes, not session read permission: reusable
+`domains/<domain>/curriculum.yaml` belongs to Core; an Instance-local curriculum
+uses `curriculum/local/<domain>/curriculum.yaml`.
+
+Every required and optional path must pass the session's host-owned capability
+checks before snapshot or document I/O. One unauthorized path rejects the whole
+batch; marking it optional does not bypass authorization. Only an authorized
+optional path absent from that snapshot is returned in `missing_optional`.
+A missing required path rejects the operation. The public `guard_rejected` code
+is deliberately opaque and is not evidence that a document is absent. These
+rules clarify the existing [bounded context read](../protocol/deployment-runtime.md)
+and do not expose or broaden the host's private capability policy.
+
+`discover_learning_evidence` takes an empty `arguments` mapping. Its coverage is
+explicit-context, typed Evidence matching the trusted session's Main
+Topic/Subtopic, as described [below](#bounded-interruption-discovery-surface-v3).
+Context-free legacy Evidence is excluded from that selector; it remains readable
+through existing authorized reads. A successful empty discovery result means no
+eligible matching records were found in that bounded snapshot. It does not mean
+that all Evidence or Knowledge is absent, or that the learner lacks a capability.
+
 ## Synthetic reference-journey coverage
 
 `tests/test_reference_host.py` composes the thin host surface with the existing synthetic broker fixture and exercises:
