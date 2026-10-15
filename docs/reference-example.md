@@ -1,10 +1,20 @@
 # Offline synthetic reference example
 
 Run two existing examples and inspect why their persisted state leads to a
-particular continuation. You need Python 3.12, Git on `PATH`, a POSIX shell,
-and network access to obtain the public source and its declared dependency.
+particular continuation. You need Python 3.12, a Git client on `PATH` accepting
+`--no-lazy-fetch`, a POSIX shell, and network access to obtain the public source
+and its declared dependency.
 The example executions use local synthetic data, with no model calls, accounts,
 credentials, real learner state, or private Instance repository.
+
+The Git provider needs `GIT_NO_LAZY_FETCH` plus filtered fetch/refetch behavior.
+Upstream [Git 2.45 introduced the no-lazy-fetch interface](https://github.com/git/git/blob/v2.45.0/Documentation/RelNotes/2.45.0.txt);
+[Git's manual](https://git-scm.com/docs/git/2.45.0) documents the environment
+variable. This recipe conservatively requires the CLI interface and probes it
+before setup, then tests actual provider materialization before either exporter.
+Git 2.52.0 was used for the original Linux replay. Some older builds have an
+[environment-only backport](https://github.com/git/git/commit/7b70e9efb18c2cc3f219af399bd384c5801ba1d7);
+their version number alone does not establish compatibility with this recipe.
 
 These are **two separate chapters, not one end-to-end learner journey**:
 
@@ -33,6 +43,10 @@ development snapshot is not a deployment pin.
 
 ```sh
 set -eu
+if ! git --no-lazy-fetch --version; then
+  printf '%s\n' 'Stop: install a Git client supporting --no-lazy-fetch; do not bypass this check.' >&2
+  exit 1
+fi
 BASE=$(mktemp -d "${TMPDIR:-/tmp}/learning-os-example.XXXXXX")
 export PYTHONUTF8=1 PYTHONDONTWRITEBYTECODE=1
 unset PYTHONOPTIMIZE
@@ -49,6 +63,8 @@ PY="$BASE/venv/bin/python"
 "$PY" --version
 git --version
 "$PY" -m pip show PyYAML
+"$PY" -m unittest -v \
+  tests.test_runtime_adapter.GitCliProviderTests.test_materialize_uses_host_bound_identity_and_strips_git_metadata
 "$PY" scripts/validate_learning_os.py . --core
 "$PY" -m tests.answer_closure_fixture --output "$BASE/answer-closure"
 "$PY" -m tests.git_recovery_fixture --output "$BASE/git-recovery"
@@ -65,15 +81,60 @@ for the separate Windows validation setup.
 
 Expected top-level results:
 
-1. The Core validator exits 0 with `validated Core snapshot: 0 error(s)`.
+1. The provider preflight runs one passing test against disposable local Git
+   repositories. It exercises the provider's blob-free metadata and bounded
+   hydration path; accepting the CLI flag alone is not this behavior check.
+   The Core validator then exits 0 with `validated Core snapshot: 0 error(s)`.
 2. The answer exporter exits 0 without a success banner and creates seven files:
    `mechanical-replay.json` and `{elm,pine,reed}-{b,c}-packet.json`.
 3. The Git exporter exits 0 and prints JSON with `status: "passed"`,
    `process_count: 8`, and this run's `source_identity_sha256`.
 
-Stop on any unexpected exit or mismatch; see the stop rules below. For review
-or integration, the [agent contract](../AGENTS.md) additionally requires the full
-suite on the exact candidate: `"$PY" -m unittest discover -s tests -v`.
+Stop on any unexpected exit or mismatch; see the stop rules below. A preflight
+failure stops before either exporter; preserve its diagnostics and correct the
+Git/environment prerequisite rather than bypassing the provider's guards.
+
+### Review or integration: validate the actual candidate
+
+The recipe above leaves the shell in the older baseline checkout. Its results
+are **not candidate validation**. The [agent contract](../AGENTS.md) requires
+both the Core validator and full suite on the exact candidate under review.
+
+Separately obtain a clean checkout of that reviewed commit. Set `CANDIDATE_DIR`
+to its absolute path, `EXPECTED_CANDIDATE_SHA` and `EXPECTED_CANDIDATE_TREE` to
+the full commit/tree IDs from the reviewed PR or independently verified receipt,
+and `CANDIDATE_PY` to an absolute Python 3.12 executable with that candidate's
+declared dependencies installed. Do not copy the baseline pin or derive the
+expected IDs from whichever checkout happens to be current. Run this block in
+a subshell so the later example-inspection commands keep their baseline context:
+
+```sh
+(
+  set -eu
+  : "${CANDIDATE_DIR:?Set the separate candidate checkout path}"
+  : "${EXPECTED_CANDIDATE_SHA:?Set the full reviewed candidate commit SHA}"
+  : "${EXPECTED_CANDIDATE_TREE:?Set the full reviewed candidate tree SHA}"
+  : "${CANDIDATE_PY:?Set the absolute candidate Python executable}"
+  cd "$CANDIDATE_DIR"
+  test "$(git rev-parse HEAD)" = "$EXPECTED_CANDIDATE_SHA"
+  test "$(git rev-parse HEAD^{tree})" = "$EXPECTED_CANDIDATE_TREE"
+  test -z "$(git status --porcelain)"
+  export PYTHONUTF8=1 PYTHONDONTWRITEBYTECODE=1
+  unset PYTHONOPTIMIZE
+  git --no-lazy-fetch --version
+  "$CANDIDATE_PY" --version
+  "$CANDIDATE_PY" -m pip show PyYAML
+  printf 'Candidate commit: %s\nCandidate tree: %s\n' \
+    "$EXPECTED_CANDIDATE_SHA" "$EXPECTED_CANDIDATE_TREE"
+  "$CANDIDATE_PY" scripts/validate_learning_os.py . --core
+  "$CANDIDATE_PY" -m unittest discover -s tests -v
+  test -z "$(git status --porcelain)"
+)
+```
+
+Retain both check results with those IDs. An unpublished staged candidate needs
+an independently supplied expected tree plus patch identity and a verified
+index/worktree match; it must not be represented as this clean-commit workflow.
 
 ## 2. Chapter A: answer-conditioned continuity
 
