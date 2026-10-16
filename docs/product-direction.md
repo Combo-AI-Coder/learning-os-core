@@ -90,6 +90,18 @@ Public readiness should not be equated with feature count or UI polish. A small 
 
 Packaging, onboarding, licensing, documentation, examples, and deployment ergonomics are productization concerns. They should support the reference product without becoming a second learner-state authority.
 
+### First technical-preview readiness
+
+The first public technical preview requires all three of the following, as confirmed in the [Core #34 product-direction decision](https://github.com/Combo-AI-Coder/learning-os-core/issues/34#issuecomment-6186452535):
+
+1. **Real longitudinal use:** at least one real, recoverable, longitudinal learning journey must demonstrate meaningful actual use of durable learner state for both continuity and a defensible next teaching/learning action. Retain the actual results and limitations with the appropriate private owner; do not copy real learner state, sensitive source data, or private transcripts into public Core.
+2. **A separate reproducible public reference:** a technical self-directed learner must be able to run a public-safe synthetic/example Instance and Core journey through documented setup/quickstart instructions, without private data. The example must explain durable-state and Evidence/Knowledge transitions and the basis for the next action.
+3. **Evidence-bounded claims:** clearly distinguish mechanically verified behavior, observations from real learning, and teaching/learning effects that remain unproven. Public claims must match the actual evidence and identify its limitations.
+
+A large controlled experiment or established long-term learning-effect advantage is **not a prerequisite** for this initial technical preview. A mature claim of causal, sustained learning benefit requires stronger evidence and remains a later research/product frontier. A one-off fluent tutoring answer, synthetic test PASS, single self-graded example, or completed PR does not replace the real journey.
+
+This threshold does not assert that these requirements have been met, declare Core #34 complete, or change its currently selected tests. It grants no merge, deployment/promotion, public release, or real learner/Instance mutation authority.
+
 ## First post-restart product cycle
 
 The first product cycle follows this **decision order**, not an automatic mutation sequence:
