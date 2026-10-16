@@ -35,6 +35,11 @@ Use that environment's Python for the other validation commands below as well. D
 installation may need package-index access; the validation and synthetic replay
 use local fixtures, without model calls or live learner/provider access.
 
+For a runnable two-chapter walkthrough, see the
+[offline synthetic reference example](docs/reference-example.md). It explains
+answer-conditioned continuity and local-Git recovery, with separate fixtures,
+expected outputs, and the limits of what each run establishes.
+
 For a smaller evidence-reading entry, see the
 [Core #19 offline intake-control replay](docs/evaluations/core19-intake-controls-results.md#reproduce-the-retained-evidence-offline).
 It covers the retained scope/set/reset/inheritance cases and explains which
