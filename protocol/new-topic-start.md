@@ -56,6 +56,35 @@ to start immediately takes precedence over intake depth (`defer_intake`); begin 
 provisional route and handle only genuinely blocking uncertainty without a survey.
 Depth changes neither evidence/Knowledge semantics nor privacy or write authority.
 
+### First-use invitation without a required choice
+
+On genuinely blank first use, when no learner preference is available to recover,
+proactively make the intake-depth choice discoverable with a brief, neutral,
+low-friction invitation. The learner may start immediately or choose to share a
+little or more relevant goal/background context first. Make clear that answering
+the invitation is optional and the choice can be changed later; do not require a
+mode selection, settings step, or preference survey before useful learning.
+
+If the learner skips or ignores the preference invitation, apply the precedence
+above and its existing non-personal default when no preference is supplied. Do
+not invent or persist a personalized preference from silence, a skipped choice,
+or the fallback. A viable learning request proceeds without waiting for a
+preference choice. A current instruction to start immediately still takes
+precedence: ask only genuinely blocking questions when needed, leaving
+nonblocking background unknown.
+
+The invitation may accompany the essential learning-goal question when that goal
+is unknown; it need not be a separate workflow. A new conversation for a known
+learner or Topic is not blank first use: recover the relevant recorded context
+and explicitly scoped preferences rather than restarting onboarding. This
+protocol does not prescribe a fixed script or repetition frequency, change the
+Core fallback value, or establish that it represents most learners' preferences.
+
+This experience invitation is separate from trusted first-Topic/Main Branch,
+initial-generation and runtime admission. Offering or answering it grants no
+learner-state persistence, runtime authority, or first-install setup permission;
+the existing ownership, deployment, generation and CAS requirements still apply.
+
 ### Narrow persistence and current interaction agency
 
 The reference host exposes `set_intake_preference(scope, depth,
