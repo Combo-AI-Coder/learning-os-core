@@ -803,3 +803,13 @@ Any derived planning artifact should be able to identify the learner goal/plan r
 Legacy/private project-design `lineage_control` documents may remain supported by compatibility validation and may remain canonical in the Private Control repository under that target's own governance. They are not ordinary Core or Instance product state.
 
 Core does not define Agent/session/project-design generation acquisition, handoff publication, claim, takeover, or writer credentials. Current execution-environment authority and the applicable target repository own those collaboration semantics. A legacy lineage document therefore cannot be used by ordinary Runtime to infer or acquire project/session authority, and it never bypasses deployment, learning-Branch, fresh-read, or target-CAS guards.
+## Synthetic first-use inactive registry use
+
+The existing branch registry lifecycle `idle` also fences the synthetic first-use
+staging sequence specified in `deployment-runtime.md`. The initial Main record
+binds the current Subtopic but admits no ordinary session until the final registry
+CAS changes lifecycle to `active` and revision to 2. Main runtime still has one
+active generation 1; its visibility is not authorization. No new state file type
+or learner preference is introduced. Initial Topic/Subtopic Plan revisions and
+Progress references are 1, milestone statuses remain `planned`, and current/resume
+mappings plus the actual Plan milestone keys exist before checkpoint use.

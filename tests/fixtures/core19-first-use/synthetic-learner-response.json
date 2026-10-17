@@ -1,0 +1,5 @@
+{
+  "kind": "scripted_synthetic_learner",
+  "text": "For “the cat sat on the”, “mat” could be likely. A token may be part of a word. I still want to compare what “bank” means beside a river and in a money-related sentence.",
+  "not_a_human_learning_observation": true
+}

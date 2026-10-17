@@ -1006,6 +1006,35 @@ class RuntimeSessionBroker:
         )
         return self._issue_session(state)
 
+    def _open_first_use_session(self, *, topic, subtopic, lineage_id,
+                                expected_instance_head, authorize):
+        """Host-only final binding after trusted first-use activation.
+
+        No caller-chosen generation/roots. The caller must hold current grant
+        and shared deployment leases; this private entry is not a facade API.
+        """
+        authorize()
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=(f"topics/{topic}", "evidence", "learner"),
+            writable_roots=(f"topics/{topic}/subtopics/{subtopic}/progress.yaml",),
+        )
+        session = self.open_session(
+            branch_runtime_path=f"topics/{topic}/coordination/branches/main/runtime.yaml",
+            policy=policy, expected_generation=1,
+        )
+        try:
+            state = self._session_state(session)
+            if (state.binding.lineage_id != lineage_id or
+                    state.binding.role != "main" or state.binding.subtopic != subtopic):
+                raise GuardRejected("first-use binding changed")
+            self._assert_deployed_write_policy_compatible(state)
+            self._assert_instance_authority_head_current(state, expected_instance_head)
+            authorize()
+            return session
+        except BaseException:
+            self.close_session(session)
+            raise
+
     def _issue_session(
         self, state: _LearningRuntimeSessionState
     ) -> LearningRuntimeSession:
