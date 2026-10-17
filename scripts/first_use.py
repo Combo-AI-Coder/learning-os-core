@@ -351,7 +351,9 @@ class SyntheticFirstUseService:
                 [sys.executable, str(core.root / "scripts/validate_learning_os.py"), "--write-policy-fingerprint"], cwd=core.root)
             if declared != actual or actual != instance_write_policy_fingerprint():
                 raise FirstUseRejected("stale_deployment")
-            instance = self.provider.materialize(inst["repository_id"], inst["canonical_ref"])
+            materialize_instance = (self.provider.materialize_first_use_baseline if receipt is None
+                                    else self.provider.materialize)
+            instance = materialize_instance(inst["repository_id"], inst["canonical_ref"])
             owned.append(instance)
             if instance.repository_id != inst["repository_id"]:
                 raise FirstUseRejected("target_identity_conflict")

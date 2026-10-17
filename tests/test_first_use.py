@@ -58,7 +58,7 @@ def repository(root, files):
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8", newline="")
     git("add", ".", cwd=root)
-    git("commit", "-qm", "Synthetic initial transport", cwd=root)
+    git("commit", "--allow-empty", "-qm", "Synthetic initial transport", cwd=root)
     remote = root.with_suffix(".git")
     git("clone", "-q", "--bare", str(root), str(remote))
     git("--git-dir", str(remote), "config", "uploadpack.allowFilter", "true")
@@ -221,6 +221,65 @@ class FirstUseTests(unittest.TestCase):
             self.assertEqual(head, self.head())
         result.host.close()
 
+    def test_truly_empty_tree_baseline_activates_and_recovers_first_ack(self):
+        for interruption in ("none", "prepared", "accepted"):
+            with self.subTest(interruption=interruption):
+                if interruption != "none":
+                    self.doCleanups()
+                    self.setUp()
+                self.instance_remote = repository(self.root / "empty-baseline", {})
+                self.baseline = git("--git-dir", str(self.instance_remote), "rev-parse", "main")
+                self.assertEqual("", git("--git-dir", str(self.instance_remote), "ls-tree", "-r", "main"))
+                self.provider.bindings[INSTANCE_ID] = GitRepositoryBinding(INSTANCE_ID, str(self.instance_remote),
+                                                                          "synthetic/instance", writable=True)
+                self.bindings = [binding if binding.repository_id != INSTANCE_ID else self.provider.bindings[INSTANCE_ID]
+                                 for binding in self.bindings]
+                # Public ordinary transport remains strict, even on the synthetic subclass.
+                with self.assertRaisesRegex(ResolutionError, "empty directory"):
+                    self.provider.materialize(INSTANCE_ID, "main")
+                with self.assertRaisesRegex(ResolutionError, "empty directory"):
+                    self.provider.create_text(INSTANCE_ID, "main", "ordinary.txt", "not allowed", "synthetic ordinary create",
+                                              expected_ref_sha=self.baseline)
+                self.prepare()
+                self.assertEqual([], self.store.read()["manifest"]["baseline"]["entries"])
+                real_git = self.provider._git
+                def lost_response(*args, **kwargs):
+                    value = real_git(*args, **kwargs)
+                    if args and args[0] == "push" and self.store.read()["confirmed"] == 0:
+                        raise CasConflict("synthetic empty baseline first acknowledgement lost")
+                    return value
+                if interruption == "prepared":
+                    step = self.stop_after_receipt()
+                    self.assertEqual(self.baseline, self.head())
+                    result = self.apply(self.new_service(provider=self.new_provider()))
+                    self.assertEqual(step.candidate, self.store.read()["steps"][0]["candidate"])
+                elif interruption == "accepted":
+                    with mock.patch.object(self.provider, "_git", side_effect=lost_response):
+                        self.assertEqual("outcome_unknown", self.apply().status)
+                    candidate = self.store.read()["steps"][0]["candidate"]
+                    self.assertEqual(candidate, self.head())
+                    result = self.apply(self.new_service(provider=self.new_provider()))
+                    self.assertEqual(candidate, self.store.read()["steps"][0]["candidate"])
+                else:
+                    result = self.apply()
+                self.assertEqual("active", result.status)
+                self.assert_ten_transitions()
+                result.host.close()
+
+    def test_bootstrap_empty_root_exception_still_rejects_nested_empty_tree(self):
+        clone = self.root / "instance"
+        empty_tree = subprocess.run(["git", "hash-object", "-t", "tree", "--stdin"], cwd=clone,
+                                    input="", text=True, capture_output=True, check=True).stdout.strip()
+        raw = f"040000 tree {empty_tree}\tempty\n"
+        tree = subprocess.run(["git", "mktree"], cwd=clone, input=raw, text=True,
+                              capture_output=True, check=True).stdout.strip()
+        commit = git("commit-tree", tree, "-p", self.baseline, "-m", "Synthetic nested empty directory", cwd=clone)
+        git("push", "-q", str(self.instance_remote), f"{commit}:main", cwd=clone)
+        with self.assertRaisesRegex(ResolutionError, "empty directory"):
+            self.prepare()
+        self.assertEqual(commit, self.head())
+        self.assertFalse(self.provider.first_use_trace)
+
     def test_all_ten_accepted_lost_ack_restart_exact_candidates(self):
         # Each subtest uses a fresh blank fixture. Never seed learner documents.
         for index in range(10):
@@ -279,6 +338,20 @@ class FirstUseTests(unittest.TestCase):
         self.assertEqual(step.candidate, self.store.read()["steps"][0]["candidate"])
         self.assert_ten_transitions()
         result.host.close()
+
+    def test_prepared_verification_reuses_only_current_exact_object_walks(self):
+        step = self.stop_after_receipt()
+        provider = self.new_provider()
+        real_walk = provider._tree_objects
+        # Each restore must re-read both exact trees; a prior successful call
+        # must never substitute for the next restore's Git object evidence.
+        for _ in range(2):
+            with mock.patch.object(provider, "_tree_objects", wraps=real_walk) as walk:
+                with provider._first_use_restore(step):
+                    pass
+            self.assertEqual([step.descriptor["parent"], step.candidate],
+                             [call.args[1] for call in walk.call_args_list])
+        self.assertEqual(self.baseline, self.head())
 
     def test_unknown_old_publisher_blocks_republish(self):
         step = self.stop_after_receipt()

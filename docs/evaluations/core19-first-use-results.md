@@ -16,10 +16,11 @@ persistent permission creation, cross-process revocation, deployment or merge.
 ## Reproducible structural acceptance
 
 Run `python scripts/validate_learning_os.py . --core` and
-`python -m unittest discover -s tests -v`. `tests/test_first_use.py` adds 38 tests
+`python -m unittest discover -s tests -v`. `tests/test_first_use.py` adds 41 tests
 with real local Git transports, including:
 
-- N: a genuinely blank tree, complete nine-document validation, every inactive
+- N: a zero-file empty-root commit and an optional-README baseline, complete
+  nine-document validation, every inactive
   prefix denied by ordinary open, exactly ten single-parent/single-path accepted
   commits, unique generation 1, and an actually saved checkpoint. Exact Git diff
   and complete semantic comparison show only authorized checkpoint fields move;
@@ -47,6 +48,22 @@ claim of an actual Windows run. Tests cover adapter restart and controlled local
 transport failures, not arbitrary machine crashes, power loss or Internet
 availability. An orphan operation lock remains blocked until separately proven
 drained; no unsafe lock-stealing recovery is provided.
+
+The initial Code review identified that the README-only fixture missed the
+zero-file root-tree case. The repair permits an empty root only on dedicated
+first-use paths, retains ordinary/nested-empty rejection, and tests both normal
+activation and first-acceptance lost-response recovery from that baseline.
+
+The first hosted Windows run exhausted its existing 15-minute job budget; it
+did not report an assertion failure before cancellation. Profiling exposed
+repeated Git subprocess work. The synthetic provider now reuses the two exact
+validated object walks only within one verification/preparation invocation.
+There is no cross-call cache: every restore and checkout still reads Git objects,
+and remote refs, authority, receipts and publication outcomes remain fresh.
+A narrow regression checks both once-per-commit traversal and fresh revalidation
+on the next restore. Timings and hosted outcomes are reported separately in the
+PR receipt; this change alone does not establish Windows completion or an
+interactive performance guarantee.
 
 ## One independent-context A/B behavior sample
 

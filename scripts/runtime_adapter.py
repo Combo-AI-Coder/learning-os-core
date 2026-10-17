@@ -1464,7 +1464,7 @@ class GitCliProvider:
         return full_path, next_depth, next_expanded
 
     def _tree_objects(
-        self, repo: Path, commit: str
+        self, repo: Path, commit: str, *, allow_empty_root: bool = False
     ) -> list[tuple[str, str, str, str]]:
         root_tree = self._commit_tree_sha(repo, commit)
         pending_trees: list[tuple[str, str, int]] = [("", root_tree, 0)]
@@ -1487,6 +1487,8 @@ class GitCliProvider:
                     extra_env={"GIT_NO_LAZY_FETCH": "1"},
                 )
                 if not raw:
+                    if allow_empty_root and not prefix and depth == 0 and tree_sha == root_tree:
+                        return []
                     raise ResolutionError("Git tree contains an empty directory")
                 tree_cache[tree_sha] = raw
             listing_bytes += len(raw)
@@ -1519,11 +1521,13 @@ class GitCliProvider:
         return objects
 
     def _tree_entries(
-        self, repo: Path, commit: str
+        self, repo: Path, commit: str, *, allow_empty_root: bool = False
     ) -> list[tuple[str, str, str]]:
         return [
             (path, sha, mode)
-            for path, sha, mode, object_type in self._tree_objects(repo, commit)
+            for path, sha, mode, object_type in self._tree_objects(
+                repo, commit, allow_empty_root=allow_empty_root
+            )
             if object_type == "blob"
         ]
 
@@ -1612,9 +1616,9 @@ class GitCliProvider:
         return total
 
     def _verify_regular_tree(
-        self, repo: Path, commit: str
+        self, repo: Path, commit: str, *, allow_empty_root: bool = False
     ) -> list[tuple[str, str, str, str]]:
-        objects = self._tree_objects(repo, commit)
+        objects = self._tree_objects(repo, commit, allow_empty_root=allow_empty_root)
         seen_casefold: dict[str, str] = {}
         seen_win32_upper: dict[str, str] = {}
         nonempty_directories: set[str] = set()
@@ -1912,6 +1916,8 @@ class GitCliProvider:
         self,
         binding: GitRepositoryBinding,
         ref: str,
+        *,
+        allow_empty_root: bool = False,
     ) -> tuple[tempfile.TemporaryDirectory, Path, str]:
         td = tempfile.TemporaryDirectory(prefix="learning-os-git-")
         repo = Path(td.name) / "repo"
@@ -1930,7 +1936,7 @@ class GitCliProvider:
                 )
             if not EXACT_COMMIT.fullmatch(fetched):
                 raise ResolutionError("Git did not resolve an exact commit")
-            objects = self._verify_regular_tree(repo, fetched)
+            objects = self._verify_regular_tree(repo, fetched, allow_empty_root=allow_empty_root)
             self._require_blob_free_metadata_fetch(repo, objects)
             blob_cap = self._bounded_blob_fetch_cap(objects)
             if blob_cap is not None:
@@ -1953,6 +1959,8 @@ class GitCliProvider:
         self,
         binding: GitRepositoryBinding,
         branch: str,
+        *,
+        allow_empty_root: bool = False,
     ) -> tuple[
         tempfile.TemporaryDirectory, Path, str, str, int, int | None
     ]:
@@ -1969,7 +1977,7 @@ class GitCliProvider:
             fetched = self._resolve_fetched_commit(repo)
             if not EXACT_COMMIT.fullmatch(fetched):
                 raise ResolutionError("Git did not resolve an exact branch head")
-            objects = self._verify_regular_tree(repo, fetched)
+            objects = self._verify_regular_tree(repo, fetched, allow_empty_root=allow_empty_root)
             self._require_blob_free_metadata_fetch(repo, objects)
             blob_cap = self._bounded_blob_fetch_cap(objects)
             if blob_cap is not None:
@@ -2039,16 +2047,22 @@ class GitCliProvider:
     def materialize(
         self, repository_id: int, ref: str
     ) -> MaterializedRepository:
+        return self._materialize(repository_id, ref)
+
+    def _materialize(
+        self, repository_id: int, ref: str, *, allow_empty_root: bool = False
+    ) -> MaterializedRepository:
         with self._tempdirs_lock:
             if self._closed:
                 raise ResolutionError("repository provider is closed")
         binding = self._binding(repository_id)
-        checkout_td, repo, commit = self._checkout(binding, ref)
+        bootstrap = {"allow_empty_root": True} if allow_empty_root else {}
+        checkout_td, repo, commit = self._checkout(binding, ref, **bootstrap)
         snapshot_td = tempfile.TemporaryDirectory(prefix="learning-os-snapshot-")
         snapshot = Path(snapshot_td.name)
         entries: list[tuple[str, str, str]] = []
         try:
-            entries = self._tree_entries(repo, commit)
+            entries = self._tree_entries(repo, commit, **bootstrap)
             self._materialize_blobs(repo, entries, snapshot)
         except Exception:
             snapshot_td.cleanup()
@@ -2420,6 +2434,11 @@ class SyntheticPreparedGitProvider(GitCliProvider):
                 raise ResolutionError("synthetic first-use requires local Git repositories")
         self.first_use_trace = []
 
+    def materialize_first_use_baseline(self, repository_id, ref):
+        # Explicit bootstrap-only exception. Ordinary materialize/read/create
+        # retain their strict empty-root rejection; nested empty trees always fail.
+        return self._materialize(repository_id, ref, allow_empty_root=True)
+
     @staticmethod
     def _first_use_json(value) -> bytes:
         return json.dumps(value, sort_keys=True, separators=(",", ":"),
@@ -2450,7 +2469,7 @@ class SyntheticPreparedGitProvider(GitCliProvider):
             raise ResolutionError("prepared candidate identity is invalid")
         return self.prepared_store / f"{candidate}.{suffix}"
 
-    def _first_use_verify(self, repo: Path, descriptor: dict) -> None:
+    def _first_use_verify(self, repo: Path, descriptor: dict):
         d = descriptor
         raw = self._git_bytes("cat-file", "commit", d["candidate"], cwd=repo)
         header, separator, message = raw.partition(b"\n\n")
@@ -2463,14 +2482,19 @@ class SyntheticPreparedGitProvider(GitCliProvider):
             raise ResolutionError("prepared candidate tree differs")
         if self._commit_tree_sha(repo, d["parent"]) != d["parent_tree"]:
             raise ResolutionError("prepared parent tree differs")
+        # Reuse only this invocation's exact, validated object walks. A fresh
+        # restore/checkout still performs real Git reads; no cache crosses calls.
+        verified = {}
         for commit in (d["parent"], d["candidate"]):
-            objects = self._verify_regular_tree(repo, commit)
+            objects = self._verify_regular_tree(repo, commit,
+                allow_empty_root=commit == d["parent"] and d["metadata"]["step_index"] == 0)
             self._validate_snapshot_budget(repo, objects,
                 fetched_blob_cap=self._bounded_blob_fetch_cap(objects))
-        before = {path: (sha, mode) for path, sha, mode in
-                  self._tree_entries(repo, d["parent"])}
-        after = {path: (sha, mode) for path, sha, mode in
-                 self._tree_entries(repo, d["candidate"])}
+            verified[commit] = objects
+        before = {path: (sha, mode) for path, sha, mode, kind in
+                  verified[d["parent"]] if kind == "blob"}
+        after = {path: (sha, mode) for path, sha, mode, kind in
+                 verified[d["candidate"]] if kind == "blob"}
         expected_old = None if d["old_blob"] is None else (d["old_blob"], d["old_mode"])
         if before.get(d["path"]) != expected_old:
             raise ResolutionError("prepared old object differs")
@@ -2478,6 +2502,7 @@ class SyntheticPreparedGitProvider(GitCliProvider):
         expected[d["path"]] = (d["new_blob"], "100644")
         if before == after or after != expected:
             raise ResolutionError("prepared tree is not the exact single-path effect")
+        return verified
 
     def _first_use_load(self, step: PreparedFirstUseStep):
         if not isinstance(step, PreparedFirstUseStep):
@@ -2544,7 +2569,7 @@ class SyntheticPreparedGitProvider(GitCliProvider):
         encoded = content.encode("utf-8")
         if len(encoded) > 64 * 1024:
             raise ResolutionError("first-use text exceeds its bounded budget")
-        td, repo, parent, branch_ref, _, _ = self._checkout_branch(binding, branch)
+        td, repo, parent, branch_ref, _, _ = self._checkout_branch(binding, branch, allow_empty_root=step_index == 0)
         try:
             if parent != expected_parent:
                 raise CasConflict("first-use branch head conflict")
@@ -2572,10 +2597,10 @@ class SyntheticPreparedGitProvider(GitCliProvider):
                      old_blob=None if old is None else old[0],
                      old_mode=None if old is None else old[1], new_blob=blob,
                      metadata=metadata)
-            self._first_use_verify(repo, d)
+            verified = self._first_use_verify(repo, d)
             identities = {parent: "commit", candidate: "commit", tree: "tree", d["parent_tree"]: "tree"}
             for commit in (parent, candidate):
-                identities.update({sha: kind for _, sha, _, kind in self._tree_objects(repo, commit)})
+                identities.update({sha: kind for _, sha, _, kind in verified[commit]})
             objects = {}
             for sha, kind in identities.items():
                 raw = self._git_bytes("cat-file", kind, sha, cwd=repo)
@@ -2637,10 +2662,10 @@ class SyntheticPreparedGitProvider(GitCliProvider):
             return "outcome_unknown"
 
     def inspect_first_use_tree(self, repository_id, ref):
-        td, repo, commit = self._checkout(self._binding(repository_id), ref)
+        td, repo, commit = self._checkout(self._binding(repository_id), ref, allow_empty_root=True)
         try:
             return dict(head=commit, tree=self._commit_tree_sha(repo, commit),
-                        entries=self._tree_entries(repo, commit))
+                        entries=self._tree_entries(repo, commit, allow_empty_root=True))
         finally:
             self._cleanup_checkout_tempdir(td)
 
