@@ -180,3 +180,13 @@ After intake is answered, left unknown, or explicitly skipped:
 5. begin full teaching.
 
 Do not present a generic curriculum map as if it were the learner-specific plan.
+### Trusted first-use reference
+
+For a truly blank, already-supplied Instance, ordinary Runtime cannot claim the
+initial Main by choosing generation 1. The synthetic Host owning transition in
+`deployment-runtime.md` validates a typed intent, stages the full nine-document
+current-unit graph inactive, then activates it by exact prepared registry CAS.
+The optional invitation above stays optional: silence does not persist an intake
+preference, and a viable start-now request need not wait for that choice. The
+reference route uses the existing prediction/context curriculum; it is not a
+production installer or a generic arbitrary-YAML creation endpoint.

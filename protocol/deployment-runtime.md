@@ -93,3 +93,96 @@ Learner Knowledge is a derived capability-state family, so ordinary generic repl
 For every Evidence reference newly added to a capability's support/challenge portfolio, the broker requires the session's host-owned read policy to permit that exact Evidence path before inspecting it, then reads the immutable Evidence from the same pinned Instance snapshot. One reconciliation may add at most 32 new Evidence references; the bound is checked before any per-Evidence repository read so a candidate cannot monopolize the write lease through unbounded validation I/O. New references must use a typed capability target that exactly matches the Knowledge domain, concept and capability, and the Evidence interpretation direction must match the support/challenge side. Legacy references already present in current Knowledge may remain; they are not retroactively reclassified by this mechanical gate. Static candidate validation still verifies the complete resulting Instance and all Evidence references before canonical mutation.
 
 This operation validates reference relevance and write integrity; it does not choose the capability state, confidence, or integration outcome on the model's behalf. Semantic integration still follows evidence-integration.md, including alternative explanations, evidence diversity/diagnosticity and the rule that low-confidence Evidence alone cannot trigger a persistent transition.
+
+## Synthetic trusted first-use owning transition
+
+The reference `scripts/first_use.py` implements a separate, synthetic-only Host
+bootstrap operation. It is not part of the ordinary seven-operation facade.
+Existing repository supply, an existing canonical branch, and an active, exact
+Core deployment are prerequisites. A real authentication/grant/receipt provider,
+production permission creation, rollout and real learner initialization are not
+implemented by this reference.
+
+The trusted Host fixes numeric repository identities, locator, canonical ref,
+receiving principal/surface and the permitted teaching template. Typed proposal
+content cannot choose roots, generation, Core pin, YAML or arbitrary paths. The
+synthetic grant covers its exact normalized intent and target. Reading a runtime
+generation, an operation ID, repository bytes or a receipt is not authorization.
+
+### Publication, recovery and activation
+
+The installation's shared private store reserves one target slot for the exact
+operation and binding before preparation. Its operation lock serializes entries
+across store objects. A competing operation fails before prepare/publish; an
+orphan lock is not stolen. The store must be common to all Hosts controlling the
+same target. A separate store is not an independent right to claim that target.
+
+The fixed manifest creates nine existing canonical documents in this order:
+Instance config; Topic Goal, Plan, Progress; current Subtopic Plan, Progress,
+Definition; branch registry; Main runtime. Subtopic Definition remains last for
+its unit. The registry remains `idle`, so even read-only ordinary sessions cannot
+open. Runtime generation 1 may be visible without constituting a usable writer.
+Candidate validation covers the full graph before any publication.
+
+Each single-file step uses the optional prepared provider surface. Before push,
+its private store durably retains exact commit bytes, the single expected parent,
+Git trees/blobs, path/blob/mode identities and operation/step/intent/manifest
+metadata. The integrity-protected receipt then durably records that descriptor.
+Only after both steps does the provider push the exact candidate SHA using an
+exact-head lease. The candidate is a normal single-parent successor, not a
+history rewrite. No GET-then-PUT or blob-only fallback is permitted. The REST
+provider remains unsupported.
+
+Git tree-object evidence proves modes and unchanged paths. Filesystem stat,
+chmod success and equal text do not prove this. Unrelated mode changes or
+same-byte commits with different identities fail closed. Fixed candidate bytes
+survive adapter restart; retry never regenerates a commit with a fresh timestamp.
+
+After each publish, only `head == prepared candidate` with verified objects is
+`applied`. `head == expected parent` is `not_applied` only before any publisher
+started or after independent proof it has ended. A timeout or killed local
+transport does not prove remote drain. Other heads, including an unfamiliar
+successor or same-byte rival commit, are conflicts. Missing/corrupt artifacts,
+unavailable reads or an undrained publisher retain `outcome_unknown` and stop
+later mutation. Receipt failure cannot authorize publishing.
+
+After all nine documents are verified and full deployment validation succeeds,
+one prepared exact-head/blob CAS changes only the registry to revision 2 and
+Main lifecycle `active`. This is activation's linearization point. Full readback,
+current authorization and exact deployed write-policy compatibility precede
+internal generation-1 capability issuance. No generation is accepted from the
+receiver. The Host scopes this reference writer to the bound Subtopic checkpoint.
+
+### Admission, revocation, delivery and exit
+
+Each step and issuance holds the shared deployment admission and current grant
+lease. Revocation drains admitted synthetic operations and closes issued handles;
+no later step/issuance begins after its linearization. Promotion must use the
+same admission/drain mechanism. Instance CAS cannot provide cross-repository
+atomicity or protect against external administrators ignoring that mechanism.
+The included gates model one process; production cross-process gates require
+separate implementation and validation.
+
+Unacknowledged activation is inspected against its prepared identity, never
+repeated. Redelivery is confined to the original authenticated binding and the
+unchanged activation window. A live cached handle is checked and reused. An
+unknown prior Host/handle is `delivery_pending`, not permission to issue a second
+writer. A closed/delivered handle is not replaced. Fresh writable continuity must
+use the existing learner-authorized successor handoff; fresh read-only recovery
+does not establish it. After normal learning advances, a completed initialization
+returns `already_applied` without restoring old progress or issuing a new writer.
+
+Transient materializations are released on every path, with all cleanup attempts
+made. Cleanup failure before activation blocks it; failure after a mutation does
+not prove that mutation failed. Prepared artifacts remain available for unknown
+results. The reference retains at most the fixed operation's ten bounded prepared
+packages plus its receipt/tombstone, including after delivery, rather than
+silently discarding recovery evidence. Production retention/key management is a
+separate adapter concern. No remote cleanup, reset, force rollback or deletion is
+provided. Inactive partial state remains visible to existing repository readers;
+this is admission isolation, not confidentiality isolation.
+
+The reference filesystem uses bounded HMAC-protected receipts and atomic
+replacement with file fsync. Tests cover local Git acceptance, interrupted
+responses and Host-adapter restart. They do not establish arbitrary power-loss,
+disk corruption recovery, production network reliability or real learning gains.

@@ -1,0 +1,29 @@
+{
+  "context": {
+    "documents": [
+      {
+        "content": "schema_version: '0.3'\ndocument_type: topic_goal\nupdated_at: '2026-10-17T15:25:56Z'\nrevision: 1\ntopic:\n  id: llm-first-use\n  title: Prediction and context\ngoal:\n  purpose:\n    value: Understand next-token prediction and tokens/context through two examples.\n    authority: user_authoritative\n  horizon:\n    type: null\n    deadline: null\n  depth_profile: {}\n  success_criteria:\n  - Explain next-token prediction using a short sentence.\n  - Compare two contexts and explain why a likely token need not be a true fact.\n  constraints: {}\n  preferences:\n    include: []\n    avoid: []\n",
+        "path": "topics/llm-first-use/goal.yaml",
+        "version_token": "f0822c48ce10d88588349d1654266fdd6e139b21"
+      },
+      {
+        "content": "schema_version: '0.3'\ndocument_type: topic_plan\nupdated_at: '2026-10-17T15:25:56Z'\nrevision: 1\ntopic: llm-first-use\nplan:\n  status: provisional\n  intake:\n    status: sufficient\n    gaps: []\n  based_on:\n    goal_revision: 1\n    curricula:\n    - domain: modern-language-models\n      curriculum_version: '0.2'\n  milestones:\n  - id: explain-boundaries\n    title: Prediction and context\n    objective: Understand next-token prediction and tokens/context through two examples.\n    exit_criteria:\n    - Explain next-token prediction using a short sentence.\n    - Compare two contexts and explain why a likely token need not be a true fact.\n    suggested_subtopic: prediction-and-context\n  suggested_sequence:\n  - explain-boundaries\n  replanning_triggers: []\n",
+        "path": "topics/llm-first-use/plan.yaml",
+        "version_token": "a4abde21be7ffe9d459fcb323dca979494504cbe"
+      },
+      {
+        "content": "schema_version: '0.3'\ndocument_type: subtopic_plan\nupdated_at: '2026-10-17T15:25:56Z'\nrevision: 1\ntopic: llm-first-use\nsubtopic: prediction-and-context\nplan:\n  status: provisional\n  based_on:\n    topic_plan_revision: 1\n    curricula:\n    - domain: modern-language-models\n      curriculum_version: '0.2'\n  objective: Understand next-token prediction and tokens/context through two examples.\n  milestones:\n  - id: next-token\n    title: Next-token prediction\n    exit_criteria:\n    - Explain next-token prediction using a short sentence.\n    curriculum_refs:\n    - type: curriculum_node\n      domain: modern-language-models\n      id: language_modeling.next_token_prediction\n  - id: tokens-context\n    title: Tokens, context and limits\n    exit_criteria:\n    - Compare two contexts and explain why a likely token need not be a true fact.\n    curriculum_refs:\n    - type: curriculum_node\n      domain: modern-language-models\n      id: representation.tokens_and_context\n  suggested_sequence:\n  - next-token\n  - tokens-context\n",
+        "path": "topics/llm-first-use/subtopics/prediction-and-context/plan.yaml",
+        "version_token": "65a045286253b4bd708338de028ea95e62310a32"
+      },
+      {
+        "content": "schema_version: '0.3'\ndocument_type: subtopic_progress\nupdated_at: '2026-10-17T15:25:56Z'\nrevision: 1\ntopic: llm-first-use\nsubtopic: prediction-and-context\nplan_revision: 1\nmilestones:\n  next-token:\n    status: planned\n  tokens-context:\n    status: planned\ncurrent:\n  milestone:\n  - next-token\nblockers: []\nresume:\n  return_point: null\n  ready_next:\n  - Explain next-token prediction using a short sentence.\nwatch: []\navoid_retesting: []\n",
+        "path": "topics/llm-first-use/subtopics/prediction-and-context/progress.yaml",
+        "version_token": "8f0771eeac3d7c712a9a365477922edc3b8a1043"
+      }
+    ],
+    "missing_optional": []
+  },
+  "request": "Explain next-token prediction with a short example, then introduce how tokens/context affect it. Do not infer my mastery or invent prior knowledge.",
+  "role": "You are teaching one synthetic learner in a first learning session."
+}

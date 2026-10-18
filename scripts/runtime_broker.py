@@ -447,6 +447,25 @@ class _PinnedInstanceAuthority:
     head: str
 
 
+def _run_pinned_core_validator(core_root: Path, arguments: list[str]) -> None:
+    """Run the deployed implementation with bounded time and no output capture."""
+    validator_path = core_root / "scripts" / "validate_learning_os.py"
+    if not validator_path.is_file():
+        raise GuardRejected("deployed Core validator is unavailable")
+    try:
+        result = subprocess.run(
+            [sys.executable, str(validator_path), *arguments],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            timeout=CANDIDATE_VALIDATION_TIMEOUT_SECONDS, check=False, cwd=core_root,
+        )
+    except subprocess.TimeoutExpired:
+        raise GuardRejected("candidate Instance validation timed out") from None
+    except OSError:
+        raise GuardRejected("candidate Instance validation failed to start") from None
+    if result.returncode != 0:
+        raise GuardRejected("candidate Instance state failed canonical validation")
+
+
 class RuntimeSessionBroker:
     """Bind a replaceable conversation surface to narrow Learning OS authority."""
 
@@ -1005,6 +1024,35 @@ class RuntimeSessionBroker:
             policy=policy,
         )
         return self._issue_session(state)
+
+    def _open_first_use_session(self, *, topic, subtopic, lineage_id,
+                                expected_instance_head, authorize):
+        """Host-only final binding after trusted first-use activation.
+
+        No caller-chosen generation/roots. The caller must hold current grant
+        and shared deployment leases; this private entry is not a facade API.
+        """
+        authorize()
+        policy = RuntimeCapabilityPolicy(
+            readable_roots=(f"topics/{topic}", "evidence", "learner"),
+            writable_roots=(f"topics/{topic}/subtopics/{subtopic}/progress.yaml",),
+        )
+        session = self.open_session(
+            branch_runtime_path=f"topics/{topic}/coordination/branches/main/runtime.yaml",
+            policy=policy, expected_generation=1,
+        )
+        try:
+            state = self._session_state(session)
+            if (state.binding.lineage_id != lineage_id or
+                    state.binding.role != "main" or state.binding.subtopic != subtopic):
+                raise GuardRejected("first-use binding changed")
+            self._assert_deployed_write_policy_compatible(state)
+            self._assert_instance_authority_head_current(state, expected_instance_head)
+            authorize()
+            return session
+        except BaseException:
+            self.close_session(session)
+            raise
 
     def _issue_session(
         self, state: _LearningRuntimeSessionState
@@ -1786,44 +1834,10 @@ class RuntimeSessionBroker:
                     encoding="utf-8",
                     newline="\n",
                 )
-                validator_path = (
-                    core.root / "scripts" / "validate_learning_os.py"
-                )
-                if not validator_path.is_file():
-                    raise GuardRejected(
-                        "deployed Core validator is unavailable"
-                    )
-                command = [
-                    sys.executable,
-                    str(validator_path),
-                    str(root),
-                    "--instance",
-                    "--core-snapshot",
-                    str(core.root),
-                    "--deployment-binding",
-                    str(binding_path),
-                ]
-                try:
-                    result = subprocess.run(
-                        command,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        timeout=CANDIDATE_VALIDATION_TIMEOUT_SECONDS,
-                        check=False,
-                        cwd=core.root,
-                    )
-                except subprocess.TimeoutExpired:
-                    raise GuardRejected(
-                        "candidate Instance validation timed out"
-                    ) from None
-                except OSError:
-                    raise GuardRejected(
-                        "candidate Instance validation failed to start"
-                    ) from None
-            if result.returncode != 0:
-                raise GuardRejected(
-                    "candidate Instance state failed canonical validation"
-                )
+                _run_pinned_core_validator(core.root, [
+                    str(root), "--instance", "--core-snapshot", str(core.root),
+                    "--deployment-binding", str(binding_path),
+                ])
         finally:
             self._release_materializations(snapshots)
 

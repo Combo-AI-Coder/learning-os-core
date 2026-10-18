@@ -7,6 +7,7 @@ ordinary-Runtime operations needed by the synthetic reference journey.
 """
 from __future__ import annotations
 
+import threading
 from typing import Any
 
 from scripts.runtime_adapter import (
@@ -89,6 +90,7 @@ class ReferenceLearningHost:
         self._broker = broker
         self._session = session
         self._closed = False
+        self._close_lock = threading.Lock()
 
     @classmethod
     def open(
@@ -114,10 +116,13 @@ class ReferenceLearningHost:
         return cls(broker, session)
 
     def close(self) -> None:
-        if self._closed:
-            return
-        self._broker.close_session(self._session)
-        self._closed = True
+        # Concurrent owners must join the same drain, not observe an in-flight
+        # broker revocation as if close had already completed.
+        with self._close_lock:
+            if self._closed:
+                return
+            self._broker.close_session(self._session)
+            self._closed = True
 
     def __enter__(self) -> "ReferenceLearningHost":
         return self

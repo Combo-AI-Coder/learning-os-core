@@ -169,3 +169,13 @@ Canonical learner intent may record whether re-engagement is enabled and the lea
 `last_meaningful_learning_at`, if cached in learner execution state, is a recoverable convenience projection; immutable/closed execution records are the stronger factual source. Meta Learning OS design/admin interactions do not count as meaningful domain learning.
 
 A reminder failure or missing provider task ID MUST NOT corrupt learning state. If an important reminder synchronization fails, tell the learner rather than pretending it is active.
+
+## Initial admission versus successor continuity
+
+The synthetic first-use transition in `deployment-runtime.md` owns initial
+Topic/Main creation and the first authorized capability. It does not replace
+normal learner-authorized handoff/pending-successor/claim. An interrupted result
+may recover only under its original grant and exact prepared activation window,
+without a second parallel writer. A new read-only consumer may recover canonical
+Goal/Plan/Progress through its Host's current read authorization; reading
+`active_generation: 1` grants no writable identity.

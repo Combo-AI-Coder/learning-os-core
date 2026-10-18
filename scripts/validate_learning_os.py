@@ -616,6 +616,7 @@ INSTANCE_GENERIC_WRITE_TRANSITION_RULES={
     "daily_execution":"preserve_locked_daily_baseline_v1",
 }
 INSTANCE_DEDICATED_RUNTIME_OPERATIONS={
+    "trusted_first_use":"nine_file_prepared_v1",
     "create_evidence":"v2",
     "reconcile_knowledge":"v2",
     "save_learning_checkpoint":"v1",

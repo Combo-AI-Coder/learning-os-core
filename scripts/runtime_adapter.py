@@ -5,6 +5,8 @@ live/materialization duties that intentionally do not belong to it.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
+
 import base64
 import errno
 import json
@@ -1462,7 +1464,7 @@ class GitCliProvider:
         return full_path, next_depth, next_expanded
 
     def _tree_objects(
-        self, repo: Path, commit: str
+        self, repo: Path, commit: str, *, allow_empty_root: bool = False
     ) -> list[tuple[str, str, str, str]]:
         root_tree = self._commit_tree_sha(repo, commit)
         pending_trees: list[tuple[str, str, int]] = [("", root_tree, 0)]
@@ -1485,6 +1487,8 @@ class GitCliProvider:
                     extra_env={"GIT_NO_LAZY_FETCH": "1"},
                 )
                 if not raw:
+                    if allow_empty_root and not prefix and depth == 0 and tree_sha == root_tree:
+                        return []
                     raise ResolutionError("Git tree contains an empty directory")
                 tree_cache[tree_sha] = raw
             listing_bytes += len(raw)
@@ -1517,11 +1521,13 @@ class GitCliProvider:
         return objects
 
     def _tree_entries(
-        self, repo: Path, commit: str
+        self, repo: Path, commit: str, *, allow_empty_root: bool = False
     ) -> list[tuple[str, str, str]]:
         return [
             (path, sha, mode)
-            for path, sha, mode, object_type in self._tree_objects(repo, commit)
+            for path, sha, mode, object_type in self._tree_objects(
+                repo, commit, allow_empty_root=allow_empty_root
+            )
             if object_type == "blob"
         ]
 
@@ -1610,9 +1616,9 @@ class GitCliProvider:
         return total
 
     def _verify_regular_tree(
-        self, repo: Path, commit: str
+        self, repo: Path, commit: str, *, allow_empty_root: bool = False
     ) -> list[tuple[str, str, str, str]]:
-        objects = self._tree_objects(repo, commit)
+        objects = self._tree_objects(repo, commit, allow_empty_root=allow_empty_root)
         seen_casefold: dict[str, str] = {}
         seen_win32_upper: dict[str, str] = {}
         nonempty_directories: set[str] = set()
@@ -1910,6 +1916,8 @@ class GitCliProvider:
         self,
         binding: GitRepositoryBinding,
         ref: str,
+        *,
+        allow_empty_root: bool = False,
     ) -> tuple[tempfile.TemporaryDirectory, Path, str]:
         td = tempfile.TemporaryDirectory(prefix="learning-os-git-")
         repo = Path(td.name) / "repo"
@@ -1928,7 +1936,7 @@ class GitCliProvider:
                 )
             if not EXACT_COMMIT.fullmatch(fetched):
                 raise ResolutionError("Git did not resolve an exact commit")
-            objects = self._verify_regular_tree(repo, fetched)
+            objects = self._verify_regular_tree(repo, fetched, allow_empty_root=allow_empty_root)
             self._require_blob_free_metadata_fetch(repo, objects)
             blob_cap = self._bounded_blob_fetch_cap(objects)
             if blob_cap is not None:
@@ -1951,6 +1959,8 @@ class GitCliProvider:
         self,
         binding: GitRepositoryBinding,
         branch: str,
+        *,
+        allow_empty_root: bool = False,
     ) -> tuple[
         tempfile.TemporaryDirectory, Path, str, str, int, int | None
     ]:
@@ -1967,7 +1977,7 @@ class GitCliProvider:
             fetched = self._resolve_fetched_commit(repo)
             if not EXACT_COMMIT.fullmatch(fetched):
                 raise ResolutionError("Git did not resolve an exact branch head")
-            objects = self._verify_regular_tree(repo, fetched)
+            objects = self._verify_regular_tree(repo, fetched, allow_empty_root=allow_empty_root)
             self._require_blob_free_metadata_fetch(repo, objects)
             blob_cap = self._bounded_blob_fetch_cap(objects)
             if blob_cap is not None:
@@ -2037,16 +2047,22 @@ class GitCliProvider:
     def materialize(
         self, repository_id: int, ref: str
     ) -> MaterializedRepository:
+        return self._materialize(repository_id, ref)
+
+    def _materialize(
+        self, repository_id: int, ref: str, *, allow_empty_root: bool = False
+    ) -> MaterializedRepository:
         with self._tempdirs_lock:
             if self._closed:
                 raise ResolutionError("repository provider is closed")
         binding = self._binding(repository_id)
-        checkout_td, repo, commit = self._checkout(binding, ref)
+        bootstrap = {"allow_empty_root": True} if allow_empty_root else {}
+        checkout_td, repo, commit = self._checkout(binding, ref, **bootstrap)
         snapshot_td = tempfile.TemporaryDirectory(prefix="learning-os-snapshot-")
         snapshot = Path(snapshot_td.name)
         entries: list[tuple[str, str, str]] = []
         try:
-            entries = self._tree_entries(repo, commit)
+            entries = self._tree_entries(repo, commit, **bootstrap)
             self._materialize_blobs(repo, entries, snapshot)
         except Exception:
             snapshot_td.cleanup()
@@ -2374,6 +2390,348 @@ class GitCliProvider:
                 cwd=repo, cas=True, binding=binding,
             )
             return new_commit
+        finally:
+            self._cleanup_checkout_tempdir(td)
+
+
+@dataclass(frozen=True)
+class PreparedFirstUseStep:
+    """Host-only identity; this is evidence, never a learning capability."""
+
+    candidate: str
+    artifact_sha256: str
+    descriptor: dict
+
+
+class PreparedFirstUseProvider(Protocol):
+    def prepare_first_use_step(self, **request) -> PreparedFirstUseStep: ...
+    def publish_first_use_step(
+        self, step: PreparedFirstUseStep, *, authorize: Callable[[], None]
+    ) -> None: ...
+    def inspect_first_use_step(self, step: PreparedFirstUseStep) -> str: ...
+
+
+class SyntheticPreparedGitProvider(GitCliProvider):
+    """Reference prepared transport for synthetic, local bare Git only.
+
+    This deliberately does not activate a production provider. The trusted host
+    owns this adapter and its private artifact directory. Atomic replacement +
+    fsync covers tested host-adapter restart, not arbitrary disk/power failure.
+    A started publisher with no durable completion remains unknown at its parent;
+    killing a transport is never treated as proof that a server was drained.
+    """
+
+    FIRST_USE_ARTIFACT_LIMIT = 4 * 1024 * 1024
+    FIRST_USE_BASELINE_LIMIT = 1024 * 1024
+
+    @staticmethod
+    def _first_use_metadata(repository_id, branch_ref, path, operation_id,
+                            step_index, intent_digest, manifest_digest):
+        return dict(schema="learning-os-first-use-step-v1", operation_id=operation_id,
+                    step_index=step_index, intent_digest=intent_digest,
+                    manifest_digest=manifest_digest, repository_id=repository_id,
+                    canonical_ref=branch_ref, path=path)
+
+    def __init__(self, bindings, *, prepared_store: Path, git_env=None):
+        super().__init__(bindings, git_env=git_env)
+        self.prepared_store = Path(prepared_store)
+        self.prepared_store.mkdir(parents=True, exist_ok=True)
+        if self.prepared_store.is_symlink():
+            raise ResolutionError("prepared store must be a private directory")
+        for binding in self.bindings.values():
+            if not Path(binding.remote).is_absolute() or not Path(binding.remote).is_dir():
+                raise ResolutionError("synthetic first-use requires local Git repositories")
+        self.first_use_trace = []
+
+    def materialize_first_use_baseline(self, repository_id, ref):
+        # Explicit bootstrap-only exception. Ordinary materialize/read/create
+        # retain their strict empty-root rejection; nested empty trees always fail.
+        return self._materialize(repository_id, ref, allow_empty_root=True)
+
+    @staticmethod
+    def _first_use_json(value) -> bytes:
+        return json.dumps(value, sort_keys=True, separators=(",", ":"),
+                          ensure_ascii=False).encode("utf-8")
+
+    @staticmethod
+    def _first_use_digest(value: bytes) -> str:
+        import hashlib
+        return hashlib.sha256(value).hexdigest()
+
+    @staticmethod
+    def _first_use_atomic(path: Path, raw: bytes) -> None:
+        if path.is_symlink():
+            raise ResolutionError("unsafe first-use artifact path")
+        fd, name = tempfile.mkstemp(prefix=".prepared-", dir=path.parent)
+        try:
+            with os.fdopen(fd, "wb") as output:
+                output.write(raw)
+                output.flush()
+                os.fsync(output.fileno())
+            os.replace(name, path)
+        finally:
+            if os.path.exists(name):
+                os.unlink(name)
+
+    def _first_use_artifact_path(self, candidate: str, suffix="json") -> Path:
+        if not isinstance(candidate, str) or not EXACT_COMMIT.fullmatch(candidate):
+            raise ResolutionError("prepared candidate identity is invalid")
+        return self.prepared_store / f"{candidate}.{suffix}"
+
+    def _first_use_verify(self, repo: Path, descriptor: dict):
+        d = descriptor
+        raw = self._git_bytes("cat-file", "commit", d["candidate"], cwd=repo)
+        header, separator, message = raw.partition(b"\n\n")
+        if (not separator or len(raw) > 16384 or
+                [line for line in header.splitlines() if line.startswith(b"parent ")]
+                != [f'parent {d["parent"]}'.encode("ascii")] or
+                message != self._first_use_json(d["metadata"]) + b"\n"):
+            raise ResolutionError("prepared commit parent or operation metadata differs")
+        if self._commit_tree_sha(repo, d["candidate"]) != d["tree"]:
+            raise ResolutionError("prepared candidate tree differs")
+        if self._commit_tree_sha(repo, d["parent"]) != d["parent_tree"]:
+            raise ResolutionError("prepared parent tree differs")
+        # Reuse only this invocation's exact, validated object walks. A fresh
+        # restore/checkout still performs real Git reads; no cache crosses calls.
+        verified = {}
+        for commit in (d["parent"], d["candidate"]):
+            objects = self._verify_regular_tree(repo, commit,
+                allow_empty_root=commit == d["parent"] and d["metadata"]["step_index"] == 0)
+            self._validate_snapshot_budget(repo, objects,
+                fetched_blob_cap=self._bounded_blob_fetch_cap(objects))
+            verified[commit] = objects
+        before = {path: (sha, mode) for path, sha, mode, kind in
+                  verified[d["parent"]] if kind == "blob"}
+        after = {path: (sha, mode) for path, sha, mode, kind in
+                 verified[d["candidate"]] if kind == "blob"}
+        expected_old = None if d["old_blob"] is None else (d["old_blob"], d["old_mode"])
+        if before.get(d["path"]) != expected_old:
+            raise ResolutionError("prepared old object differs")
+        expected = dict(before)
+        expected[d["path"]] = (d["new_blob"], "100644")
+        if before == after or after != expected:
+            raise ResolutionError("prepared tree is not the exact single-path effect")
+        return verified
+
+    def _first_use_load(self, step: PreparedFirstUseStep):
+        if not isinstance(step, PreparedFirstUseStep):
+            raise ResolutionError("missing prepared first-use evidence")
+        path = self._first_use_artifact_path(step.candidate)
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > self.FIRST_USE_ARTIFACT_LIMIT:
+            raise ResolutionError("prepared artifact is missing or oversized")
+        raw = path.read_bytes()
+        if self._first_use_digest(raw) != step.artifact_sha256:
+            raise ResolutionError("prepared artifact integrity mismatch")
+        try:
+            artifact = json.loads(raw)
+            if artifact["descriptor"] != step.descriptor or artifact["descriptor"]["candidate"] != step.candidate:
+                raise ValueError()
+            objects = artifact["objects"]
+            if not isinstance(objects, dict) or len(objects) > 256:
+                raise ValueError()
+        except (KeyError, ValueError, TypeError):
+            raise ResolutionError("prepared artifact is malformed") from None
+        return artifact
+
+    @contextmanager
+    def _first_use_restore(self, step):
+        import hashlib
+        artifact = self._first_use_load(step)
+        with tempfile.TemporaryDirectory(prefix="learning-os-first-use-restore-") as name:
+            repo = Path(name)
+            self._init_repo(repo)
+            # Restore every object afresh, but amortize process creation within
+            # this one private checkout. Inputs are bounded by the artifact and
+            # named only by checked hexadecimal identities, never caller paths.
+            inputs = repo / "first-use-objects"
+            inputs.mkdir()
+            groups = {kind: [] for kind in ("blob", "tree", "commit")}
+            for sha, item in artifact["objects"].items():
+                kind, encoded = item
+                if kind not in {"blob", "tree", "commit"} or not EXACT_COMMIT.fullmatch(sha):
+                    raise ResolutionError("prepared object type or identity is invalid")
+                try:
+                    raw = base64.b64decode(encoded, validate=True)
+                except (ValueError, TypeError):
+                    raise ResolutionError("prepared object encoding is invalid") from None
+                actual = hashlib.sha1(f"{kind} {len(raw)}\0".encode() + raw).hexdigest()
+                if actual != sha:
+                    raise ResolutionError("prepared Git object integrity mismatch")
+                (inputs / sha).write_bytes(raw)
+                groups[kind].append(sha)
+            for kind, identities in groups.items():
+                if not identities:
+                    continue
+                written = self._git_bytes(
+                    "hash-object", "-w", "-t", kind, "--stdin-paths", "--no-filters",
+                    cwd=repo,
+                    input_bytes="".join(f"first-use-objects/{sha}\n" for sha in identities).encode("ascii"),
+                )
+                # Exact ordered output rejects missing, extra, reordered and
+                # malformed identities; no partially restored batch is usable.
+                if written.splitlines() != [sha.encode("ascii") for sha in identities]:
+                    raise ResolutionError("restored Git object identity mismatch")
+            self._first_use_verify(repo, artifact["descriptor"])
+            # Only one parent is needed; its ancestors are already on the remote.
+            (repo / ".git" / "shallow").write_text(step.descriptor["parent"] + "\n", encoding="ascii")
+            yield repo
+
+    def prepare_first_use_step(self, *, repository_id, branch, path, content,
+                               expected_parent, expected_blob, operation_id,
+                               step_index, intent_digest, manifest_digest,
+                               timestamp) -> PreparedFirstUseStep:
+        binding = self._binding(repository_id)
+        if binding.writable is not True:
+            raise CasConflict("synthetic Instance binding is read-only")
+        if not EXACT_COMMIT.fullmatch(str(expected_parent)):
+            raise ResolutionError("first-use parent must be exact")
+        if (not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", str(operation_id)) or
+                type(step_index) is not int or not 0 <= step_index <= 9 or
+                any(not re.fullmatch(r"[0-9a-f]{64}", str(x)) for x in (intent_digest, manifest_digest)) or
+                not re.fullmatch(r"[0-9]{10} \+0000", str(timestamp))):
+            raise ResolutionError("first-use metadata is invalid")
+        pure = self._safe_path(path)
+        encoded = content.encode("utf-8")
+        if len(encoded) > 64 * 1024:
+            raise ResolutionError("first-use text exceeds its bounded budget")
+        td, repo, parent, branch_ref, _, _ = self._checkout_branch(binding, branch, allow_empty_root=step_index == 0)
+        try:
+            if parent != expected_parent:
+                raise CasConflict("first-use branch head conflict")
+            old = self._regular_blob(repo, parent, pure, cas=True)
+            if expected_blob is None:
+                if old is not None:
+                    raise CasConflict("first-use create target already exists")
+            elif old != (expected_blob, "100644"):
+                raise CasConflict("first-use activation object conflict")
+            blob = self._git_bytes("hash-object", "-w", "--stdin", cwd=repo,
+                                   input_bytes=encoded).decode().strip()
+            self._git_bytes("update-index", "-z", "--index-info", cwd=repo,
+                            input_bytes=f"100644 {blob}\t{path}\0".encode())
+            tree = self._git("write-tree", cwd=repo)
+            metadata = self._first_use_metadata(repository_id, branch_ref, path, operation_id,
+                                                step_index, intent_digest, manifest_digest)
+            candidate = self._git_bytes("-c", "user.name=Learning OS Synthetic First Use",
+                "-c", "user.email=synthetic@learning-os.invalid", "commit-tree", tree,
+                "-p", parent, cwd=repo, input_bytes=self._first_use_json(metadata) + b"\n",
+                extra_env={"GIT_AUTHOR_DATE": timestamp, "GIT_COMMITTER_DATE": timestamp}).decode().strip()
+            d = dict(candidate=candidate, tree=tree, parent=parent,
+                     parent_tree=self._commit_tree_sha(repo, parent), path=path,
+                     old_blob=None if old is None else old[0],
+                     old_mode=None if old is None else old[1], new_blob=blob,
+                     metadata=metadata)
+            verified = self._first_use_verify(repo, d)
+            identities = {parent: "commit", candidate: "commit", tree: "tree", d["parent_tree"]: "tree"}
+            for commit in (parent, candidate):
+                identities.update({sha: kind for _, sha, _, kind in verified[commit]})
+            objects = {}
+            for sha, kind in identities.items():
+                raw = self._git_bytes("cat-file", kind, sha, cwd=repo)
+                objects[sha] = [kind, base64.b64encode(raw).decode("ascii")]
+            artifact = self._first_use_json(dict(descriptor=d, objects=objects))
+            if len(artifact) > self.FIRST_USE_ARTIFACT_LIMIT:
+                raise ResolutionError("prepared first-use objects exceed budget")
+            target = self._first_use_artifact_path(candidate)
+            if target.exists() and target.read_bytes() != artifact:
+                raise ResolutionError("prepared identity collision")
+            self._first_use_atomic(target, artifact)
+            self.first_use_trace.append(("objects_durable", step_index, candidate))
+            result = PreparedFirstUseStep(candidate, self._first_use_digest(artifact), d)
+        finally:
+            self._cleanup_checkout_tempdir(td)
+        return result
+
+    def publish_first_use_step(self, step, *, authorize):
+        with self._first_use_restore(step) as repo:
+            d = step.descriptor
+            binding = self._binding(d["metadata"]["repository_id"])
+            if binding.writable is not True:
+                raise CasConflict("synthetic Instance binding is read-only")
+            state_path = self._first_use_artifact_path(step.candidate, "publisher")
+            if state_path.exists() and state_path.read_bytes() != b"finished":
+                raise ResolutionError("old publisher is not proven drained")
+            authorize()
+            ref = d["metadata"]["canonical_ref"]
+            self._git("remote", "add", "origin", binding.remote, cwd=repo)
+            self._first_use_atomic(state_path, b"started")
+            self.first_use_trace.append(("publish_start", d["metadata"]["step_index"], step.candidate))
+            # On transport exceptions keep started. No timeout/kill implies drain.
+            self._git("push", "-q", f'--force-with-lease={ref}:{d["parent"]}',
+                      "origin", f'{step.candidate}:{ref}', cwd=repo, cas=True, binding=binding)
+            self._first_use_atomic(state_path, b"finished")
+            self.first_use_trace.append(("remote_accepted", d["metadata"]["step_index"], step.candidate))
+
+    def inspect_first_use_step(self, step):
+        with self._first_use_restore(step):
+            d = step.descriptor
+            repository_id = d["metadata"]["repository_id"]
+            ref = d["metadata"]["canonical_ref"]
+            head = self.resolve_ref(repository_id, ref)
+            self.first_use_trace.append(("inspect", d["metadata"]["step_index"], head))
+            if head == step.candidate:
+                # Trusted Git identity contains path/blob/mode, not local stat.
+                td, repo, actual = self._checkout(self._binding(repository_id), head)
+                try:
+                    if actual != step.candidate or self._commit_tree_sha(repo, actual) != d["tree"]:
+                        return "outcome_unknown"
+                finally:
+                    self._cleanup_checkout_tempdir(td)
+                return "applied"
+            if head != d["parent"]:
+                return "conflict"
+            publisher = self._first_use_artifact_path(step.candidate, "publisher")
+            if not publisher.exists() or publisher.read_bytes() == b"finished":
+                return "not_applied"
+            return "outcome_unknown"
+
+    def preflight_first_use(self, repository_id, ref, documents, *, operation_id):
+        """Read-only admission before permanently reserving the first-use slot.
+
+        A conservative envelope includes the first parent commit (not merely
+        README), all ten rendered blobs, both generated commits and both trees.
+        No speculative commits or persistent cache are created by this check.
+        """
+        binding = self._binding(repository_id)
+        if binding.writable is not True:
+            raise CasConflict("synthetic Instance binding is read-only")
+        branch_ref = self._branch_ref(ref)
+        if len(documents) != 10 or len({path for path, _ in documents[:9]}) != 9 or documents[9][0] != documents[7][0]:
+            raise ResolutionError("first-use document set is invalid")
+        paths = {"README.md", *(path for path, _ in documents)}
+        components = [part for path in paths for part in self._safe_path(path).parts]
+        if len(components) > 37 or any(len(part.encode("utf-8")) > 64 for part in components):
+            raise ResolutionError("first-use paths exceed artifact envelope")
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", str(operation_id)):
+            raise ResolutionError("first-use metadata is invalid")
+        for index, (path, content) in enumerate(documents):
+            if len(content.encode("utf-8")) > 64 * 1024:
+                raise ResolutionError("first-use text exceeds its bounded budget")
+            metadata = self._first_use_metadata(repository_id, branch_ref, path, operation_id,
+                                                index, "0" * 64, "0" * 64)
+            # The populated descriptor is at least as large as any actual step.
+            descriptor = dict(candidate="0" * 40, tree="0" * 40, parent="0" * 40,
+                parent_tree="0" * 40, path=path, old_blob="0" * 40, old_mode="100644",
+                new_blob="0" * 40, metadata=metadata)
+            if len(self._first_use_json(descriptor)) > 8192:
+                raise ResolutionError("first-use metadata exceeds artifact envelope")
+        # <=37 path components bound two trees to 2*37*(32+64) <8 KiB.
+        # <=128 objects covers these trees, ten blobs, README and two commits.
+        # A descriptor <=8 KiB also bounds each generated commit below16 KiB.
+        raw_bound = self.FIRST_USE_BASELINE_LIMIT + 10 * 64 * 1024 + 2 * 16384 + 8192
+        artifact_bound = (4 * raw_bound + 2) // 3 + 128 * (64 + 4) + 8192 + 128
+        if artifact_bound > self.FIRST_USE_ARTIFACT_LIMIT:
+            raise ResolutionError("first-use artifact envelope exceeds budget")
+        td, repo, commit, _, _, _ = self._checkout_branch(binding, branch_ref, allow_empty_root=True)
+        try:
+            tree = self._commit_tree_sha(repo, commit)
+            entries = self._tree_entries(repo, commit, allow_empty_root=True)
+            if any(path != "README.md" for path, _, _ in entries):
+                raise ResolutionError("object_conflict")
+            identities = {commit, tree, *(sha for _, sha, _ in entries)}
+            payload = sum(int(self._git("cat-file", "-s", sha, cwd=repo)) for sha in identities)
+            if payload > self.FIRST_USE_BASELINE_LIMIT:
+                raise ResolutionError("first-use baseline objects exceed artifact budget")
+            return dict(head=commit, tree=tree, entries=entries)
         finally:
             self._cleanup_checkout_tempdir(td)
 

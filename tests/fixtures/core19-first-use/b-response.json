@@ -1,0 +1,5 @@
+{
+  "next_action": "Continue with the requested river-bank versus money-bank comparison. Show: “After rowing across the river, we reached the bank…” and “To deposit my paycheck, I visited the bank…”. Explain how the preceding context changes plausible continuations and the meaning of “bank.” Note that tokens are text pieces, not necessarily whole words. Then use “In this story, the bank gives everyone free money” to illustrate that a plausible continuation can describe fiction rather than a real-world fact. Invite the learner to explain the contextual difference and why plausibility does not establish truth.",
+  "reason": "The recovered return point says a next-token example was explained and this comparison was requested. The current focus and ready-next instruction both identify tokens-context, so continuing there avoids unnecessarily restarting.",
+  "knowledge_limits": "Both milestones remain planned, and the recovered evidence list is empty. Prior explanation is not demonstrated understanding; mastery and difficulty are both unknown. This read-only teaching response does not change canonical progress."
+}
