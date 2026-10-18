@@ -46,6 +46,12 @@ It covers the retained scope/set/reset/inheritance cases and explains which
 inputs were pre-seeded. It is a replay of existing synthetic evidence, not a
 new learner session or an end-user quickstart.
 
+For the trusted blank first-use results, see the
+[Core #19 synthetic first-use evidence](docs/evaluations/core19-first-use-results.md).
+It covers inactive staging and activation, lost-response recovery, and one
+isolated-context A/B behavior sample. This is synthetic-only evidence, not
+production setup guidance, a deployment, or proof of real learning benefit.
+
 The V0.4-B2-B split-aware Instance surface validates a materialized Instance
 snapshot against a locally materialized Core snapshot plus an explicit
 synthetic trusted deployment binding:
