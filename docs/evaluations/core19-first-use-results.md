@@ -16,7 +16,7 @@ persistent permission creation, cross-process revocation, deployment or merge.
 ## Reproducible structural acceptance
 
 Run `python scripts/validate_learning_os.py . --core` and
-`python -m unittest discover -s tests -v`. `tests/test_first_use.py` adds 41 tests
+`python -m unittest discover -s tests -v`. `tests/test_first_use.py` adds 52 tests
 with real local Git transports, including:
 
 - N: a zero-file empty-root commit and an optional-README baseline, complete
@@ -64,6 +64,34 @@ A narrow regression checks both once-per-commit traversal and fresh revalidation
 on the next restore. Timings and hosted outcomes are reported separately in the
 PR receipt; this change alone does not establish Windows completion or an
 interactive performance guarantee.
+
+The subsequent review hardened admission before target-slot reservation. The
+Instance ref must identify a writable branch. A conservative transport envelope
+limits the baseline commit/root/README objects to 1 MiB, checks all nine documents
+and the actual activation document at 64 KiB each, and bounds tree, metadata,
+base64/JSON and future receipt overhead without raising the 4 MiB artifact limit.
+Oversized README and parent-message cases, exact payload and UTF-8 boundaries,
+non-branch refs and corrected-input retries have explicit regressions.
+
+Candidate validation now executes the exact deployed Core CLI's full deployment
+surface, with actual snapshot provenance and helper files outside the candidate.
+It shares the ordinary broker's bounded runner: ten-second timeout, discarded
+output and fail-closed start/nonzero/timeout behavior. A stricter deployed rule
+with the same policy fingerprint is tested explicitly, including an active-only
+rejection. Both inactive and active candidates are checked before reservation;
+the actual active overlay is checked again before the final CAS. Fingerprint equality alone
+is not evidence of validator implementation equivalence.
+
+Hosted Windows execution exposed three fixture-specific failures, retained in
+the PR's terminal logs. The nested-empty test now creates and checks binary
+NUL-delimited Git tree records, so CRLF cannot accidentally test an unsafe name.
+The mode test injects failure into an actual exported file's Path.chmod, asserts
+that it was exercised, and leaves tempfile's cleanup permissions untouched.
+The same-operation race holds the operation lock after one real accepted step,
+then requires the contender's local admission to return operation_busy before
+release. It does not rely on a second ten-step chain finishing inside a join
+window. These repairs preserve the original cases and strengthen their evidence;
+actual Windows completion remains a separate hosted result.
 
 ## One independent-context A/B behavior sample
 

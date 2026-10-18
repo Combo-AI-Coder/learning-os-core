@@ -447,6 +447,25 @@ class _PinnedInstanceAuthority:
     head: str
 
 
+def _run_pinned_core_validator(core_root: Path, arguments: list[str]) -> None:
+    """Run the deployed implementation with bounded time and no output capture."""
+    validator_path = core_root / "scripts" / "validate_learning_os.py"
+    if not validator_path.is_file():
+        raise GuardRejected("deployed Core validator is unavailable")
+    try:
+        result = subprocess.run(
+            [sys.executable, str(validator_path), *arguments],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            timeout=CANDIDATE_VALIDATION_TIMEOUT_SECONDS, check=False, cwd=core_root,
+        )
+    except subprocess.TimeoutExpired:
+        raise GuardRejected("candidate Instance validation timed out") from None
+    except OSError:
+        raise GuardRejected("candidate Instance validation failed to start") from None
+    if result.returncode != 0:
+        raise GuardRejected("candidate Instance state failed canonical validation")
+
+
 class RuntimeSessionBroker:
     """Bind a replaceable conversation surface to narrow Learning OS authority."""
 
@@ -1815,44 +1834,10 @@ class RuntimeSessionBroker:
                     encoding="utf-8",
                     newline="\n",
                 )
-                validator_path = (
-                    core.root / "scripts" / "validate_learning_os.py"
-                )
-                if not validator_path.is_file():
-                    raise GuardRejected(
-                        "deployed Core validator is unavailable"
-                    )
-                command = [
-                    sys.executable,
-                    str(validator_path),
-                    str(root),
-                    "--instance",
-                    "--core-snapshot",
-                    str(core.root),
-                    "--deployment-binding",
-                    str(binding_path),
-                ]
-                try:
-                    result = subprocess.run(
-                        command,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        timeout=CANDIDATE_VALIDATION_TIMEOUT_SECONDS,
-                        check=False,
-                        cwd=core.root,
-                    )
-                except subprocess.TimeoutExpired:
-                    raise GuardRejected(
-                        "candidate Instance validation timed out"
-                    ) from None
-                except OSError:
-                    raise GuardRejected(
-                        "candidate Instance validation failed to start"
-                    ) from None
-            if result.returncode != 0:
-                raise GuardRejected(
-                    "candidate Instance state failed canonical validation"
-                )
+                _run_pinned_core_validator(core.root, [
+                    str(root), "--instance", "--core-snapshot", str(core.root),
+                    "--deployment-binding", str(binding_path),
+                ])
         finally:
             self._release_materializations(snapshots)
 

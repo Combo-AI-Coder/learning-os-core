@@ -2422,6 +2422,15 @@ class SyntheticPreparedGitProvider(GitCliProvider):
     """
 
     FIRST_USE_ARTIFACT_LIMIT = 4 * 1024 * 1024
+    FIRST_USE_BASELINE_LIMIT = 1024 * 1024
+
+    @staticmethod
+    def _first_use_metadata(repository_id, branch_ref, path, operation_id,
+                            step_index, intent_digest, manifest_digest):
+        return dict(schema="learning-os-first-use-step-v1", operation_id=operation_id,
+                    step_index=step_index, intent_digest=intent_digest,
+                    manifest_digest=manifest_digest, repository_id=repository_id,
+                    canonical_ref=branch_ref, path=path)
 
     def __init__(self, bindings, *, prepared_store: Path, git_env=None):
         super().__init__(bindings, git_env=git_env)
@@ -2584,10 +2593,8 @@ class SyntheticPreparedGitProvider(GitCliProvider):
             self._git_bytes("update-index", "-z", "--index-info", cwd=repo,
                             input_bytes=f"100644 {blob}\t{path}\0".encode())
             tree = self._git("write-tree", cwd=repo)
-            metadata = dict(schema="learning-os-first-use-step-v1", operation_id=operation_id,
-                            step_index=step_index, intent_digest=intent_digest,
-                            manifest_digest=manifest_digest, repository_id=repository_id,
-                            canonical_ref=branch_ref, path=path)
+            metadata = self._first_use_metadata(repository_id, branch_ref, path, operation_id,
+                                                step_index, intent_digest, manifest_digest)
             candidate = self._git_bytes("-c", "user.name=Learning OS Synthetic First Use",
                 "-c", "user.email=synthetic@learning-os.invalid", "commit-tree", tree,
                 "-p", parent, cwd=repo, input_bytes=self._first_use_json(metadata) + b"\n",
@@ -2661,11 +2668,54 @@ class SyntheticPreparedGitProvider(GitCliProvider):
                 return "not_applied"
             return "outcome_unknown"
 
-    def inspect_first_use_tree(self, repository_id, ref):
-        td, repo, commit = self._checkout(self._binding(repository_id), ref, allow_empty_root=True)
+    def preflight_first_use(self, repository_id, ref, documents, *, operation_id):
+        """Read-only admission before permanently reserving the first-use slot.
+
+        A conservative envelope includes the first parent commit (not merely
+        README), all ten rendered blobs, both generated commits and both trees.
+        No speculative commits or persistent cache are created by this check.
+        """
+        binding = self._binding(repository_id)
+        if binding.writable is not True:
+            raise CasConflict("synthetic Instance binding is read-only")
+        branch_ref = self._branch_ref(ref)
+        if len(documents) != 10 or len({path for path, _ in documents[:9]}) != 9 or documents[9][0] != documents[7][0]:
+            raise ResolutionError("first-use document set is invalid")
+        paths = {"README.md", *(path for path, _ in documents)}
+        components = [part for path in paths for part in self._safe_path(path).parts]
+        if len(components) > 37 or any(len(part.encode("utf-8")) > 64 for part in components):
+            raise ResolutionError("first-use paths exceed artifact envelope")
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", str(operation_id)):
+            raise ResolutionError("first-use metadata is invalid")
+        for index, (path, content) in enumerate(documents):
+            if len(content.encode("utf-8")) > 64 * 1024:
+                raise ResolutionError("first-use text exceeds its bounded budget")
+            metadata = self._first_use_metadata(repository_id, branch_ref, path, operation_id,
+                                                index, "0" * 64, "0" * 64)
+            # The populated descriptor is at least as large as any actual step.
+            descriptor = dict(candidate="0" * 40, tree="0" * 40, parent="0" * 40,
+                parent_tree="0" * 40, path=path, old_blob="0" * 40, old_mode="100644",
+                new_blob="0" * 40, metadata=metadata)
+            if len(self._first_use_json(descriptor)) > 8192:
+                raise ResolutionError("first-use metadata exceeds artifact envelope")
+        # <=37 path components bound two trees to 2*37*(32+64) <8 KiB.
+        # <=128 objects covers these trees, ten blobs, README and two commits.
+        # A descriptor <=8 KiB also bounds each generated commit below16 KiB.
+        raw_bound = self.FIRST_USE_BASELINE_LIMIT + 10 * 64 * 1024 + 2 * 16384 + 8192
+        artifact_bound = (4 * raw_bound + 2) // 3 + 128 * (64 + 4) + 8192 + 128
+        if artifact_bound > self.FIRST_USE_ARTIFACT_LIMIT:
+            raise ResolutionError("first-use artifact envelope exceeds budget")
+        td, repo, commit, _, _, _ = self._checkout_branch(binding, branch_ref, allow_empty_root=True)
         try:
-            return dict(head=commit, tree=self._commit_tree_sha(repo, commit),
-                        entries=self._tree_entries(repo, commit, allow_empty_root=True))
+            tree = self._commit_tree_sha(repo, commit)
+            entries = self._tree_entries(repo, commit, allow_empty_root=True)
+            if any(path != "README.md" for path, _, _ in entries):
+                raise ResolutionError("object_conflict")
+            identities = {commit, tree, *(sha for _, sha, _ in entries)}
+            payload = sum(int(self._git("cat-file", "-s", sha, cwd=repo)) for sha in identities)
+            if payload > self.FIRST_USE_BASELINE_LIMIT:
+                raise ResolutionError("first-use baseline objects exceed artifact budget")
+            return dict(head=commit, tree=tree, entries=entries)
         finally:
             self._cleanup_checkout_tempdir(td)
 

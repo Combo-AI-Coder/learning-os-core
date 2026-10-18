@@ -32,10 +32,10 @@ from scripts.runtime_adapter import (
 )
 from scripts.runtime_broker import (
     RuntimeSessionBroker,
-    _compute_bounded_write_policy_fingerprint,
+    _compute_bounded_write_policy_fingerprint, _run_pinned_core_validator,
 )
 from scripts.validate_learning_os import (
-    RepositorySnapshot, instance_write_policy_fingerprint, validate_deployment,
+    instance_write_policy_fingerprint,
     validate_deployment_contract_document,
 )
 
@@ -188,11 +188,19 @@ class SyntheticFirstUseStore:
         except (OSError, ValueError, TypeError, KeyError):
             raise FirstUseRejected("receipt_integrity_failed") from None
 
-    def _write(self, name, data):
+    def _encoded(self, data):
         raw = _json(dict(data=data, mac=hmac.new(self._key, _json(data), hashlib.sha256).hexdigest()))
         if len(raw) > self.LIMIT:
             raise FirstUseRejected("receipt_oversized")
-        SyntheticPreparedGitProvider._first_use_atomic(self.root / name, raw)
+        return raw
+
+    def _write(self, name, data):
+        SyntheticPreparedGitProvider._first_use_atomic(self.root / name, self._encoded(data))
+
+    def preflight_receipt(self, receipt):
+        # Ten future descriptors plus wrapper/status growth must also fit.
+        if len(self._encoded(receipt)) + 10 * (8192 + 256) + 1024 > self.LIMIT:
+            raise FirstUseRejected("receipt_oversized")
 
     @contextmanager
     def operation(self):
@@ -207,8 +215,14 @@ class SyntheticFirstUseStore:
         finally:
             lock.unlink()
 
-    def reserve(self, slot, binding):
+    def inspect_slot(self, slot, binding):
         current = self._read("slot.json")
+        if current is not None and (current["slot"] != slot or current["binding"] != binding):
+            raise FirstUseRejected("target_slot_conflict")
+        return current
+
+    def reserve(self, slot, binding):
+        current = self.inspect_slot(slot, binding)
         if current is None:
             # operation.lock covers creation; slot is never released on failure.
             current = dict(slot=slot, binding=binding, initialized=False)
@@ -282,6 +296,14 @@ def _documents(intent, *, stamp, lineage):
     return [[path, yaml.safe_dump(data, sort_keys=False, allow_unicode=True)] for path, data in docs]
 
 
+def _activation_document(documents):
+    path, original = documents[7]
+    active = yaml.safe_load(original)
+    active["revision"] = 2
+    active["branches"]["main"]["lifecycle"] = "active"
+    return path, yaml.safe_dump(active, sort_keys=False, allow_unicode=True)
+
+
 @dataclass(frozen=True)
 class FirstUseResult:
     status: str
@@ -325,7 +347,7 @@ class SyntheticFirstUseService:
             raise FirstUseRejected("stale_deployment")
         self.guard.assert_snapshot_current(context, snapshot)
 
-    def _validate(self, documents, *, receipt=None):
+    def _validate(self, documents, *, receipt=None, validate_activation=False):
         rc, inst = self.locator["runtime_control"], self.locator["instance"]
         owned = []
         try:
@@ -358,19 +380,34 @@ class SyntheticFirstUseService:
             if instance.repository_id != inst["repository_id"]:
                 raise FirstUseRejected("target_identity_conflict")
             with tempfile.TemporaryDirectory(prefix="learning-os-first-use-candidate-") as name:
-                candidate = Path(name)
+                candidate = Path(name) / "instance"
                 shutil.copytree(instance.root, candidate, dirs_exist_ok=True)
                 for path, content in documents:
                     target = candidate / path
                     target.parent.mkdir(parents=True, exist_ok=True)
                     target.write_text(content, encoding="utf-8", newline="")
-                errors = [f.render() for f in validate_deployment(
-                    RepositorySnapshot(control.root, control.repository_id, control.commit_sha),
-                    RepositorySnapshot(core.root, core.repository_id, core.commit_sha),
-                    RepositorySnapshot(candidate, instance.repository_id, instance.commit_sha), self.locator)
-                    if f.severity == "error"]
-                if errors:
-                    raise FirstUseRejected("candidate_invalid: " + "; ".join(errors))
+                # Helpers remain outside the candidate Instance. Provenance is
+                # the actual materialization identity, never candidate YAML.
+                locator_path = Path(name) / "locator.yaml"
+                provenance_path = Path(name) / "provenance.yaml"
+                locator_path.write_text(yaml.safe_dump(self.locator), encoding="utf-8")
+                provenance_path.write_text(yaml.safe_dump({
+                    key: dict(repository_id=snapshot.repository_id, commit_sha=snapshot.commit_sha)
+                    for key, snapshot in (("control", control), ("core", core), ("instance", instance))
+                }), encoding="utf-8")
+                command = [
+                    "--deployment", "--control-snapshot", str(control.root),
+                    "--core-snapshot", str(core.root), "--instance-snapshot", str(candidate),
+                    "--locator", str(locator_path), "--provenance", str(provenance_path),
+                ]
+                try:
+                    _run_pinned_core_validator(core.root, command)
+                    if validate_activation:
+                        path, content = _activation_document(documents)
+                        (candidate / path).write_text(content, encoding="utf-8", newline="")
+                        _run_pinned_core_validator(core.root, command)
+                except GuardRejected as exc:
+                    raise FirstUseRejected("candidate_invalid: " + str(exc)) from None
             context = SessionDeploymentContext(dep["id"], dep["epoch"], pin["repository_id"], pin["commit"],
                 inst["repository_id"], rc["repository_id"], rc["canonical_ref"], rc["contract_path"])
             if receipt and (asdict(context) != receipt["deployment"] or control.commit_sha != receipt["control_head"]):
@@ -384,23 +421,23 @@ class SyntheticFirstUseService:
     def prepare(self, operation_id, receiver, intent):
         binding = self._binding(receiver, operation_id, intent)
         with self.store.operation(), self.authority.lease(receiver, binding), self.admission.write_lease():
-            slot = self.store.reserve(self._slot(), binding)
+            slot = self.store.inspect_slot(self._slot(), binding)
             previous = self.store.read()
             if previous is not None:
                 if previous["binding"] != binding:
                     raise FirstUseRejected("intent_conflict")
                 self._current(previous, receiver)
                 return FirstUseResult("already_applied" if previous["completed"] else previous["status"])
-            if slot["initialized"]:
+            if slot is not None and slot["initialized"]:
                 raise FirstUseRejected("receipt_missing")
-            identity = self.provider.inspect_first_use_tree(self._slot()["repository_id"], self._slot()["canonical_ref"])
-            if any(path != "README.md" for path, _, _ in identity["entries"]):
-                raise FirstUseRejected("object_conflict")
             now = datetime.now(timezone.utc)
             stamp = now.isoformat(timespec="seconds").replace("+00:00", "Z")
             lineage = "first-use-" + secrets.token_hex(16)
             documents = _documents(intent, stamp=stamp, lineage=lineage)
-            context, control_head, instance_head = self._validate(documents)
+            identity = self.provider.preflight_first_use(
+                self._slot()["repository_id"], self._slot()["canonical_ref"],
+                [*documents, _activation_document(documents)], operation_id=operation_id)
+            context, control_head, instance_head = self._validate(documents, validate_activation=True)
             if instance_head != identity["head"]:
                 raise FirstUseRejected("conflict")
             manifest = dict(documents=documents, lineage=lineage, intent=asdict(intent),
@@ -409,6 +446,8 @@ class SyntheticFirstUseService:
             receipt = dict(binding=binding, locator_digest=_digest(self.locator), manifest=manifest,
                            manifest_digest=_digest(manifest), deployment=asdict(context), control_head=control_head,
                            status="prepared", confirmed=0, steps=[], completed=False, delivery="not_started")
+            self.store.preflight_receipt(receipt)
+            self.store.reserve(self._slot(), binding)
             self.store.write(receipt)
             self.store.mark_initialized()
             self.event("manifest_durable", receipt)
@@ -444,18 +483,14 @@ class SyntheticFirstUseService:
                 with self.authority.lease(receiver, binding), self.admission.write_lease():
                     self._current(receipt, receiver)
                     if index == 9:
-                        self._validate([], receipt=receipt)
+                        self._validate([_activation_document(receipt["manifest"]["documents"])], receipt=receipt)
                     if len(receipt["steps"]) == index:
                         docs = receipt["manifest"]["documents"]
                         if index < 9:
                             path, content = docs[index]
                             expected_blob = None
                         else:
-                            path, original = docs[7]
-                            active = yaml.safe_load(original)
-                            active["revision"] = 2
-                            active["branches"]["main"]["lifecycle"] = "active"
-                            content = yaml.safe_dump(active, sort_keys=False, allow_unicode=True)
+                            path, content = _activation_document(docs)
                             expected_blob = receipt["steps"][7]["descriptor"]["new_blob"]
                         parent = (receipt["manifest"]["baseline"]["head"] if index == 0
                                   else receipt["steps"][index - 1]["candidate"])

@@ -182,8 +182,13 @@ class FirstUseTests(unittest.TestCase):
         self.service.event = observe
         self.assertEqual("prepared", self.prepare().status)
         self.assertEqual(self.baseline, self.head())
-        result = self.apply()
+        with mock.patch.object(self.service, "_validate", wraps=self.service._validate) as validate:
+            result = self.apply()
         self.assertEqual("active", result.status)
+        activation = validate.call_args_list[0].args[0]
+        self.assertEqual(1, len(activation))
+        self.assertEqual("active", yaml.safe_load(activation[0][1])["branches"]["main"]["lifecycle"])
+        self.assertEqual([], validate.call_args_list[1].args[0])
         self.assertEqual(list(range(1, 10)), denied)
         self.assert_ten_transitions()
         self.assertEqual({1: {"lifecycle": "active"}}, self.read(RUNTIME)["generations"])
@@ -269,10 +274,17 @@ class FirstUseTests(unittest.TestCase):
     def test_bootstrap_empty_root_exception_still_rejects_nested_empty_tree(self):
         clone = self.root / "instance"
         empty_tree = subprocess.run(["git", "hash-object", "-t", "tree", "--stdin"], cwd=clone,
-                                    input="", text=True, capture_output=True, check=True).stdout.strip()
-        raw = f"040000 tree {empty_tree}\tempty\n"
-        tree = subprocess.run(["git", "mktree"], cwd=clone, input=raw, text=True,
-                              capture_output=True, check=True).stdout.strip()
+                                    input=b"", capture_output=True, check=True).stdout.decode("ascii").strip()
+        # Binary NUL records avoid Windows text-mode CRLF becoming part of
+        # the Git pathname and accidentally testing unsafe-path rejection.
+        raw = f"040000 tree {empty_tree}\tempty\0".encode("ascii")
+        tree = subprocess.run(["git", "mktree", "-z"], cwd=clone, input=raw,
+                              capture_output=True, check=True).stdout.decode("ascii").strip()
+        actual = subprocess.run(["git", "ls-tree", "-z", tree], cwd=clone,
+                                capture_output=True, check=True).stdout
+        self.assertEqual(raw, actual)
+        self.assertEqual(b"", subprocess.run(["git", "cat-file", "tree", empty_tree], cwd=clone,
+                                             capture_output=True, check=True).stdout)
         commit = git("commit-tree", tree, "-p", self.baseline, "-m", "Synthetic nested empty directory", cwd=clone)
         git("push", "-q", str(self.instance_remote), f"{commit}:main", cwd=clone)
         with self.assertRaisesRegex(ResolutionError, "empty directory"):
@@ -447,42 +459,47 @@ class FirstUseTests(unittest.TestCase):
         self.assertEqual(self.baseline, self.head())
 
     def test_same_operation_parallel_entry_is_serialized(self):
-        entered, release = threading.Event(), threading.Event()
-        outcomes = []
-        def hold(event, receipt):
-            if event == "receipt_durable":
-                entered.set()
-                release.wait(20)
-                raise Restart()
-        self.service.event = hold
-        self.prepare()
-        def run(service):
+        outcomes, contender_done = [], threading.Event()
+        def stop_unexpected_progress(event, receipt):
+            raise Restart("contender unexpectedly advanced")
+        contender = self.new_service(event=stop_unexpected_progress)
+        def run_contender():
             try:
-                outcomes.append(self.apply(service))
+                outcomes.append(self.apply(contender))
             except BaseException as error:
                 outcomes.append(error)
-        first = threading.Thread(target=run, args=(self.service,))
-        second = threading.Thread(target=run, args=(self.new_service(),))
-        first.start()
-        try:
-            self.assertTrue(entered.wait(10))
-            second.start()
-            # The shared authority may serialize before the file lock. Neither
-            # path is allowed to prepare a second candidate while one is pending.
-            self.assertEqual(1, len(self.store.read()["steps"]))
-            self.assertEqual(self.baseline, self.head())
-        finally:
-            release.set()
-            first.join(30)
-            second.join(30)
-        self.assertFalse(first.is_alive() or second.is_alive())
-        self.assertTrue(any(isinstance(item, Restart) for item in outcomes))
-        steps = self.store.read()["steps"]
-        self.assertEqual(len(steps), len({step["candidate"] for step in steps}))
-        self.assertEqual(1, len([e for e in self.provider.first_use_trace if e[0] == "objects_durable" and e[1] == 0]))
-        for outcome in outcomes:
-            if getattr(outcome, "host", None):
-                outcome.host.close()
+            finally:
+                contender_done.set()
+        second = threading.Thread(target=run_contender)
+        def hold(event, receipt):
+            if event == "step_confirmed" and receipt["confirmed"] == 1:
+                # This hook is outside the authority lease but still inside the
+                # first caller's operation.lock. The contender can therefore
+                # actually test the file lock instead of waiting on authority.
+                second.start()
+                try:
+                    self.assertTrue(contender_done.wait(10))
+                    self.assertEqual(1, len(outcomes))
+                    self.assertIsInstance(outcomes[0], FirstUseRejected)
+                    self.assertEqual("operation_busy", str(outcomes[0]))
+                finally:
+                    second.join(30)
+                raise Restart("first accepted step")
+        self.service.event = hold
+        self.prepare()
+        # Real Git progress has no thread-arrival deadline. Only the contender's
+        # local admission check is bounded; neither caller may run the next step.
+        with self.assertRaisesRegex(Restart, "first accepted step"):
+            self.apply()
+        self.assertFalse(second.is_alive())
+        receipt = self.store.read()
+        self.assertEqual(1, receipt["confirmed"])
+        self.assertEqual(1, len(receipt["steps"]))
+        self.assertEqual(receipt["steps"][0]["candidate"], self.head())
+        self.assertEqual("1", git("--git-dir", str(self.instance_remote), "rev-list", "--count", f"{self.baseline}..main"))
+        self.assertEqual(1, len([e for e in self.provider.first_use_trace if e[0] == "objects_durable"]))
+        self.assertEqual(1, len([e for e in self.provider.first_use_trace if e[0] == "publish_start"]))
+        self.assertFalse(self.authority._sessions)
 
     def test_external_same_bytes_different_commit_is_not_our_effect(self):
         step = self.stop_after_receipt()
@@ -669,6 +686,182 @@ class FirstUseTests(unittest.TestCase):
             self.assertEqual("outcome_unknown", self.apply(self.new_service()).status)
         self.assertEqual(self.baseline, self.head())
 
+    def assert_unreserved(self):
+        self.assertFalse((self.root / "receipts" / "slot.json").exists())
+        self.assertIsNone(self.store.read())
+        self.assertEqual([], list((self.root / "prepared").iterdir()))
+        self.assertEqual(self.baseline, self.head())
+
+    def replace_blank_baseline(self, *, readme=None, message=None):
+        working = self.root / "instance"
+        if readme is not None:
+            (working / "README.md").write_text(readme, encoding="utf-8")
+        git("add", ".", cwd=working)
+        message_path = self.root / "commit-message.txt"
+        message_path.write_text(message or "Synthetic baseline", encoding="utf-8")
+        git("commit", "--amend", "-q", "-F", str(message_path), cwd=working)
+        git("push", "-q", "--force", str(self.instance_remote), "main", cwd=working)
+        self.baseline = self.head()
+
+    def prepare_new_binding(self):
+        receiver = self.authority.authorize(principal="synthetic-learner", surface="synthetic-cli",
+            operation_id="operation-b", intent=self.intent, locator=self.locator)
+        return self.new_service().prepare("operation-b", receiver, self.intent)
+
+    def test_oversized_readme_rejects_before_reservation_and_allows_corrected_binding(self):
+        self.replace_blank_baseline(readme="r" * (3 * 1024 * 1024))
+        with self.assertRaisesRegex(ResolutionError, "baseline objects exceed"):
+            self.prepare()
+        self.assert_unreserved()
+        self.replace_blank_baseline(readme="# Corrected synthetic blank\n")
+        self.assertEqual("prepared", self.prepare_new_binding().status)
+
+    def test_oversized_parent_commit_rejects_before_reservation(self):
+        self.replace_blank_baseline(message="m" * (3 * 1024 * 1024))
+        with self.assertRaisesRegex(ResolutionError, "baseline objects exceed"):
+            self.prepare()
+        self.assert_unreserved()
+        self.replace_blank_baseline(message="Corrected synthetic parent")
+        self.assertEqual("prepared", self.prepare_new_binding().status)
+
+    def test_baseline_object_payload_exact_limit_is_admitted_and_next_byte_rejected(self):
+        working = self.root / "instance"
+        self.replace_blank_baseline(readme="")
+        overhead = sum(int(git("cat-file", "-s", identity, cwd=working))
+                       for identity in ("HEAD", "HEAD^{tree}"))
+        size = self.provider.FIRST_USE_BASELINE_LIMIT - overhead
+        self.replace_blank_baseline(readme="r" * (size + 1))
+        with self.assertRaisesRegex(ResolutionError, "baseline objects exceed"):
+            self.prepare()
+        self.assert_unreserved()
+        self.replace_blank_baseline(readme="r" * size)
+        self.assertEqual("prepared", self.prepare().status)
+        # Check actual first artifact rather than treating the envelope as proof
+        # that a real package was produced; leave it unpublished.
+        step = self.stop_after_receipt()
+        self.assertLessEqual((self.root / "prepared" / f"{step.candidate}.json").stat().st_size,
+                             self.provider.FIRST_USE_ARTIFACT_LIMIT)
+        self.assertEqual(self.baseline, self.head())
+
+    def test_nonbranch_or_missing_refs_reject_before_reservation(self):
+        git("--git-dir", str(self.instance_remote), "tag", "synthetic-tag", self.baseline)
+        for ref in (self.baseline, "refs/tags/synthetic-tag", "synthetic-tag", "missing-branch"):
+            with self.subTest(ref=ref):
+                self.locator["instance"]["canonical_ref"] = ref
+                with self.assertRaises((ResolutionError, CasConflict)):
+                    self.prepare_new_binding()
+                self.assert_unreserved()
+        self.locator["instance"]["canonical_ref"] = "main"
+        self.assertEqual("prepared", self.prepare_new_binding().status)
+
+    def test_readonly_binding_rejects_before_reservation(self):
+        self.provider.bindings[INSTANCE_ID] = GitRepositoryBinding(INSTANCE_ID, str(self.instance_remote), writable=False)
+        with self.assertRaisesRegex(CasConflict, "read-only"):
+            self.prepare()
+        self.assert_unreserved()
+        self.provider.bindings[INSTANCE_ID] = self.bindings[2]
+        self.assertEqual("prepared", self.prepare_new_binding().status)
+
+    def test_explicit_heads_branch_is_admitted(self):
+        self.locator["instance"]["canonical_ref"] = "refs/heads/main"
+        self.assertEqual("prepared", self.prepare_new_binding().status)
+
+    def test_rendered_document_and_activation_utf8_byte_limits(self):
+        import scripts.first_use as first_use
+        docs = first_use._documents(self.intent, stamp="2026-10-18T00:00:00Z", lineage="synthetic")
+        docs = [*docs, first_use._activation_document(docs)]
+        for index in (0, 9):
+            with self.subTest(index=index):
+                bounded = deepcopy(docs)
+                bounded[index] = (bounded[index][0], "é" * (32 * 1024))
+                self.provider.preflight_first_use(INSTANCE_ID, "main", bounded, operation_id="operation-a")
+                bounded[index] = (bounded[index][0], bounded[index][1] + "x")
+                with self.assertRaisesRegex(ResolutionError, "text exceeds"):
+                    self.provider.preflight_first_use(INSTANCE_ID, "main", bounded, operation_id="operation-a")
+        with mock.patch("scripts.first_use._activation_document", return_value=(docs[9][0], "é" * (32 * 1024) + "x")):
+            with self.assertRaisesRegex(ResolutionError, "text exceeds"):
+                self.prepare()
+        self.assert_unreserved()
+
+    def test_receipt_budget_is_preflighted_before_reservation(self):
+        with mock.patch.object(self.service.store, "LIMIT", 1024):
+            with self.assertRaisesRegex(FirstUseRejected, "receipt_oversized"):
+                self.prepare()
+        self.assert_unreserved()
+        self.assertEqual("prepared", self.prepare_new_binding().status)
+
+    def test_pinned_validator_start_and_timeout_fail_closed_before_reservation(self):
+        for error in (subprocess.TimeoutExpired("validator", 10), OSError("synthetic start failure")):
+            with self.subTest(error=type(error).__name__):
+                real_run = subprocess.run
+                def run(command, *args, **kwargs):
+                    if "--deployment" in command:
+                        self.assertEqual(subprocess.DEVNULL, kwargs["stdout"])
+                        self.assertEqual(subprocess.DEVNULL, kwargs["stderr"])
+                        self.assertEqual(10, kwargs["timeout"])
+                        raise error
+                    return real_run(command, *args, **kwargs)
+                with mock.patch("scripts.runtime_broker.subprocess.run", side_effect=run):
+                    with self.assertRaisesRegex(FirstUseRejected, "candidate_invalid"):
+                        self.prepare()
+                self.assert_unreserved()
+
+    def install_stricter_pinned_rule(self, *, active_only=False):
+        # Modify the actual rule chain used by --deployment, not its unused
+        # validate_instance wrapper. The host-imported validator stays unchanged.
+        original_core = self.core_root
+        self.core_root = self.root / "stricter-core"
+        shutil.copytree(original_core, self.core_root)
+        validator = self.core_root / "scripts/validate_learning_os.py"
+        source = validator.read_text(encoding="utf-8")
+        condition = "any(doc.get('document_type') == 'branch_registry' and doc['branches']['main']['lifecycle'] == 'active' for doc in self.docs.values())" if active_only else "True"
+        injection = f"""
+_original_instance_run = InstanceValidator.run
+def _stricter_instance_run(self):
+    findings = _original_instance_run(self)
+    if {condition}:
+        findings.append(Finding("error", "synthetic.pinned_rule", "<candidate>", "stricter deployed rule"))
+    return findings
+InstanceValidator.run = _stricter_instance_run
+"""
+        marker = 'if __name__=='
+        self.assertIn(marker, source)
+        validator.write_text(source.replace(marker, injection + "\n" + marker), encoding="utf-8")
+        git("add", "scripts/validate_learning_os.py", cwd=self.core_root)
+        git("commit", "-qm", "Synthetic stricter pinned validation", cwd=self.core_root)
+        self.core_commit = git("rev-parse", "HEAD", cwd=self.core_root)
+        self.provider.core_root, self.provider.core_commit = self.core_root, self.core_commit
+        self.contract["core"]["commit"] = self.core_commit
+        (self.root / "control/deployment.yaml").write_text(yaml.safe_dump(self.contract), encoding="utf-8")
+        git("add", ".", cwd=self.root / "control")
+        git("commit", "-qm", "Synthetic strict pin", cwd=self.root / "control")
+        git("push", "-q", str(self.control_remote), "main", cwd=self.root / "control")
+        fingerprint = subprocess.run([os.sys.executable, str(validator), "--write-policy-fingerprint"],
+            capture_output=True, text=True, check=True).stdout.strip()
+        from scripts.validate_learning_os import instance_write_policy_fingerprint
+        self.assertEqual(instance_write_policy_fingerprint(), fingerprint)
+
+    def test_deployed_stricter_validator_same_fingerprint_rejects_before_reservation(self):
+        self.install_stricter_pinned_rule()
+        with self.assertRaisesRegex(FirstUseRejected, "candidate_invalid"):
+            self.prepare()
+        self.assert_unreserved()
+
+    def test_deployed_rule_rejecting_only_activation_denies_before_reservation(self):
+        self.install_stricter_pinned_rule(active_only=True)
+        outcomes = []
+        real_run = subprocess.run
+        def run(command, *args, **kwargs):
+            result = real_run(command, *args, **kwargs)
+            if "--deployment" in command:
+                outcomes.append(result.returncode)
+            return result
+        with mock.patch("scripts.runtime_broker.subprocess.run", side_effect=run):
+            with self.assertRaisesRegex(FirstUseRejected, "candidate_invalid"):
+                self.prepare()
+        self.assertEqual([0, 1], outcomes)  # Same pin accepts idle, rejects active.
+        self.assert_unreserved()
+
     def test_bounded_invalid_document_candidate_never_publishes(self):
         import scripts.first_use as first_use
         original = first_use._documents
@@ -700,9 +893,29 @@ class FirstUseTests(unittest.TestCase):
 
     def test_chmod_failure_cannot_hide_git_mode_drift(self):
         step = self.stop_after_receipt()
+        original_blob = git("--git-dir", str(self.instance_remote), "rev-parse", "main:README.md")
+        self.assertTrue(git("--git-dir", str(self.instance_remote), "ls-tree", "main", "README.md").startswith("100644"))
         self.external_mode_commit()
-        with mock.patch("scripts.runtime_adapter.os.chmod", side_effect=OSError("unsupported chmod")):
-            self.assertEqual("conflict", self.provider.inspect_first_use_step(step))
+        self.assertEqual(original_blob, git("--git-dir", str(self.instance_remote), "rev-parse", "main:README.md"))
+        self.assertTrue(git("--git-dir", str(self.instance_remote), "ls-tree", "main", "README.md").startswith("100755"))
+        real_chmod, injected, snapshot = Path.chmod, [], None
+        def fail_export_mode(path, mode, *args, **kwargs):
+            if path.name == "README.md" and mode == 0o755:
+                injected.append(path)
+                raise OSError("unsupported synthetic export chmod")
+            return real_chmod(path, mode, *args, **kwargs)
+        try:
+            # Patch the Path export operation, not shared os.chmod used by
+            # Windows tempfile cleanup of read-only Git object files.
+            with mock.patch("scripts.runtime_adapter.Path.chmod", autospec=True, side_effect=fail_export_mode):
+                snapshot = self.provider.materialize(INSTANCE_ID, "main")
+                self.assertEqual([snapshot.root / "README.md"], injected)
+                self.assertEqual(self.head(), snapshot.commit_sha)
+                self.assertEqual("conflict", self.provider.inspect_first_use_step(step))
+        finally:
+            if snapshot is not None:
+                self.provider.release_materialization(snapshot)
+        self.assertFalse(snapshot.root.exists())
         self.assertEqual(0, self.store.read()["confirmed"])
 
     def test_closed_provider_cannot_redeliver_dead_cached_writer(self):
