@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from copy import deepcopy
+import base64
 import json
 import hashlib
 import os
@@ -364,6 +365,101 @@ class FirstUseTests(unittest.TestCase):
             self.assertEqual([step.descriptor["parent"], step.candidate],
                              [call.args[1] for call in walk.call_args_list])
         self.assertEqual(self.baseline, self.head())
+
+    def test_restore_batches_each_type_fresh_and_bypasses_text_filters(self):
+        step = self.stop_after_receipt()
+        provider = self.new_provider()
+        artifact = provider._first_use_load(step)
+        # An extra valid object tests byte-preserving import independently of
+        # the candidate's existing tree. A text filter would change its SHA.
+        raw = b"synthetic line one\r\nsynthetic line two\r\n"
+        sha = hashlib.sha1(f"blob {len(raw)}\0".encode() + raw).hexdigest()
+        artifact["objects"][sha] = ["blob", base64.b64encode(raw).decode("ascii")]
+        encoded = provider._first_use_json(artifact)
+        provider._first_use_artifact_path(step.candidate).write_bytes(encoded)
+        step = PreparedFirstUseStep(step.candidate, provider._first_use_digest(encoded), step.descriptor)
+        real_init, real_git = provider._init_repo, provider._git_bytes
+        batches, roots = [], []
+        def init_with_filter(repo):
+            real_init(repo)
+            (repo / ".gitattributes").write_text("first-use-objects/* text eol=lf\n", encoding="ascii")
+        def observe(*args, **kwargs):
+            result = real_git(*args, **kwargs)
+            if args[0] == "hash-object" and "--stdin-paths" in args:
+                self.assertIn("--no-filters", args)
+                paths = kwargs["input_bytes"].decode("ascii").splitlines()
+                self.assertTrue(paths)
+                self.assertTrue(all(path.startswith("first-use-objects/") for path in paths))
+                batches.append((args[args.index("-t") + 1], paths))
+                # Both normal LF and CRLF process output preserve identities.
+                return result.replace(b"\n", b"\r\n")
+            return result
+        with mock.patch.object(provider, "_init_repo", side_effect=init_with_filter), \
+                mock.patch.object(provider, "_git_bytes", side_effect=observe):
+            for _ in range(2):
+                before = len(batches)
+                with provider._first_use_restore(step) as repo:
+                    roots.append(repo)
+                    self.assertEqual(raw, real_git("cat-file", "blob", sha, cwd=repo))
+                current = batches[before:]
+                self.assertEqual(["blob", "tree", "commit"], [kind for kind, _ in current])
+                self.assertEqual(set(artifact["objects"]),
+                                 {Path(path).name for _, paths in current for path in paths})
+        self.assertEqual(2, len(set(roots)))
+        self.assertTrue(all(not root.exists() for root in roots))
+        self.assertEqual(self.baseline, self.head())
+
+    def test_restore_rejects_missing_extra_reordered_or_malformed_batch_output(self):
+        step = self.stop_after_receipt()
+        provider = self.new_provider()
+        real_git = provider._git_bytes
+        for mutation in ("missing", "extra", "reordered", "wrong", "nonascii", "whitespace"):
+            with self.subTest(mutation=mutation):
+                roots = []
+                def corrupt(*args, **kwargs):
+                    result = real_git(*args, **kwargs)
+                    if args[0] == "hash-object" and "--stdin-paths" in args and args[args.index("-t") + 1] == "commit":
+                        roots.append(kwargs["cwd"])
+                        identities = result.splitlines()
+                        self.assertGreaterEqual(len(identities), 2)
+                        if mutation == "missing": identities.pop()
+                        elif mutation == "extra": identities.append(identities[-1])
+                        elif mutation == "reordered": identities.reverse()
+                        elif mutation == "wrong": identities[0] = b"0" * 40
+                        elif mutation == "nonascii": identities[0] = b"\xff" * 40
+                        else: identities[0] += b" "
+                        return b"\n".join(identities) + b"\n"
+                    return result
+                with mock.patch.object(provider, "_git_bytes", side_effect=corrupt):
+                    with self.assertRaisesRegex(ResolutionError, "restored Git object identity mismatch"):
+                        with provider._first_use_restore(step):
+                            self.fail("corrupt batch became usable")
+                self.assertEqual(1, len(roots))
+                self.assertFalse(roots[0].exists())
+                self.assertEqual(self.baseline, self.head())
+
+    def test_restore_batch_failure_never_starts_publisher_and_cleans_partial_objects(self):
+        step = self.stop_after_receipt()
+        provider = self.new_provider()
+        real_git = provider._git_bytes
+        batches, roots = [], []
+        def fail_tree(*args, **kwargs):
+            if args[0] == "hash-object" and "--stdin-paths" in args:
+                kind = args[args.index("-t") + 1]
+                batches.append(kind)
+                roots.append(kwargs["cwd"])
+                if kind == "tree":
+                    raise ResolutionError("synthetic batch write failure")
+            return real_git(*args, **kwargs)
+        with mock.patch.object(provider, "_git_bytes", side_effect=fail_tree):
+            self.assertEqual("outcome_unknown", self.apply(self.new_service(provider=provider)).status)
+        self.assertEqual(["blob", "tree"], batches)
+        self.assertTrue(all(not root.exists() for root in roots))
+        self.assertEqual(self.baseline, self.head())
+        self.assertFalse(provider._first_use_artifact_path(step.candidate, "publisher").exists())
+        self.assertFalse(any(event[0] == "publish_start" for event in provider.first_use_trace))
+        self.assertEqual(0, self.store.read()["confirmed"])
+        self.assertEqual(1, len(self.store.read()["steps"]))
 
     def test_unknown_old_publisher_blocks_republish(self):
         step = self.stop_after_receipt()

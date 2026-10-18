@@ -16,7 +16,7 @@ persistent permission creation, cross-process revocation, deployment or merge.
 ## Reproducible structural acceptance
 
 Run `python scripts/validate_learning_os.py . --core` and
-`python -m unittest discover -s tests -v`. `tests/test_first_use.py` adds 52 tests
+`python -m unittest discover -s tests -v`. `tests/test_first_use.py` adds 55 tests
 with real local Git transports, including:
 
 - N: a zero-file empty-root commit and an optional-README baseline, complete
@@ -92,6 +92,16 @@ then requires the contender's local admission to return operation_busy before
 release. It does not rely on a second ten-step chain finishing inside a join
 window. These repairs preserve the original cases and strengthen their evidence;
 actual Windows completion remains a separate hosted result.
+
+The provider restores prepared objects in bounded batches grouped by Git object
+type inside each fresh private checkout. Every input still has its object hash
+checked, every Git-returned identity must match in order, and the complete
+prepared parent/candidate trees are revalidated. Text filters are explicitly
+disabled, with CRLF payload/output coverage. Missing, extra, reordered or invalid
+identities and partial batch failure stop use/publication and clean the temporary
+checkout. No object cache survives a restore. This reduces process creation,
+not the authority, remote-ref, artifact, path, mode or budget evidence required.
+Linux timing and hosted CI reliability remain separately reported measurements.
 
 ## One independent-context A/B behavior sample
 

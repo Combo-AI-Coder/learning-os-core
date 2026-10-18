@@ -2540,6 +2540,12 @@ class SyntheticPreparedGitProvider(GitCliProvider):
         with tempfile.TemporaryDirectory(prefix="learning-os-first-use-restore-") as name:
             repo = Path(name)
             self._init_repo(repo)
+            # Restore every object afresh, but amortize process creation within
+            # this one private checkout. Inputs are bounded by the artifact and
+            # named only by checked hexadecimal identities, never caller paths.
+            inputs = repo / "first-use-objects"
+            inputs.mkdir()
+            groups = {kind: [] for kind in ("blob", "tree", "commit")}
             for sha, item in artifact["objects"].items():
                 kind, encoded = item
                 if kind not in {"blob", "tree", "commit"} or not EXACT_COMMIT.fullmatch(sha):
@@ -2551,9 +2557,19 @@ class SyntheticPreparedGitProvider(GitCliProvider):
                 actual = hashlib.sha1(f"{kind} {len(raw)}\0".encode() + raw).hexdigest()
                 if actual != sha:
                     raise ResolutionError("prepared Git object integrity mismatch")
-                written = self._git_bytes("hash-object", "-w", "-t", kind, "--stdin",
-                                         cwd=repo, input_bytes=raw).decode().strip()
-                if written != sha:
+                (inputs / sha).write_bytes(raw)
+                groups[kind].append(sha)
+            for kind, identities in groups.items():
+                if not identities:
+                    continue
+                written = self._git_bytes(
+                    "hash-object", "-w", "-t", kind, "--stdin-paths", "--no-filters",
+                    cwd=repo,
+                    input_bytes="".join(f"first-use-objects/{sha}\n" for sha in identities).encode("ascii"),
+                )
+                # Exact ordered output rejects missing, extra, reordered and
+                # malformed identities; no partially restored batch is usable.
+                if written.splitlines() != [sha.encode("ascii") for sha in identities]:
                     raise ResolutionError("restored Git object identity mismatch")
             self._first_use_verify(repo, artifact["descriptor"])
             # Only one parent is needed; its ancestors are already on the remote.
