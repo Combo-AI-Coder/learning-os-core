@@ -1,0 +1,15 @@
+{
+  "accepted_initial_transitions": 10,
+  "checkpoint": {
+    "surface_version": "v4",
+    "ok": true,
+    "operation": "save_learning_checkpoint",
+    "result": {
+      "applied": true
+    }
+  },
+  "fresh_read_only_write_rejected": true,
+  "head_unchanged_by_fresh_consumer": true,
+  "initialization_retry": "already_applied",
+  "no_evidence_created": true
+}

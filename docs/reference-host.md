@@ -187,3 +187,28 @@ A new host against an old deployed write policy fails closed for ordinary writes
 not only these operations. This is a deployment compatibility change, not a
 Core promotion or permission to update a real host. See
 `tests/test_intake_operations.py` and the separate synthetic experience report.
+
+## Blank first-use synthetic reference
+
+The separately trusted `SyntheticFirstUseService` in `scripts/first_use.py` can
+exercise a genuinely blank local synthetic Instance with an existing `main` ref
+and only an optional README. It uses `SyntheticFirstUseAuthority`, a private
+`SyntheticFirstUseStore`, shared `DeploymentWriteGate`, and
+`SyntheticPreparedGitProvider`. These are test adapters, not production identity,
+permissions or receipt services. The ordinary `ReferenceLearningHost.invoke`
+allowlist remains exactly seven operations and contains no initialization API.
+
+Its fixed prediction/context template supplies nine existing document formats,
+including a meaningful two-step current Subtopic. A five-document structural
+minimum alone is not enough for checkpoint/discovery, which require a bound
+Subtopic. Ordinary open rejects every inactive prefix. Only full prepared
+activation and current grant/deployment checks produce the opaque checkpoint
+writer. The seeded examples above are still seeded examples, not blank setup
+proof. The new acceptance tests are `tests/test_first_use.py`.
+
+An authenticated retry recovers an exact prepared effect after lost responses.
+It never accepts same text as proof of ownership, changes its expected parent,
+creates generation 2, overwrites later learning, or grants a fresh consumer write
+identity. See `protocol/deployment-runtime.md` for unknown outcomes, retained
+artifacts, revocation and unsupported production boundaries. Fresh read-only
+recovery and a separate learner-authorized writable handoff are different paths.

@@ -1,0 +1,15 @@
+{
+  "plan_sha256": "ca7599261dd92532beed677ed574fe93a4ecef1e08da8022b7fa7362acf1a127",
+  "a_packet_sha256": "eba751fac02e48ea72f18de89415fd0ed038fd1d65b13666accc6a000ed4b061",
+  "synthetic_core_commit": "0d102a3ba92b684c2f5cbc9e2d934252778b2374",
+  "source_sha256": {
+    "scripts/first_use.py": "eadfc5ecee4fdd4f5f2ebc684c0ed8669866a54a16082c8cf5624ab0484b3c90",
+    "scripts/runtime_adapter.py": "f7eaf4b46e279fdd72409e24fb3c0b347734ac6fa40ee601727535f9fdd227b0",
+    "scripts/runtime_broker.py": "c58f856294c8304109e5902f6e1985d4f361f97b9973b9d425b3cc0289b7c777",
+    "scripts/validate_learning_os.py": "55899f514c9680a9ef2af303ad435a21e1eacbc9dd0fde8e905e6c20e159e6a1",
+    "config/core.yaml": "167a025a56942db1421c4e17d47cb8f9b0d232ab5843c8d8389c36925d48cbde"
+  },
+  "sample_count": 1,
+  "real_learner": false,
+  "independent_provider_model": false
+}
