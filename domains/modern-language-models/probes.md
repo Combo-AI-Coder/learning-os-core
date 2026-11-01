@@ -214,6 +214,14 @@ A response creates no capability transition by itself. Any later
 persistent judgment must follow the Evidence protocols and preserve
 scope, assistance, exposure, and uncertainty.
 
+### Mixed-response interpretation example
+
+For a worked synthetic response that gets the ID trace and initial lookup
+right but incorrectly restricts output to tokens already seen in the input,
+see the [scoped interpretation card and research boundary](https://github.com/Combo-AI-Coder/learning-os-core/issues/34#issuecomment-6551815808).
+It illustrates this rubric's component-specific follow-up, not a new probe,
+learner observation, automatic capability update, or demonstrated learning effect.
+
 ### Provenance and licensing
 
 Self-authored for Learning OS using a synthetic toy model and examples.
