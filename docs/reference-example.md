@@ -94,6 +94,29 @@ Stop on any unexpected exit or mismatch; see the stop rules below. A preflight
 failure stops before either exporter; preserve its diagnostics and correct the
 Git/environment prerequisite rather than bypassing the provider's guards.
 
+### Development CLI feedback (not in the pinned baseline above)
+
+The current development exporters add concise terminal feedback. This section
+applies only to a source candidate containing these changes; the pinned
+`39ad24e...` recipe above still has its original behavior and expectations.
+Do not silently switch executable sources to obtain the new messages.
+
+- Both exporters resolve the requested path first (including symlink components).
+  They reject an existing resolved destination or one inside Core before starting
+  the replay, with a usage error (exit 2). Use an explicit fresh path rather than
+  symlink indirection. These usability checks do not protect against hostile
+  concurrent path replacement. Preserve existing results
+  and choose a new directory outside Core; do not delete a failed run to hide it.
+- After **all** answer-replay files have been written successfully, Chapter A
+  prints one JSON summary: `status: "passed"`, `packet_count: 6`,
+  `output_file_count: 7`, and `model_resampled: false`. Read the exported files
+  as described below; this is mechanical replay, not a new learning result.
+- Chapter B keeps its existing success JSON and failure-record behavior.
+  A later integrity, permission, concurrent-directory-creation or write failure
+  is still a failure, not a usage error or success. Partial outputs may remain;
+  the summary does not make multi-file export atomic or replace exit-status
+  checks. No failure is automatically retried or cleaned up.
+
 ### Review or integration: validate the actual candidate
 
 The recipe above leaves the shell in the older baseline checkout. Its results

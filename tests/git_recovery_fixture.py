@@ -378,11 +378,12 @@ class GitRecoveryJourney:
         return result
 
 
-def main() -> None:
+def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path)
+    parser.add_argument("--output", type=Path,
+                        help="new resolved output directory outside Core; paths follow symlinks; existing results are never overwritten")
     parser.add_argument("--worker", nargs=2, metavar=("ROOT", "MODE"))
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if args.worker:
         if args.output:
             parser.error("worker and output are exclusive")
@@ -396,7 +397,9 @@ def main() -> None:
         parser.error("--output is required")
     output = args.output.resolve()
     if output == ROOT or ROOT in output.parents:
-        parser.error("output must be outside the Core checkout")
+        parser.error("output must be outside the Core checkout; choose a new sibling directory")
+    if output.exists():
+        parser.error("output already exists; preserve it and choose a new directory")
     output.mkdir(parents=True, exist_ok=False)
     journey = GitRecoveryJourney(output)
     try:

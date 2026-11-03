@@ -12,6 +12,7 @@ import json
 import hashlib
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -64,6 +65,27 @@ def repository(root, files):
     git("clone", "-q", "--bare", str(root), str(remote))
     git("--git-dir", str(remote), "config", "uploadpack.allowFilter", "true")
     return remote
+
+
+def exact_commit_topology(repo, candidates):
+    """Read this assertion's exact candidates in one Git process, without caching."""
+    if (not candidates or
+            any(not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha)
+                for sha in candidates) or len(set(candidates)) != len(candidates)):
+        raise AssertionError("candidate topology identities are invalid")
+    rows = git("--git-dir", str(repo), "show", "--no-walk=unsorted",
+               "--format=%H %P %T", "--no-patch", *candidates, "--").splitlines()
+    if len(rows) != len(candidates):
+        raise AssertionError("candidate topology row count differs")
+    topology = []
+    for candidate, row in zip(candidates, rows):
+        fields = row.split()
+        # Exactly one parent is part of this fixture's ten-transition contract.
+        if (len(fields) != 3 or fields[0] != candidate or
+                any(not re.fullmatch(r"[0-9a-f]{40}", value) for value in fields)):
+            raise AssertionError("candidate topology identity or parent count differs")
+        topology.append((fields[1], fields[2]))
+    return topology
 
 
 class Restart(Exception):
@@ -161,10 +183,12 @@ class FirstUseTests(unittest.TestCase):
         self.assertEqual(10, len(receipt["steps"]))
         self.assertEqual("10", git("--git-dir", str(self.instance_remote), "rev-list", "--count", f"{self.baseline}..main"))
         parent = self.baseline
-        for step in receipt["steps"]:
+        candidates = [step["candidate"] for step in receipt["steps"]]
+        topology = exact_commit_topology(self.instance_remote, candidates)
+        for step, (actual_parent, actual_tree) in zip(receipt["steps"], topology):
             self.assertEqual(parent, step["descriptor"]["parent"])
-            self.assertEqual(parent, git("--git-dir", str(self.instance_remote), "rev-parse", f'{step["candidate"]}^'))
-            self.assertEqual(step["descriptor"]["tree"], git("--git-dir", str(self.instance_remote), "rev-parse", f'{step["candidate"]}^{{tree}}'))
+            self.assertEqual(parent, actual_parent)
+            self.assertEqual(step["descriptor"]["tree"], actual_tree)
             parent = step["candidate"]
 
     def test_blank_normal_staging_activation_and_checkpoint(self):

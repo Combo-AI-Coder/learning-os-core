@@ -309,8 +309,23 @@ def export_replay(destination):
     return result
 
 
-if __name__ == '__main__':
+def main(argv=None):
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--output', required=True, type=Path)
-    export_replay(parser.parse_args().output)
+    parser.add_argument('--output', required=True, type=Path,
+                        help='new resolved output directory outside Core; paths follow symlinks; existing results are never overwritten')
+    destination = parser.parse_args(argv).output.resolve()
+    if destination == ROOT or ROOT in destination.parents:
+        parser.error('output must be outside the Core checkout; choose a new sibling directory')
+    if destination.exists():
+        parser.error('output already exists; preserve it and choose a new directory')
+    # Only predictable input mistakes are usage errors. Replay/integrity and
+    # write failures keep their original exception and never print success.
+    result = export_replay(destination)
+    print(json.dumps({'status': 'passed', 'packet_count': len(result['packets']),
+                      'output_file_count': len(result['packets']) + 1,
+                      'model_resampled': result['model_resampled']}))
+
+
+if __name__ == '__main__':
+    main()
