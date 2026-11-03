@@ -3,6 +3,16 @@
 Date: 2026-10-06  
 Status: external research input for Learning OS Core issue #34; not product acceptance, deployment authority, learner-state mutation authority, or schema authorization.
 
+## Dated successor navigation — 2026-10-31
+
+The report below preserves what the October 6 research run did and did not verify. Its primary-source and bibliographic follow-up gaps have since received these bounded October 10 results:
+
+- [Spacing: Cepeda primary-source reconciliation](https://github.com/Combo-AI-Coder/learning-os-core/issues/34#issuecomment-6093784329) distinguishes study spacing from final-test delay; it does not establish individual forgetting thresholds, automatic capability decay or transfer.
+- [Learning styles: Pashler primary-source reconciliation](https://github.com/Combo-AI-Coder/learning-os-core/issues/34#issuecomment-6095447978) separates the matching hypothesis from learner-owned presentation preferences and the synthetic a05 invariance case; it is not a current comprehensive literature review.
+- [Personalization mechanisms and bibliography](https://github.com/Combo-AI-Coder/learning-os-core/issues/34#issuecomment-6096202100) identifies the personalization-bias study and separates information-selection bias, domain knowledge organization and outcome prediction; transfer to longitudinal tutoring remains uncertain.
+
+The [October 20 source-to-receipt reconciliation](https://github.com/Combo-AI-Coder/learning-os-core/issues/34#issuecomment-6284324807) records why these completed retrieval/metadata follow-ups must not be reopened from the historical wording below. These pointers are navigation, not new research or stronger learning-effect claims. Causal value of persistent learner state, delayed retention/transfer and the other product-evidence frontiers remain open at issue #34.
+
 ## Research question
 
 For a long-running, cross-session AI tutor, which learner-state signals are worth persisting because they can reasonably change the next teaching action, and what is an evidence-backed minimal sufficient learner model?
