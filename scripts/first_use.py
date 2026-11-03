@@ -57,6 +57,13 @@ class FirstUseRejected(GuardRejected):
         super().__init__(code)
 
 
+def _utf8_size(value, rejection_code):
+    try:
+        return len(value.encode("utf-8"))
+    except UnicodeEncodeError:
+        raise FirstUseRejected(rejection_code) from None
+
+
 def _slug(value):
     if not isinstance(value, str) or not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", value):
         raise FirstUseRejected("invalid_intent")
@@ -81,7 +88,7 @@ class FirstUseIntent:
         _slug(self.topic)
         _slug(self.unit)
         for value in (self.title, self.goal):
-            if not isinstance(value, str) or not value.strip() or len(value.encode("utf-8")) > 4096:
+            if not isinstance(value, str) or not value.strip() or _utf8_size(value, "invalid_intent") > 4096:
                 raise FirstUseRejected("invalid_intent")
 
 
@@ -110,6 +117,8 @@ class SyntheticFirstUseAuthority:
             raise FirstUseRejected("invalid_operation")
         if not all(isinstance(x, str) and 0 < len(x) <= 128 for x in (principal, surface)):
             raise FirstUseRejected("invalid_receiver")
+        for value in (principal, surface):
+            _utf8_size(value, "invalid_receiver")
         grant = dict(principal=principal, surface=surface, operation_id=operation_id,
                      intent_digest=_digest(asdict(intent)), locator_digest=_digest(load_locator(locator)),
                      version=FIRST_USE_VERSION)
