@@ -41,6 +41,7 @@ from scripts.runtime_adapter import (
     ResolutionError,
     SessionDeploymentContext,
     _preflight_bounded_yaml,
+    _load_bounded_yaml,
     load_locator,
 )
 from scripts.validate_learning_os import (
@@ -534,13 +535,7 @@ class RuntimeSessionBroker:
     def _parse_branch_runtime(
         text: str, *, allow_handoff_pending: bool = False
     ) -> dict:
-        _preflight_authority_yaml(text, "Branch runtime YAML")
-        try:
-            data = yaml.safe_load(text)
-        except yaml.YAMLError as exc:
-            raise ResolutionError(
-                f"Branch runtime is malformed YAML: {exc.__class__.__name__}"
-            ) from None
+        data = _load_bounded_yaml(text, "Branch runtime")
         if not isinstance(data, dict):
             raise ResolutionError("Branch runtime must be a mapping")
         missing = BRANCH_RUNTIME_REQUIRED_FIELDS - set(data)
@@ -652,13 +647,7 @@ class RuntimeSessionBroker:
 
     @staticmethod
     def _parse_branch_registry(text: str) -> dict:
-        _preflight_authority_yaml(text, "Branch registry YAML")
-        try:
-            data = yaml.safe_load(text)
-        except yaml.YAMLError as exc:
-            raise ResolutionError(
-                f"Branch registry is malformed YAML: {exc.__class__.__name__}"
-            ) from None
+        data = _load_bounded_yaml(text, "Branch registry")
         if not isinstance(data, dict):
             raise ResolutionError("Branch registry must be a mapping")
         missing = BRANCH_REGISTRY_REQUIRED_FIELDS - set(data)
@@ -853,13 +842,7 @@ class RuntimeSessionBroker:
                     ref,
                     "Branch runtime handoff_ref",
                 )
-                try:
-                    handoff = yaml.safe_load(text)
-                except yaml.YAMLError as exc:
-                    raise ResolutionError(
-                        f"Branch runtime handoff_ref is malformed YAML: "
-                        f"{exc.__class__.__name__}"
-                    ) from None
+                handoff = _load_bounded_yaml(text, "Branch runtime handoff_ref")
                 if not isinstance(handoff, dict):
                     raise ResolutionError(
                         "Branch runtime handoff_ref target must be a mapping"

@@ -150,9 +150,15 @@ def _preflight_bounded_yaml(content: str, where: str) -> None:
                                 raise ResolutionError(
                                     f"{where} mapping keys must be scalars"
                                 )
-                            key = key_loader.construct_object(
-                                key_node, deep=True
-                            )
+                            try:
+                                key = key_loader.construct_object(key_node, deep=True)
+                            except (ValueError, OverflowError, AttributeError,
+                                    KeyError, IndexError) as exc:
+                                # SafeLoader scalar constructors use built-in
+                                # exceptions for malformed tagged/scalar keys.
+                                raise ResolutionError(
+                                    f"{where} has a malformed YAML key: {exc.__class__.__name__}"
+                                ) from None
                             if key in seen:
                                 raise ResolutionError(
                                     f"{where} contains a duplicate mapping key"
@@ -168,6 +174,20 @@ def _preflight_bounded_yaml(content: str, where: str) -> None:
     except yaml.YAMLError as exc:
         raise ResolutionError(
             f"{where} preflight failed: {exc.__class__.__name__}"
+        ) from None
+
+
+def _load_bounded_yaml(text: str, where: str) -> object:
+    """Parse bounded YAML, classifying scalar-construction failures as input errors."""
+    _preflight_bounded_yaml(text, where)
+    try:
+        return yaml.safe_load(text)
+    except (yaml.YAMLError, ValueError, OverflowError, AttributeError,
+            KeyError, IndexError) as exc:
+        # Only SafeLoader runs in this catch: provider I/O and host bugs must
+        # remain operator exceptions rather than becoming input rejections.
+        raise ResolutionError(
+            f"{where} is malformed YAML: {exc.__class__.__name__}"
         ) from None
 
 
@@ -284,11 +304,7 @@ def load_locator(source: str | Path | dict) -> dict:
 
 
 def _load_contract(text: str) -> dict:
-    _preflight_bounded_yaml(text, "Runtime-Control YAML")
-    try:
-        data = yaml.safe_load(text)
-    except yaml.YAMLError as exc:
-        raise ResolutionError(f"Runtime-Control contract is malformed YAML: {exc.__class__.__name__}") from None
+    data = _load_bounded_yaml(text, "Runtime-Control contract")
     if not isinstance(data, dict):
         raise ResolutionError("Runtime-Control contract must be a mapping")
     deployment, core = data.get("deployment"), data.get("core")
