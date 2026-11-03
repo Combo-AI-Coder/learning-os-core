@@ -88,6 +88,32 @@ Core mutation follows PR-required governance. Deployed Runtime resolves and
 reads the exact Core commit pinned by Runtime-Control; advancement of this
 repository's `main` branch alone does not change the deployed Core.
 
+## CI event coverage
+
+The full Linux and Windows validation jobs run for pull requests (including
+mergeable Draft PRs), pushes to `main`, and pushes of any tag name. Ordinary
+non-main branch pushes do not start a second copy of the PR matrix. Job steps,
+permissions, checkout behavior, cleanup, and the Linux 15-minute / Windows
+90-minute limits are unchanged.
+
+A branch without a PR has no automatic hosted validation. Before proposing
+integration, run the Core validator and full unit suite described above in an
+authorized development environment, then open or update a mergeable Draft PR
+for hosted dual-platform evidence. GitHub does not run `pull_request` workflows
+while the PR has merge conflicts: resolve the conflicts and update the branch
+before relying on hosted results. Local results are not a replacement for the
+full hosted matrix. Fork approval restrictions still apply.
+
+PR validation tests GitHub's merge result, not merely the branch head. Preserve
+current-base checks and natural main verification; an older matching source
+tree is not a substitute for current required checks. Tag validation does not
+authorize a release or deployment. No manual-dispatch shortcut is introduced.
+
+The source-contract tests in `tests/test_ci_workflow.py` guard the event mapping
+and non-trigger configuration. They do not simulate GitHub event delivery or
+prove current branch-protection settings. Intentional future job changes must
+review and update the preservation digest.
+
 ## Thin reference host
 
 The development reference host façade in `scripts/reference_host.py` exposes
