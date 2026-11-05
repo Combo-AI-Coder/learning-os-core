@@ -23,9 +23,9 @@ LEGACY_CANONICAL_DOCUMENT_TYPES={
     "branch_registry","branch_runtime","branch_report","coordination_event",
     "hub_runtime","topic_report","learning_handoff","evidence",
 }
-# Current production legacy V0.3 schema-version compatibility, compiled from
-# production protocol/schema.md §2.1. No fallback/wildcard exists; the V0.4
-# split Instance state schema axis is deliberately separate.
+# Legacy V0.3 schema-version compatibility used by Validator.
+# No fallback/wildcard exists; the V0.4 split Instance state schema axis
+# is deliberately separate.
 LEGACY_SCHEMA_VERSIONS={
     "project_config":{"0.3"},"conversation_sequence_registry":{"0.3"},"lineage_control":{"0.3"},
     "learner_background":{"0.1"},"learner_model":{"0.1"},"learner_calibration":{"0.1"},"learner_costs":{"0.1"},
@@ -36,7 +36,7 @@ LEGACY_SCHEMA_VERSIONS={
     "branch_registry":{"0.3"},"branch_runtime":{"0.3"},"branch_report":{"0.3"},"coordination_event":{"0.3"},
     "hub_runtime":{"0.3"},"topic_report":{"0.3"},"learning_handoff":{"0.3"},"evidence":{"0.3"},
 }
-# Current production protocol/schema.md §2.3 canonical legacy storage registry.
+# Canonical legacy storage-family rules used by Validator.
 # Rule order has no semantic meaning: callers must collect every full match.
 _SEG=r"(?!(?:\.|\.\.)(?:/|$))[^/]+"
 _YAML_SEG=r"(?!(?:\.|\.\.)\.yaml$)[^/]+\.yaml"
