@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Deterministic mechanical validator for Learning OS canonical YAML."""
 from __future__ import annotations
-import argparse, hashlib, json, re, stat
+import argparse, hashlib, json, os, re, stat
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import yaml
@@ -955,7 +955,21 @@ class InstanceValidator:
         else: self.error("instance.core_manifest","config/core.yaml","Core manifest.supported_instance_state_schema_versions missing or invalid (fail closed)")
         ddir=self.core_root/"domains"
         if ddir.is_dir():
-            for f in sorted(ddir.glob("*/curriculum.yaml")):
+            # Path.glob suppresses scan/stat errors, which can hide Core bases.
+            try:
+                curricula=[]
+                with os.scandir(ddir) as entries:
+                    domain_entries=sorted(entries,key=lambda entry:entry.name)
+                for entry in domain_entries:
+                    if not entry.is_dir(): continue
+                    domain_dir=ddir/entry.name
+                    with os.scandir(domain_dir) as entries:
+                        curricula.extend(domain_dir/child.name for child in entries
+                                         if Path(child.name).match("curriculum.yaml"))
+            except OSError:
+                self.error("instance.core_enumeration","domains","Core curricula could not be enumerated (fail closed)")
+                return
+            for f in sorted(curricula):
                 try:c=yaml.safe_load(f.read_text(encoding="utf-8"))
                 except Exception:
                     # Failed reads are not evidence that a Core base is absent.
