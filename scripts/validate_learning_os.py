@@ -885,8 +885,30 @@ class InstanceValidator:
                         if sub.name=="lineages": self.error("instance.private_lineage","runtime/lineages","private project-design lineage control material belongs to the Control plane, never Instance")
                         elif sub.name!="ui": self.error("instance.runtime_entry",f"runtime/{sub.name}","only runtime/ui/ is allowed under the Instance runtime directory")
             elif n not in INSTANCE_ALLOWED_FILES: self.error("instance.top_level",n,f"unexpected top-level file {n}")
+    def discover_documents(self,pattern):
+        # rglob suppresses filesystem errors, which can hide Instance documents.
+        paths=[]; pending=[self.root]; failed=set()
+        while pending:
+            directory=pending.pop()
+            try:
+                with os.scandir(directory) as entries:
+                    for entry in entries:
+                        path=directory/entry.name
+                        # Like rglob, match names regardless of the entry type,
+                        # but never recurse into directory symlinks.
+                        if Path(entry.name).match(pattern): paths.append(path)
+                        try:
+                            if entry.is_dir(follow_symlinks=False): pending.append(path)
+                        except OSError:
+                            failed.add(path.relative_to(self.root).as_posix())
+            except OSError:
+                failed.add(directory.relative_to(self.root).as_posix())
+        reported={finding.path for finding in self.findings if finding.code=="instance.enumeration"}
+        for path in sorted(failed-reported):
+            self.error("instance.enumeration",path,"Instance documents could not be enumerated (fail closed)")
+        return sorted(paths)
     def collect(self):
-        for f in sorted(self.root.rglob("*.yaml")):
+        for f in self.discover_documents("*.yaml"):
             rp=f.relative_to(self.root)
             if not rp.parts or rp.parts[0] in (".git",".github"): continue
             p=rp.as_posix()
@@ -1000,7 +1022,7 @@ class InstanceValidator:
             elif t in INSTANCE_CONTRACT_TYPES and d["schema_version"]!=INSTANCE_SCHEMA:
                 self.error("instance.contract_schema",p,f"{t} is a V0.4-only contract document and requires schema_version {INSTANCE_SCHEMA!r}")
             self.check_keys(p,d,t)
-        for f in sorted(self.root.rglob("*.md")):
+        for f in self.discover_documents("*.md"):
             if CORE_TOKEN_RE.search(f.read_text(encoding="utf-8")):
                 self.error("instance.credential_value",f.relative_to(self.root).as_posix(),"structurally detected credential/token value in document text")
     def build_curricula(self):
