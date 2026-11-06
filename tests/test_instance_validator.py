@@ -21,7 +21,10 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
+from unittest import mock
 
 import yaml
 
@@ -924,6 +927,110 @@ class SplitInstanceStorageRegistryTests(unittest.TestCase):
             "targets": ["x"],
         })
         self.assert_pass()
+
+
+class InstanceCoreCurriculumLoadTests(unittest.TestCase):
+    """A discovered but unreadable Core base must not become an absent base."""
+
+    def setUp(self):
+        td = tempfile.TemporaryDirectory()
+        self.addCleanup(td.cleanup)
+        self.root = Path(td.name)
+        self.core = make_core(self.root / "core")
+        self.instance = make_instance(self.root / "instance")
+        self.curriculum = self.core / f"domains/{DOMAIN}/curriculum.yaml"
+
+    def add_local(self, domain=DOMAIN):
+        local = core_curriculum(domain, "9.9")
+        local["schema_version"] = "0.3"
+        write_yaml(self.instance, f"curriculum/local/{domain}/curriculum.yaml", local)
+
+    def findings(self):
+        return validate_instance(self.instance, self.core, deployment_binding())
+
+    def assert_load_error(self, findings):
+        errors = [f for f in findings if f.severity == "error"]
+        self.assertEqual(["instance.core_curriculum"], [f.code for f in errors])
+        self.assertEqual(f"domains/{DOMAIN}/curriculum.yaml", errors[0].path)
+        self.assertEqual(
+            "Core curriculum could not be read or parsed (fail closed)",
+            errors[0].message,
+        )
+        rendered = "\n".join(f.render() for f in findings)
+        self.assertNotIn("synthetic-private-marker", rendered)
+        self.assertNotIn(str(self.root), rendered)
+
+    def fail_curriculum_read(self, error):
+        read_text = Path.read_text
+
+        def read(path, *args, **kwargs):
+            if path == self.curriculum:
+                raise error
+            return read_text(path, *args, **kwargs)
+
+        return mock.patch.object(Path, "read_text", read)
+
+    def test_core_curriculum_read_error_cannot_hide_shadow(self):
+        self.add_local()
+        with self.fail_curriculum_read(PermissionError("synthetic-private-marker")):
+            self.assert_load_error(self.findings())
+
+    def test_core_curriculum_read_error_without_shadow(self):
+        for error_type in (OSError, FileNotFoundError):
+            with self.subTest(error_type=error_type.__name__):
+                with self.fail_curriculum_read(error_type("synthetic-private-marker")):
+                    self.assert_load_error(self.findings())
+
+    def test_core_curriculum_decode_error_with_or_without_shadow(self):
+        self.curriculum.write_bytes(b"synthetic-private-marker: \xff\n")
+        self.assert_load_error(self.findings())
+        self.add_local()
+        self.assert_load_error(self.findings())
+
+    def test_core_curriculum_yaml_error_with_or_without_shadow(self):
+        self.curriculum.write_text("synthetic-private-marker: [\n", encoding="utf-8")
+        self.assert_load_error(self.findings())
+        self.add_local()
+        self.assert_load_error(self.findings())
+
+    def test_core_curriculum_failure_with_unrelated_local_domain(self):
+        self.add_local("unrelated-domain")
+        with self.fail_curriculum_read(PermissionError("synthetic-private-marker")):
+            self.assert_load_error(self.findings())
+
+    def test_other_loaded_core_base_still_rejects_shadow(self):
+        write_yaml(self.core, "domains/other-domain/curriculum.yaml", core_curriculum("other-domain"))
+        self.add_local("other-domain")
+        with self.fail_curriculum_read(PermissionError("synthetic-private-marker")):
+            errors = {f.code for f in self.findings() if f.severity == "error"}
+        self.assertEqual({"instance.core_curriculum", "instance.domain_shadow"}, errors)
+
+    def test_sparse_core_without_a_curriculum_remains_allowed(self):
+        self.curriculum.unlink()
+        self.add_local()
+        # A directory without a curriculum is not an enumerated failed read.
+        self.assertEqual([], self.findings())
+        self.curriculum.parent.rmdir()
+        (self.core / "domains").rmdir()
+        self.assertEqual([], self.findings())
+
+    def test_instance_cli_rejects_core_load_error(self):
+        from scripts.validate_learning_os import main
+
+        self.add_local()
+        binding = self.root / "binding.yaml"
+        write_yaml(self.root, binding.name, deployment_binding())
+        output = StringIO()
+        argv = ["validate_learning_os.py", str(self.instance), "--instance",
+                "--core-snapshot", str(self.core), "--deployment-binding", str(binding)]
+        with mock.patch.object(sys, "argv", argv), redirect_stdout(output):
+            with self.fail_curriculum_read(PermissionError("synthetic-private-marker")):
+                status = main()
+        self.assertEqual(1, status)
+        self.assertIn("instance.core_curriculum", output.getvalue())
+        self.assertIn("1 error(s)", output.getvalue())
+        self.assertNotIn("synthetic-private-marker", output.getvalue())
+        self.assertNotIn(str(self.root), output.getvalue())
 
 
 if __name__ == "__main__":
