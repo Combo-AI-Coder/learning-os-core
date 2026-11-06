@@ -12,6 +12,9 @@ from typing import Any
 
 from scripts.runtime_adapter import (
     CasConflict,
+    WriteOutcomeUnknown,
+    WriteCleanupFailed,
+    WritePublishedCleanupFailed,
     GuardRejected,
     RepositoryProvider,
     ResolutionError,
@@ -319,6 +322,12 @@ class ReferenceLearningHost:
             raise GuardRejected(
                 "reference host operation has no dispatcher"
             )
+        except WritePublishedCleanupFailed:
+            return self._failure(operation, "write_published_cleanup_failed")
+        except WriteCleanupFailed:
+            return self._failure(operation, "write_cleanup_failed")
+        except WriteOutcomeUnknown:
+            return self._failure(operation, "write_outcome_unknown")
         except CasConflict:
             return self._failure(operation, "cas_conflict")
         except GuardRejected:

@@ -34,6 +34,8 @@ from scripts.runtime_adapter import (
     MAX_SNAPSHOT_PATH_COMPONENT_BYTES,
     MAX_SNAPSHOT_PATH_DEPTH,
     CasConflict,
+    WriteOutcomeError,
+    WriteOutcomeUnknown,
     DeploymentGuard,
     DeploymentResolver,
     GuardRejected,
@@ -1184,12 +1186,12 @@ class RuntimeSessionBroker:
                     ),
                     expected_ref_sha=authority_head,
                 )
-            except CasConflict:
+            except (CasConflict, WriteOutcomeError):
                 raise
             except Exception as exc:
-                raise CasConflict(
-                    f"successor claim compare-and-swap failed: {exc}"
-                ) from None
+                raise WriteOutcomeUnknown(
+                    "provider write outcome is unconfirmed"
+                ) from exc
 
             self.guard.check(deployment)
             claimed_runtime, claimed_head = self._read_branch_runtime(
@@ -2780,12 +2782,12 @@ class RuntimeSessionBroker:
                             message,
                             expected_ref_sha=authority.head,
                         )
-                    except CasConflict:
+                    except (CasConflict, WriteOutcomeError):
                         raise
                     except Exception as exc:
-                        raise CasConflict(
-                            f"Instance create-only compare-and-swap failed: {exc}"
-                        ) from None
+                        raise WriteOutcomeUnknown(
+                            "provider write outcome is unconfirmed"
+                        ) from exc
                 finally:
                     if not release_attempted:
                         pending = [
@@ -3123,12 +3125,12 @@ class RuntimeSessionBroker:
                                 message,
                                 expected_ref_sha=authority.head,
                             )
-                    except CasConflict:
+                    except (CasConflict, WriteOutcomeError):
                         raise
                     except Exception as exc:
-                        raise CasConflict(
-                            f"Knowledge compare-and-swap failed: {exc}"
-                        ) from None
+                        raise WriteOutcomeUnknown(
+                            "provider write outcome is unconfirmed"
+                        ) from exc
                 finally:
                     if not release_attempted:
                         pending = [
@@ -3277,10 +3279,12 @@ class RuntimeSessionBroker:
                                     state.deployment.instance_repository_id, state.binding.instance_ref,
                                     path, content, expected_blob_sha, message, expected_ref_sha=authority.head,
                                 )
-                        except CasConflict:
+                        except (CasConflict, WriteOutcomeError):
                             raise
-                        except Exception:
-                            raise CasConflict("intake preference compare-and-swap failed") from None
+                        except Exception as exc:
+                            raise WriteOutcomeUnknown(
+                                "provider write outcome is unconfirmed"
+                            ) from exc
                 finally:
                     if not release_attempted:
                         self._release_materializations([
@@ -3409,12 +3413,12 @@ class RuntimeSessionBroker:
                             message,
                             expected_ref_sha=authority.head,
                         )
-                    except CasConflict:
+                    except (CasConflict, WriteOutcomeError):
                         raise
                     except Exception as exc:
-                        raise CasConflict(
-                            f"Instance compare-and-swap failed: {exc}"
-                        ) from None
+                        raise WriteOutcomeUnknown(
+                            "provider write outcome is unconfirmed"
+                        ) from exc
                 finally:
                     if not release_attempted:
                         pending = [

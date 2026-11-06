@@ -134,7 +134,17 @@ Normal learning chats:
 
 Low-level GitHub details belong in Learning OS/audit contexts unless synchronization fails.
 
-If an important write fails, MUST disclose that durable state was not synchronized. Do not claim success.
+If an important write fails, MUST disclose the outcome supported by evidence.
+A confirmed pre-publication refusal means durable state was not synchronized.
+An unknown publication outcome must not be described as proof that nothing was
+written. Acknowledged publication followed by cleanup failure means the write was
+published but cleanup remains incomplete; do not report complete success or
+automatically repeat the write. Recover through authorized reads and the existing
+operation's identity/idempotency rules before deciding whether a retry is needed.
+Keep the original Evidence occurrence ID/content rather than inventing a new
+occurrence to recover a missing acknowledgement. Cleanup failures stay visible to
+the trusted operator. The ordinary reference Host's bounded error codes are
+specified in `docs/reference-host.md`; they do not expose private commit identity.
 
 ## 11. Historical V0.2 learner-project artifacts
 
