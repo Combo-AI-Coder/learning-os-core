@@ -4168,5 +4168,206 @@ class RuntimeSessionBrokerTests(unittest.TestCase):
         )
 
 
+class BoundedWritePolicyFingerprintTests(unittest.TestCase):
+    """Portable deterministic pipe cases plus bounded direct-child smoke tests."""
+
+    def setUp(self):
+        self.now = 0.0
+        self.pipe = mock.Mock()
+        self.pipe.fileno.return_value = 12345
+        self.pipe.read.side_effect = AssertionError("must not use buffered read")
+        self.process = mock.Mock(stdout=self.pipe, returncode=0)
+        self.process.poll.side_effect = lambda: self.process.returncode
+        self.process.kill.side_effect = lambda: setattr(self.process, "returncode", -9)
+        self.process.wait.return_value = -9
+        self.chunks = []
+        self.read_sizes = []
+
+    def monotonic(self):
+        # Time also advances under continuous output, without real sleeping.
+        self.now += 0.01
+        return self.now
+
+    def read(self, fd, size):
+        self.assertEqual(12345, fd)
+        self.read_sizes.append(size)
+        value = self.chunks.pop(0) if self.chunks else BlockingIOError()
+        if isinstance(value, BaseException):
+            raise value
+        return value
+
+    def invoke(self, chunks, *, setup_error=None):
+        self.chunks = list(chunks)
+        with (
+            mock.patch.object(runtime_broker.subprocess, "Popen", return_value=self.process),
+            mock.patch.object(runtime_broker.os, "set_blocking", side_effect=setup_error) as blocking,
+            mock.patch.object(runtime_broker.os, "read", side_effect=self.read),
+            mock.patch.object(runtime_broker.time, "monotonic", side_effect=self.monotonic),
+            mock.patch.object(runtime_broker.time, "sleep"),
+            mock.patch.object(runtime_broker, "CANDIDATE_VALIDATION_TIMEOUT_SECONDS", 0.05),
+            mock.patch.object(runtime_broker.threading, "Thread") as thread,
+        ):
+            try:
+                return runtime_broker._compute_bounded_write_policy_fingerprint(
+                    ["synthetic-fingerprint"], cwd=ROOT
+                )
+            finally:
+                blocking.assert_called_once_with(12345, False)
+                self.pipe.close.assert_called_once_with()
+                self.pipe.read.assert_not_called()
+                thread.assert_not_called()
+                self.assertTrue(all(size == 64 for size in self.read_sizes))
+
+    def test_fragmented_ascii_and_eof(self):
+        self.assertEqual("abcd", self.invoke([b"ab", BlockingIOError(), b"cd\n", b""]))
+        self.process.kill.assert_not_called()
+
+    def test_empty_eof(self):
+        self.assertEqual("", self.invoke([b""]))
+
+    def test_exact_output_cap(self):
+        self.assertEqual("a" * 128, self.invoke([b"a" * 64, b"a" * 64, b""]))
+
+    def test_overflow_rejected_before_next_read(self):
+        with self.assertRaisesRegex(GuardRejected, "exceeded Runtime budget"):
+            self.invoke([b"a" * 64, b"a" * 64, b"b", b"not consumed"])
+        self.assertEqual([b"not consumed"], self.chunks)
+
+    def test_non_ascii_fails_closed(self):
+        with self.assertRaisesRegex(GuardRejected, "failed closed"):
+            self.invoke([b"\xff", b""])
+
+    def test_nonzero_exit_fails_closed(self):
+        self.process.returncode = 1
+        with self.assertRaisesRegex(GuardRejected, "failed closed"):
+            self.invoke([b"valid ascii", b""])
+
+    def test_exited_child_with_open_pipe_hits_drain_deadline(self):
+        with self.assertRaisesRegex(GuardRejected, "output did not drain"):
+            self.invoke([])
+        self.assertGreater(self.now, 1)
+        self.assertLess(self.now, 1.2)
+        self.process.kill.assert_not_called()
+
+    def test_live_child_hits_computation_deadline_and_is_reaped(self):
+        self.process.returncode = None
+        with self.assertRaisesRegex(GuardRejected, "computation timed out"):
+            self.invoke([])
+        self.process.kill.assert_called_once_with()
+        self.process.wait.assert_called_once_with(timeout=1)
+        self.assertLess(self.now, 0.2)
+
+    def test_eof_does_not_skip_live_child_deadline(self):
+        self.process.returncode = None
+        with self.assertRaisesRegex(GuardRejected, "computation timed out"):
+            self.invoke([b""])
+        self.assertEqual([64], self.read_sizes)
+        self.process.kill.assert_called_once_with()
+        self.process.wait.assert_called_once_with(timeout=1)
+
+    def test_eof_waits_for_normal_child_exit(self):
+        self.process.returncode = None
+        def poll():
+            if self.now > 0.03:
+                self.process.returncode = 0
+            return self.process.returncode
+        self.process.poll.side_effect = poll
+        self.assertEqual("ok", self.invoke([b"ok", b""]))
+        self.process.kill.assert_not_called()
+
+    def test_read_failure_closes_pipe_and_reaps_live_child(self):
+        self.process.returncode = None
+        with self.assertRaisesRegex(GuardRejected, "failed closed"):
+            self.invoke([OSError("synthetic read failure")])
+        self.process.kill.assert_called_once_with()
+        self.process.wait.assert_called_once_with(timeout=1)
+
+    def test_nonblocking_setup_failure_fails_closed_and_reaps(self):
+        self.process.returncode = None
+        with self.assertRaisesRegex(GuardRejected, "failed closed"):
+            self.invoke([], setup_error=OSError("synthetic setup failure"))
+        self.process.kill.assert_called_once_with()
+        self.process.wait.assert_called_once_with(timeout=1)
+        self.assertEqual([], self.read_sizes)
+
+    def test_start_failure_is_guard_rejection(self):
+        with mock.patch.object(runtime_broker.subprocess, "Popen", side_effect=OSError):
+            with self.assertRaisesRegex(GuardRejected, "failed to start"):
+                runtime_broker._compute_bounded_write_policy_fingerprint(
+                    ["synthetic-fingerprint"], cwd=ROOT
+                )
+
+    def test_real_pipe_held_writer_has_bounded_drain_and_closes(self):
+        if runtime_broker.sys.platform == "win32" and runtime_broker.sys.version_info < (3, 12):
+            self.skipTest("Windows nonblocking pipes require Python 3.12+")
+        read_fd, write_fd = runtime_broker.os.pipe()
+        pipe = runtime_broker.os.fdopen(read_fd, "rb")
+        process = mock.Mock(stdout=pipe, returncode=0)
+        process.poll.return_value = 0
+        started = runtime_broker.time.monotonic()
+        try:
+            with (
+                mock.patch.object(runtime_broker.subprocess, "Popen", return_value=process),
+                mock.patch.object(runtime_broker.threading, "Thread") as thread,
+            ):
+                with self.assertRaisesRegex(GuardRejected, "output did not drain"):
+                    runtime_broker._compute_bounded_write_policy_fingerprint(
+                        ["synthetic-fingerprint"], cwd=ROOT
+                    )
+                thread.assert_not_called()
+            elapsed = runtime_broker.time.monotonic() - started
+            self.assertGreaterEqual(elapsed, 1)
+            self.assertLess(elapsed, 3)
+            self.assertTrue(pipe.closed)
+            process.kill.assert_not_called()
+            process.wait.assert_not_called()
+        finally:
+            # The writer is owned by this test, not an inherited descendant.
+            runtime_broker.os.close(write_fd)
+            pipe.close()
+
+    def real_child(self, code, *, timeout=2):
+        # No descendants: every producer ends naturally within one second even
+        # if cleanup regresses. Windows nonblocking pipes require Python 3.12+.
+        if runtime_broker.sys.platform == "win32" and runtime_broker.sys.version_info < (3, 12):
+            self.skipTest("Windows nonblocking pipes require Python 3.12+")
+        created = []
+        popen = subprocess.Popen
+        def spawn(*args, **kwargs):
+            process = popen(*args, **kwargs)
+            created.append(process)
+            return process
+        with (
+            mock.patch.object(runtime_broker.subprocess, "Popen", side_effect=spawn),
+            mock.patch.object(runtime_broker, "CANDIDATE_VALIDATION_TIMEOUT_SECONDS", timeout),
+        ):
+            try:
+                return runtime_broker._compute_bounded_write_policy_fingerprint(
+                    [runtime_broker.sys.executable, "-c", code], cwd=ROOT
+                )
+            finally:
+                # Bounded defensive test cleanup also runs on a failed assertion.
+                for process in created:
+                    try:
+                        self.assertIsNotNone(process.poll())
+                        self.assertTrue(process.stdout.closed)
+                    finally:
+                        if process.poll() is None:
+                            process.kill()
+                        process.wait(timeout=2)
+                        process.stdout.close()
+
+    def test_real_finite_producer_success(self):
+        self.assertEqual("a" * 64, self.real_child("print('a' * 64)"))
+
+    def test_real_finite_producer_overflow(self):
+        with self.assertRaisesRegex(GuardRejected, "exceeded Runtime budget"):
+            self.real_child("import os; os.write(1, b'a' * 129)")
+
+    def test_real_finite_producer_timeout(self):
+        with self.assertRaisesRegex(GuardRejected, "computation timed out"):
+            self.real_child("import time; time.sleep(1)", timeout=0.2)
+
+
 if __name__ == "__main__":
     unittest.main()
