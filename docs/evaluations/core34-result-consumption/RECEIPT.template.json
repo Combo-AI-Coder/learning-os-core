@@ -1,0 +1,16 @@
+{
+  "template_only": true,
+  "source_commit": null,
+  "source_tree": null,
+  "base_commit": null,
+  "checked_out_commit": null,
+  "checked_out_tree": null,
+  "platform": null,
+  "python_major_minor": null,
+  "test_command": null,
+  "core_validator_rc": null,
+  "unittest_rc": null,
+  "native_run_ref": null,
+  "identity_evidence_ref": null,
+  "notes": "Fill only from independently verified native run and exact checkout evidence. This template is not evidence and grants no execution or retry."
+}

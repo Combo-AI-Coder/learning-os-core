@@ -1,0 +1,14 @@
+{
+  "source_commit": "941c41b04e5af2d404d654a0720983fe84a6ade3",
+  "source_tree": "7fe8d043b143adf98755ca187d020110470c8e0d",
+  "base_commit": "d5a02ce120052666f436194c087255540b49f491",
+  "checked_out_commit": "941c41b04e5af2d404d654a0720983fe84a6ade3",
+  "checked_out_tree": "7fe8d043b143adf98755ca187d020110470c8e0d",
+  "platform": "linux",
+  "python_major_minor": "3.12",
+  "core_validator_rc": 0,
+  "unittest_rc": 0,
+  "test_command": "python -m unittest discover -s tests -v",
+  "native_run_ref": "FIXTURE ONLY - no native run",
+  "identity_evidence_ref": "FIXTURE ONLY - no actual checkout"
+}

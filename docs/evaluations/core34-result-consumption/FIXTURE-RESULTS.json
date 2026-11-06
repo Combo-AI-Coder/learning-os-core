@@ -1,0 +1,371 @@
+{
+  "scope": "standalone text consumer only; no target tests, imports, subprocesses, network, sockets or probes",
+  "fixture_cases": 33,
+  "all_assertions_passed": true,
+  "elapsed_seconds": 0.09349688002839684,
+  "inventory_sha256": "0e239d27302854768b66eb68e09c8a9d645da52140aaf3a4e42323e2a13ad02a",
+  "helper_sha256": "dc91f7d089e6a827c1893853055bf60b8b5e88b2f4445d2bf2d922df9291d5f5",
+  "results": [
+    {
+      "fixture": "complete_linux_one_expected_skip",
+      "assertion_passed": true,
+      "expected_problem": null,
+      "actual_problems": [],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "complete_windows_no_skips",
+      "assertion_passed": true,
+      "expected_problem": null,
+      "actual_problems": [],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "historical_component_917_cannot_cover_union",
+      "assertion_passed": true,
+      "expected_problem": "missing_test_ids",
+      "actual_problems": [
+        "missing_test_ids",
+        "summary_count_missing_multiple_or_mismatch"
+      ],
+      "observed_count": 917,
+      "missing_count": 41,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "summary_only_958_is_insufficient",
+      "assertion_passed": true,
+      "expected_problem": "missing_test_ids",
+      "actual_problems": [
+        "linux_windows_only_skip_missing_or_changed",
+        "missing_test_ids"
+      ],
+      "observed_count": 0,
+      "missing_count": 958,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "same_count_duplicate_replaces_missing",
+      "assertion_passed": true,
+      "expected_problem": "duplicate_test_ids",
+      "actual_problems": [
+        "duplicate_test_ids",
+        "missing_test_ids"
+      ],
+      "observed_count": 958,
+      "missing_count": 1,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "incomplete_log_with_correct_summary",
+      "assertion_passed": true,
+      "expected_problem": "missing_test_ids",
+      "actual_problems": [
+        "missing_test_ids"
+      ],
+      "observed_count": 957,
+      "missing_count": 1,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "old_component_commit",
+      "assertion_passed": true,
+      "expected_problem": "identity_mismatch:source_commit",
+      "actual_problems": [
+        "identity_mismatch:source_commit"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "old_local_attempt_not_native_head",
+      "assertion_passed": true,
+      "expected_problem": "identity_mismatch:source_commit",
+      "actual_problems": [
+        "identity_mismatch:source_commit"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "changed_base",
+      "assertion_passed": true,
+      "expected_problem": "identity_mismatch:base_commit",
+      "actual_problems": [
+        "identity_mismatch:base_commit"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "checked_out_merge_tree_changed",
+      "assertion_passed": true,
+      "expected_problem": "checked_out_tree_mismatch_or_missing",
+      "actual_problems": [
+        "checked_out_tree_mismatch_or_missing"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "same_tree_distinct_native_merge_commit",
+      "assertion_passed": true,
+      "expected_problem": null,
+      "actual_problems": [],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "missing_checkout_identity",
+      "assertion_passed": true,
+      "expected_problem": "checked_out_commit_missing_or_malformed",
+      "actual_problems": [
+        "checked_out_commit_missing_or_malformed"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "missing_core_exit",
+      "assertion_passed": true,
+      "expected_problem": "nonzero_or_missing:core_validator_rc",
+      "actual_problems": [
+        "nonzero_or_missing:core_validator_rc"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "boolean_exit_is_not_zero",
+      "assertion_passed": true,
+      "expected_problem": "nonzero_or_missing:unittest_rc",
+      "actual_problems": [
+        "nonzero_or_missing:unittest_rc"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "focused_command_is_not_full_discovery",
+      "assertion_passed": true,
+      "expected_problem": "test_command_mismatch_or_missing",
+      "actual_problems": [
+        "test_command_mismatch_or_missing"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "python_baseline_not_met",
+      "assertion_passed": true,
+      "expected_problem": "python_baseline_mismatch_or_missing",
+      "actual_problems": [
+        "python_baseline_mismatch_or_missing"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "no_native_evidence_ref",
+      "assertion_passed": true,
+      "expected_problem": "native_evidence_reference_missing",
+      "actual_problems": [
+        "native_evidence_reference_missing"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "unexpected_skip_requires_disposition",
+      "assertion_passed": true,
+      "expected_problem": "skip_requires_owner_review",
+      "actual_problems": [
+        "skip_requires_owner_review"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "windows_cleanup_test_skipped",
+      "assertion_passed": true,
+      "expected_problem": "windows_cleanup_coverage_missing",
+      "actual_problems": [
+        "skip_requires_owner_review",
+        "windows_cleanup_coverage_missing"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "linux_expected_skip_removed",
+      "assertion_passed": true,
+      "expected_problem": "linux_windows_only_skip_missing_or_changed",
+      "actual_problems": [
+        "linux_windows_only_skip_missing_or_changed"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "failed_method_cannot_hide_behind_OK",
+      "assertion_passed": true,
+      "expected_problem": "non_success_test_status",
+      "actual_problems": [
+        "non_success_test_status"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "expected_failure_not_new_success",
+      "assertion_passed": true,
+      "expected_problem": "non_success_test_status",
+      "actual_problems": [
+        "non_success_test_status"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "multiple_runs_cannot_concatenate",
+      "assertion_passed": true,
+      "expected_problem": "summary_count_missing_multiple_or_mismatch",
+      "actual_problems": [
+        "duplicate_test_ids",
+        "success_summary_missing_multiple_or_skip_mismatch",
+        "summary_count_missing_multiple_or_mismatch"
+      ],
+      "observed_count": 1916,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "CI_prefix_requires_explicit_extract",
+      "assertion_passed": true,
+      "expected_problem": "missing_test_ids",
+      "actual_problems": [
+        "linux_windows_only_skip_missing_or_changed",
+        "missing_test_ids",
+        "success_summary_missing_multiple_or_skip_mismatch",
+        "summary_count_missing_multiple_or_mismatch"
+      ],
+      "observed_count": 0,
+      "missing_count": 958,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "setup_refusal_zero_target_commands",
+      "assertion_passed": true,
+      "expected_problem": "setup_refusal_or_not_started_marker",
+      "actual_problems": [
+        "linux_windows_only_skip_missing_or_changed",
+        "missing_test_ids",
+        "nonzero_or_missing:core_validator_rc",
+        "nonzero_or_missing:unittest_rc",
+        "setup_refusal_or_not_started_marker",
+        "success_summary_missing_multiple_or_skip_mismatch",
+        "summary_count_missing_multiple_or_mismatch"
+      ],
+      "observed_count": 0,
+      "missing_count": 958,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "malformed_id_label",
+      "assertion_passed": true,
+      "expected_problem": "method_id_mismatch",
+      "actual_problems": [
+        "method_id_mismatch"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "unknown_test_instead_of_expected",
+      "assertion_passed": true,
+      "expected_problem": "unknown_test_ids",
+      "actual_problems": [
+        "missing_test_ids",
+        "unknown_test_ids"
+      ],
+      "observed_count": 958,
+      "missing_count": 1,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "skip_summary_count_mismatch",
+      "assertion_passed": true,
+      "expected_problem": "success_summary_missing_multiple_or_skip_mismatch",
+      "actual_problems": [
+        "success_summary_missing_multiple_or_skip_mismatch"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "embedded_failure_summary",
+      "assertion_passed": true,
+      "expected_problem": "failure_marker",
+      "actual_problems": [
+        "failure_marker"
+      ],
+      "observed_count": 958,
+      "missing_count": 0,
+      "evidence_class": "synthetic helper fixture, not Core validation"
+    },
+    {
+      "fixture": "CLI_complete_synthetic",
+      "assertion_passed": true,
+      "expected_exit": 0,
+      "actual_exit": 0,
+      "verdict": "internally_consistent_complete_reported_success",
+      "evidence_class": "synthetic helper CLI fixture in-process; not Core validation"
+    },
+    {
+      "fixture": "CLI_old917_rejected",
+      "assertion_passed": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "verdict": "discrepancy_or_incomplete",
+      "evidence_class": "synthetic helper CLI fixture in-process; not Core validation"
+    },
+    {
+      "fixture": "CLI_missing_input",
+      "assertion_passed": true,
+      "expected_exit": 2,
+      "actual_exit": 2,
+      "verdict": "input_error",
+      "evidence_class": "synthetic helper CLI fixture in-process; not Core validation"
+    },
+    {
+      "fixture": "CLI_malformed_receipt",
+      "assertion_passed": true,
+      "expected_exit": 2,
+      "actual_exit": 2,
+      "verdict": "input_error",
+      "evidence_class": "synthetic helper CLI fixture in-process; not Core validation"
+    }
+  ]
+}

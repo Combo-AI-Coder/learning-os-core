@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "source-bound unittest text-reconciliation aid",
+  "repository": "Combo-AI-Coder/learning-os-core",
+  "source_commit": "941c41b04e5af2d404d654a0720983fe84a6ade3",
+  "source_tree": "7fe8d043b143adf98755ca187d020110470c8e0d",
+  "base_commit": "d5a02ce120052666f436194c087255540b49f491",
+  "candidate_leaf_count": 316,
+  "expected_test_ids": 958,
+  "inventory_kind": "static AST-derived expectation; not dynamic discovery or executed results",
+  "source_url": "https://github.com/Combo-AI-Coder/learning-os-core/commit/941c41b04e5af2d404d654a0720983fe84a6ade3",
+  "task_url": "https://github.com/Combo-AI-Coder/learning-os-core/issues/34",
+  "required_evidence": "Independently verified native run, checkout identity, original command exits and complete output; receipt fields alone are not proof."
+}

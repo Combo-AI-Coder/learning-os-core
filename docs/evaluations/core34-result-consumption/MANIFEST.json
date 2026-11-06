@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "kind": "source-only technical preparation; no execution or integration claim",
+  "source_commit": "941c41b04e5af2d404d654a0720983fe84a6ade3",
+  "source_tree": "7fe8d043b143adf98755ca187d020110470c8e0d",
+  "files": [
+    {
+      "path": "EXPECTED-TESTS.json",
+      "mode": "100644",
+      "bytes": 520605,
+      "sha256": "0e239d27302854768b66eb68e09c8a9d645da52140aaf3a4e42323e2a13ad02a",
+      "git_blob": "a759cbe0ab8fee6fc939e384a5310288d8504623"
+    },
+    {
+      "path": "FIXTURE-RESULTS.json",
+      "mode": "100644",
+      "bytes": 12324,
+      "sha256": "ad07407b52a8a93b998f9bd5a75233128b4fd60b8acb91ecfd1fd6aa98d03fb1",
+      "git_blob": "f3f2fd0677960eefe0263831c7e0a40026acfe1f"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "bytes": 4266,
+      "sha256": "1bdf75179ea4a5b1777041851dbddf7eca23c42b5a21bb4590842855f94bfb68",
+      "git_blob": "ab0d21c4ec4b78c72e1a77f0f45833c6f000264b"
+    },
+    {
+      "path": "RECEIPT.template.json",
+      "mode": "100644",
+      "bytes": 498,
+      "sha256": "fe5e65c243716c4df4ca15012b8098888e978eaac31760a619b546b8774c1a83",
+      "git_blob": "30cb837ad0d0c3f2b52aeea60c8b4151f44da886"
+    },
+    {
+      "path": "SOURCE-IDENTITY.json",
+      "mode": "100644",
+      "bytes": 833,
+      "sha256": "6cfa5d949982460c21443a53d2b145d3f680247a8b0da3410ba5e96450402bd8",
+      "git_blob": "9640c32b4e59209bd28ad520b55cdf4298e1ef54"
+    },
+    {
+      "path": "check_fixtures.py",
+      "mode": "100644",
+      "bytes": 8058,
+      "sha256": "966b5e627dafe897a09d524713bdf2655ae920338fe9792ab985d4e0f2332794",
+      "git_blob": "06c2f08d232008b9799774b8640288a39b1f3138"
+    },
+    {
+      "path": "fixtures/malformed-receipt.json",
+      "mode": "100644",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "git_blob": "fe51488c7066f6687ef680d6bfaa4f7768ef205c"
+    },
+    {
+      "path": "fixtures/synthetic-complete-linux.log",
+      "mode": "100644",
+      "bytes": 150463,
+      "sha256": "ae68fb83f02d535b70de456da191d34c3bd1332a6869091d1d50ab5c41a3de2f",
+      "git_blob": "7bd3e06249f4bf48ab1324217f8c652373f801c2"
+    },
+    {
+      "path": "fixtures/synthetic-old917.log",
+      "mode": "100644",
+      "bytes": 143732,
+      "sha256": "acff671fcc6d0d44d1322e5b3fd99ce5273b7c37b5b24d2ed3ad0438acb22955",
+      "git_blob": "9596f288f7f3a4bfd3b65d9800ab772bb66ae332"
+    },
+    {
+      "path": "fixtures/synthetic-receipt.json",
+      "mode": "100644",
+      "bytes": 600,
+      "sha256": "7668e99541cb36daa3252b77334b4a6772c3d7db177a5f6de78dc1a874095b12",
+      "git_blob": "0f17e4afe535f3e892726f6b84ea2e89f4079c0a"
+    },
+    {
+      "path": "reconcile_report.py",
+      "mode": "100644",
+      "bytes": 7330,
+      "sha256": "dc91f7d089e6a827c1893853055bf60b8b5e88b2f4445d2bf2d922df9291d5f5",
+      "git_blob": "5efbadc871049db025f8f8ef53759306d585767d"
+    }
+  ]
+}
