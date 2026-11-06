@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Deterministic mechanical validator for Learning OS canonical YAML."""
 from __future__ import annotations
-import argparse, hashlib, json, re, stat
+import argparse, hashlib, json, os, re, stat
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import yaml
@@ -885,8 +885,30 @@ class InstanceValidator:
                         if sub.name=="lineages": self.error("instance.private_lineage","runtime/lineages","private project-design lineage control material belongs to the Control plane, never Instance")
                         elif sub.name!="ui": self.error("instance.runtime_entry",f"runtime/{sub.name}","only runtime/ui/ is allowed under the Instance runtime directory")
             elif n not in INSTANCE_ALLOWED_FILES: self.error("instance.top_level",n,f"unexpected top-level file {n}")
+    def discover_documents(self,pattern):
+        # rglob suppresses filesystem errors, which can hide Instance documents.
+        paths=[]; pending=[self.root]; failed=set()
+        while pending:
+            directory=pending.pop()
+            try:
+                with os.scandir(directory) as entries:
+                    for entry in entries:
+                        path=directory/entry.name
+                        # Like rglob, match names regardless of the entry type,
+                        # but never recurse into directory symlinks.
+                        if Path(entry.name).match(pattern): paths.append(path)
+                        try:
+                            if entry.is_dir(follow_symlinks=False): pending.append(path)
+                        except OSError:
+                            failed.add(path.relative_to(self.root).as_posix())
+            except OSError:
+                failed.add(directory.relative_to(self.root).as_posix())
+        reported={finding.path for finding in self.findings if finding.code=="instance.enumeration"}
+        for path in sorted(failed-reported):
+            self.error("instance.enumeration",path,"Instance documents could not be enumerated (fail closed)")
+        return sorted(paths)
     def collect(self):
-        for f in sorted(self.root.rglob("*.yaml")):
+        for f in self.discover_documents("*.yaml"):
             rp=f.relative_to(self.root)
             if not rp.parts or rp.parts[0] in (".git",".github"): continue
             p=rp.as_posix()
@@ -955,9 +977,26 @@ class InstanceValidator:
         else: self.error("instance.core_manifest","config/core.yaml","Core manifest.supported_instance_state_schema_versions missing or invalid (fail closed)")
         ddir=self.core_root/"domains"
         if ddir.is_dir():
-            for f in sorted(ddir.glob("*/curriculum.yaml")):
+            # Path.glob suppresses scan/stat errors, which can hide Core bases.
+            try:
+                curricula=[]
+                with os.scandir(ddir) as entries:
+                    domain_entries=sorted(entries,key=lambda entry:entry.name)
+                for entry in domain_entries:
+                    if not entry.is_dir(): continue
+                    domain_dir=ddir/entry.name
+                    with os.scandir(domain_dir) as entries:
+                        curricula.extend(domain_dir/child.name for child in entries
+                                         if Path(child.name).match("curriculum.yaml"))
+            except OSError:
+                self.error("instance.core_enumeration","domains","Core curricula could not be enumerated (fail closed)")
+                return
+            for f in sorted(curricula):
                 try:c=yaml.safe_load(f.read_text(encoding="utf-8"))
-                except Exception: continue
+                except Exception:
+                    # Failed reads are not evidence that a Core base is absent.
+                    self.error("instance.core_curriculum",f.relative_to(self.core_root).as_posix(),"Core curriculum could not be read or parsed (fail closed)")
+                    continue
                 if isinstance(c,dict) and isinstance(c.get("domain"),dict) and isinstance(c["domain"].get("id"),str): self.core_bases[c["domain"]["id"]]=c
     def check_keys(self,p,d,t):
         self.findings.extend(
@@ -983,7 +1022,7 @@ class InstanceValidator:
             elif t in INSTANCE_CONTRACT_TYPES and d["schema_version"]!=INSTANCE_SCHEMA:
                 self.error("instance.contract_schema",p,f"{t} is a V0.4-only contract document and requires schema_version {INSTANCE_SCHEMA!r}")
             self.check_keys(p,d,t)
-        for f in sorted(self.root.rglob("*.md")):
+        for f in self.discover_documents("*.md"):
             if CORE_TOKEN_RE.search(f.read_text(encoding="utf-8")):
                 self.error("instance.credential_value",f.relative_to(self.root).as_posix(),"structurally detected credential/token value in document text")
     def build_curricula(self):

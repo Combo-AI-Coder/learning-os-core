@@ -79,6 +79,38 @@ class CasConflict(RuntimeError):
     pass
 
 
+class WriteOutcomeError(RuntimeError):
+    """A write cannot be reported as either complete success or retryable CAS.
+
+    Publication knowledge and checkout cleanup are independent. Details remain
+    in the trusted provider/operator layer, never the public Host envelope.
+    """
+
+
+class WriteOutcomeUnknown(WriteOutcomeError):
+    publication_state = "unknown"
+
+    def __init__(self, message: str, *, cleanup_failed: bool = False):
+        super().__init__(message)
+        self.cleanup_failed = cleanup_failed
+
+
+class WriteCleanupFailed(WriteOutcomeError):
+    publication_state = "not_published"
+    cleanup_failed = True
+
+
+class WritePublishedCleanupFailed(WriteOutcomeError):
+    publication_state = "published"
+    cleanup_failed = True
+
+    def __init__(self, published_commit: str):
+        if not EXACT_COMMIT.fullmatch(published_commit):
+            raise ValueError("published commit must be exact")
+        super().__init__("Git push was acknowledged but checkout cleanup failed")
+        self.published_commit = published_commit
+
+
 class TransitionRejected(RuntimeError):
     pass
 
@@ -595,10 +627,10 @@ class DeploymentGuard:
                 expected_blob_sha, message,
                 expected_ref_sha=expected_ref_sha,
             )
-        except CasConflict:
+        except (CasConflict, WriteOutcomeError):
             raise
         except Exception as exc:
-            raise CasConflict(f"target blob CAS failed: {exc}") from None
+            raise WriteOutcomeUnknown("provider write outcome is unconfirmed") from exc
 
 
 
@@ -2161,6 +2193,25 @@ class GitCliProvider:
         finally:
             self._cleanup_checkout_tempdir(td)
 
+    def _cleanup_write_checkout(
+        self, td, *, publication_state: str, published_commit: str | None,
+    ) -> None:
+        try:
+            self._cleanup_checkout_tempdir(td)
+        except Exception as exc:
+            if publication_state == "published":
+                raise WritePublishedCleanupFailed(published_commit) from exc
+            if publication_state == "unknown":
+                # The cleanup exception retains the in-flight push exception
+                # in its context. Unknown publication must not become refusal.
+                raise WriteOutcomeUnknown(
+                    "Git push outcome is unconfirmed and checkout cleanup failed",
+                    cleanup_failed=True,
+                ) from exc
+            raise WriteCleanupFailed(
+                "write was not published and checkout cleanup failed"
+            ) from exc
+
     def update_text(
         self,
         repository_id: int,
@@ -2184,6 +2235,8 @@ class GitCliProvider:
         (
             td, repo, commit, branch_ref, snapshot_total, blob_cap
         ) = self._checkout_branch(binding, branch)
+        publication_state = "not_published"
+        published_commit = None
         try:
             if expected_ref_sha is not None and commit != expected_ref_sha:
                 raise CasConflict("branch head compare-and-swap mismatch")
@@ -2273,15 +2326,27 @@ class GitCliProvider:
             if not EXACT_COMMIT.fullmatch(new_commit):
                 raise CasConflict("Git update returned no exact commit")
 
-            self._git(
-                "push", "-q",
-                f"--force-with-lease={branch_ref}:{commit}",
-                "origin", f"HEAD:{branch_ref}",
-                cwd=repo, cas=True, binding=binding,
-            )
+            # Once push is invoked, a transport failure or nonzero exit alone
+            # does not establish that the remote ref was unchanged. Do not
+            # translate that uncertainty into a retryable CAS refusal.
+            publication_state = "unknown"
+            try:
+                self._git(
+                    "push", "-q",
+                    f"--force-with-lease={branch_ref}:{commit}",
+                    "origin", f"HEAD:{branch_ref}",
+                    cwd=repo, cas=True, binding=binding,
+                )
+            except Exception as exc:
+                raise WriteOutcomeUnknown("Git push outcome is unconfirmed") from exc
+            published_commit = new_commit
+            publication_state = "published"
             return new_commit
         finally:
-            self._cleanup_checkout_tempdir(td)
+            self._cleanup_write_checkout(
+                td, publication_state=publication_state,
+                published_commit=published_commit,
+            )
 
 
     def create_text(
@@ -2305,6 +2370,8 @@ class GitCliProvider:
         (
             td, repo, commit, branch_ref, snapshot_total, blob_cap
         ) = self._checkout_branch(binding, branch)
+        publication_state = "not_published"
+        published_commit = None
         try:
             if expected_ref_sha is not None and commit != expected_ref_sha:
                 raise CasConflict("branch head compare-and-swap mismatch")
@@ -2399,15 +2466,27 @@ class GitCliProvider:
                     f"created snapshot is not Runtime-materializable: {exc}"
                 ) from None
 
-            self._git(
-                "push", "-q",
-                f"--force-with-lease={branch_ref}:{commit}",
-                "origin", f"HEAD:{branch_ref}",
-                cwd=repo, cas=True, binding=binding,
-            )
+            # Once push is invoked, a transport failure or nonzero exit alone
+            # does not establish that the remote ref was unchanged. Do not
+            # translate that uncertainty into a retryable CAS refusal.
+            publication_state = "unknown"
+            try:
+                self._git(
+                    "push", "-q",
+                    f"--force-with-lease={branch_ref}:{commit}",
+                    "origin", f"HEAD:{branch_ref}",
+                    cwd=repo, cas=True, binding=binding,
+                )
+            except Exception as exc:
+                raise WriteOutcomeUnknown("Git push outcome is unconfirmed") from exc
+            published_commit = new_commit
+            publication_state = "published"
             return new_commit
         finally:
-            self._cleanup_checkout_tempdir(td)
+            self._cleanup_write_checkout(
+                td, publication_state=publication_state,
+                published_commit=published_commit,
+            )
 
 
 @dataclass(frozen=True)

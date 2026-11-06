@@ -34,6 +34,8 @@ from scripts.runtime_adapter import (
     MAX_SNAPSHOT_PATH_COMPONENT_BYTES,
     MAX_SNAPSHOT_PATH_DEPTH,
     CasConflict,
+    WriteOutcomeError,
+    WriteOutcomeUnknown,
     DeploymentGuard,
     DeploymentResolver,
     GuardRejected,
@@ -224,56 +226,56 @@ def _compute_bounded_write_policy_fingerprint(
         ) from None
 
     output = bytearray()
-    overflow = threading.Event()
-
-    def drain_stdout() -> None:
-        if process.stdout is None:
-            return
-        while True:
-            chunk = process.stdout.read(64)
-            if not chunk:
-                break
-            remaining = FINGERPRINT_STDOUT_MAX_BYTES - len(output)
-            if remaining > 0:
-                output.extend(chunk[:remaining])
-            if len(chunk) > remaining:
-                overflow.set()
-
-    reader = threading.Thread(
-        target=drain_stdout,
-        name="learning-os-write-policy-fingerprint-stdout",
-        daemon=True,
-    )
-    reader.start()
-
-    timed_out = False
     try:
+        assert process.stdout is not None
+        # Never let an inherited writer hold a reader thread (or close lock).
+        # Nonblocking pipes are supported on POSIX and Windows Python 3.12+.
+        try:
+            os.set_blocking(process.stdout.fileno(), False)
+        except (OSError, ValueError):
+            raise GuardRejected(
+                "deployed Core write policy computation failed closed"
+            ) from None
         deadline = time.monotonic() + CANDIDATE_VALIDATION_TIMEOUT_SECONDS
-        while process.poll() is None:
-            if overflow.is_set():
-                process.kill()
+        drain_deadline = None
+        eof = False
+        while True:
+            now = time.monotonic()
+            returncode = process.poll()
+            if returncode is None:
+                if now > deadline:
+                    raise GuardRejected(
+                        "deployed Core write policy computation timed out"
+                    )
+            elif drain_deadline is None:
+                drain_deadline = now + 1
+            if eof and returncode is not None:
                 break
-            if time.monotonic() > deadline:
-                timed_out = True
-                process.kill()
-                break
-            time.sleep(FINGERPRINT_POLL_SECONDS)
-
-        if process.poll() is None:
-            process.wait()
-        reader.join(timeout=1)
-        if reader.is_alive():
-            raise GuardRejected(
-                "deployed Core write policy output did not drain"
-            )
-        if overflow.is_set():
-            raise GuardRejected(
-                "deployed Core write policy output exceeded Runtime budget"
-            )
-        if timed_out:
-            raise GuardRejected(
-                "deployed Core write policy computation timed out"
-            )
+            if drain_deadline is not None and now > drain_deadline:
+                raise GuardRejected(
+                    "deployed Core write policy output did not drain"
+                )
+            if eof:
+                time.sleep(FINGERPRINT_POLL_SECONDS)
+                continue
+            try:
+                chunk = os.read(process.stdout.fileno(), 64)
+            except BlockingIOError:
+                time.sleep(FINGERPRINT_POLL_SECONDS)
+                continue
+            except OSError:
+                raise GuardRejected(
+                    "deployed Core write policy computation failed closed"
+                ) from None
+            if not chunk:
+                eof = True
+                continue
+            remaining = FINGERPRINT_STDOUT_MAX_BYTES - len(output)
+            output.extend(chunk[:max(0, remaining)])
+            if len(chunk) > remaining:
+                raise GuardRejected(
+                    "deployed Core write policy output exceeded Runtime budget"
+                )
         if process.returncode != 0:
             raise GuardRejected(
                 "deployed Core write policy computation failed closed"
@@ -293,7 +295,6 @@ def _compute_bounded_write_policy_fingerprint(
                 pass
         if process.stdout is not None:
             process.stdout.close()
-        reader.join(timeout=1)
 
 
 class DeploymentWriteAdmission(Protocol):
@@ -1184,12 +1185,12 @@ class RuntimeSessionBroker:
                     ),
                     expected_ref_sha=authority_head,
                 )
-            except CasConflict:
+            except (CasConflict, WriteOutcomeError):
                 raise
             except Exception as exc:
-                raise CasConflict(
-                    f"successor claim compare-and-swap failed: {exc}"
-                ) from None
+                raise WriteOutcomeUnknown(
+                    "provider write outcome is unconfirmed"
+                ) from exc
 
             self.guard.check(deployment)
             claimed_runtime, claimed_head = self._read_branch_runtime(
@@ -2780,12 +2781,12 @@ class RuntimeSessionBroker:
                             message,
                             expected_ref_sha=authority.head,
                         )
-                    except CasConflict:
+                    except (CasConflict, WriteOutcomeError):
                         raise
                     except Exception as exc:
-                        raise CasConflict(
-                            f"Instance create-only compare-and-swap failed: {exc}"
-                        ) from None
+                        raise WriteOutcomeUnknown(
+                            "provider write outcome is unconfirmed"
+                        ) from exc
                 finally:
                     if not release_attempted:
                         pending = [
@@ -3123,12 +3124,12 @@ class RuntimeSessionBroker:
                                 message,
                                 expected_ref_sha=authority.head,
                             )
-                    except CasConflict:
+                    except (CasConflict, WriteOutcomeError):
                         raise
                     except Exception as exc:
-                        raise CasConflict(
-                            f"Knowledge compare-and-swap failed: {exc}"
-                        ) from None
+                        raise WriteOutcomeUnknown(
+                            "provider write outcome is unconfirmed"
+                        ) from exc
                 finally:
                     if not release_attempted:
                         pending = [
@@ -3277,10 +3278,12 @@ class RuntimeSessionBroker:
                                     state.deployment.instance_repository_id, state.binding.instance_ref,
                                     path, content, expected_blob_sha, message, expected_ref_sha=authority.head,
                                 )
-                        except CasConflict:
+                        except (CasConflict, WriteOutcomeError):
                             raise
-                        except Exception:
-                            raise CasConflict("intake preference compare-and-swap failed") from None
+                        except Exception as exc:
+                            raise WriteOutcomeUnknown(
+                                "provider write outcome is unconfirmed"
+                            ) from exc
                 finally:
                     if not release_attempted:
                         self._release_materializations([
@@ -3409,12 +3412,12 @@ class RuntimeSessionBroker:
                             message,
                             expected_ref_sha=authority.head,
                         )
-                    except CasConflict:
+                    except (CasConflict, WriteOutcomeError):
                         raise
                     except Exception as exc:
-                        raise CasConflict(
-                            f"Instance compare-and-swap failed: {exc}"
-                        ) from None
+                        raise WriteOutcomeUnknown(
+                            "provider write outcome is unconfirmed"
+                        ) from exc
                 finally:
                     if not release_attempted:
                         pending = [

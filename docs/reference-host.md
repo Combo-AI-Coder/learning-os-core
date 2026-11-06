@@ -45,7 +45,39 @@ Expected broker failures use stable public codes:
 
 - `resolution_failed`;
 - `guard_rejected`;
-- `cas_conflict` (marked retryable).
+- `cas_conflict` (marked retryable; an explicit provider/CAS refusal);
+- `write_outcome_unknown` (not retryable): publication could have happened;
+- `write_published_cleanup_failed` (not retryable): Git push was acknowledged,
+  but checkout cleanup failed; this is not a completed-success response;
+- `write_cleanup_failed` (not retryable): the write had not entered publication,
+  but checkout cleanup failed.
+
+These additive codes preserve the v4 failure shape: `error` contains only `code`
+and `retryable`. No exception text, commit, path or cleanup diagnostic is exposed.
+An unrecognized code must fail closed, never be treated as success or retried by
+default. `retryable: false` prevents automatic replay; it is not a permanent ban
+on recovery after the trusted owner has inspected the write and cleanup outcome.
+
+For ordinary Git CLI writes, exact-head/blob/create-only checks before push remain
+CAS refusals. Once push is invoked, an exception (including timeout, output
+overflow, missing drain or nonzero exit) is conservatively an unknown outcome.
+A local candidate commit alone is not publication evidence. A normal push return
+is acknowledgement of publication at that point, not a claim that the ref cannot
+subsequently advance. Successful provider calls still return the commit string;
+successful Host calls still return only `{"applied": <bool>}`.
+
+After unknown or acknowledged publication, recover through authorized reads and
+the existing operation semantics before any retry. Preserve the original Evidence
+ID and content; do not create a new occurrence merely because acknowledgement was
+not delivered. An identical already-persisted Evidence retry can still return
+`applied: false`, after the usual fresh authority and validation checks. The
+provider/broker exceptions retain cleanup failure details and any acknowledged
+commit for trusted operator handling; the public Host exposes only the fixed code.
+No cleanup error is suppressed or converted into a successful result.
+
+This classification is scoped to ordinary Git CLI writes and broker propagation.
+Legacy no-head-CAS REST writes and trusted first-use have separate contracts;
+this change does not certify their full error taxonomy or perform recovery.
 
 Internal repository paths, remotes, commits and credential material are not reflected in those failure envelopes. Unexpected implementation failures remain host-operator exceptions rather than being converted into false success.
 

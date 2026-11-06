@@ -19,6 +19,7 @@ import yaml
 from scripts.runtime_adapter import (
     BOUNDED_YAML_MAX_NODES,
     CasConflict,
+    WriteOutcomeUnknown,
     DeploymentGuard,
     DeploymentResolver,
     GuardRejected,
@@ -1621,7 +1622,7 @@ class GitCliProviderTests(unittest.TestCase):
             )
         ])
         self.addCleanup(provider.close)
-        with self.assertRaisesRegex(CasConflict, "compare-and-swap"):
+        with self.assertRaisesRegex(WriteOutcomeUnknown, "push outcome"):
             provider.update_text(
                 self.REPO_ID,
                 "main",
@@ -1973,7 +1974,9 @@ class GitCliProviderTests(unittest.TestCase):
             )
         ])
         self.addCleanup(provider.close)
-        with self.assertRaisesRegex(CasConflict, "compare-and-swap"):
+        # A failed push is conservatively unknown to the provider; the independent
+        # fixture readback below still proves this particular race did not write.
+        with self.assertRaisesRegex(WriteOutcomeUnknown, "push outcome"):
             provider.update_text(
                 self.REPO_ID,
                 "main",
