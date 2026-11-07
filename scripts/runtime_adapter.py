@@ -9,6 +9,7 @@ from contextlib import contextmanager
 
 import base64
 import errno
+import hashlib
 import json
 import os
 import re
@@ -1438,6 +1439,10 @@ class GitCliProvider:
             cwd=repo,
             extra_env={"GIT_NO_LAZY_FETCH": "1"},
         )
+        return self._commit_tree_from_raw(raw)
+
+    @staticmethod
+    def _commit_tree_from_raw(raw: bytes) -> str:
         first = raw.splitlines()[0] if raw else b""
         if not first.startswith(b"tree "):
             raise ResolutionError("Git commit is missing a tree")
@@ -1482,7 +1487,14 @@ class GitCliProvider:
     def _tree_objects(
         self, repo: Path, commit: str, *, allow_empty_root: bool = False
     ) -> list[tuple[str, str, str, str]]:
-        root_tree = self._commit_tree_sha(repo, commit)
+        return self._tree_objects_from_root(
+            repo, self._commit_tree_sha(repo, commit), allow_empty_root=allow_empty_root
+        )
+
+    def _tree_objects_from_root(
+        self, repo: Path, root_tree: str, *, allow_empty_root: bool = False
+    ) -> list[tuple[str, str, str, str]]:
+        # Internal traversal entry point. The caller must validate commit -> root.
         pending_trees: list[tuple[str, str, int]] = [("", root_tree, 0)]
         objects: list[tuple[str, str, str, str]] = []
         listing_bytes = 0
@@ -1635,6 +1647,11 @@ class GitCliProvider:
         self, repo: Path, commit: str, *, allow_empty_root: bool = False
     ) -> list[tuple[str, str, str, str]]:
         objects = self._tree_objects(repo, commit, allow_empty_root=allow_empty_root)
+        return self._verify_regular_tree_objects(objects)
+
+    def _verify_regular_tree_objects(
+        self, objects: list[tuple[str, str, str, str]]
+    ) -> list[tuple[str, str, str, str]]:
         seen_casefold: dict[str, str] = {}
         seen_win32_upper: dict[str, str] = {}
         nonempty_directories: set[str] = set()
@@ -2494,25 +2511,51 @@ class SyntheticPreparedGitProvider(GitCliProvider):
             raise ResolutionError("prepared candidate identity is invalid")
         return self.prepared_store / f"{candidate}.{suffix}"
 
+    @staticmethod
+    def _first_use_check_commit_content(sha: str, raw: bytes, size: int):
+        if len(raw) != size:
+            raise ResolutionError("prepared commit content size differs")
+        digest = hashlib.sha1(b"commit " + str(size).encode("ascii") + b"\0" + raw)
+        if digest.hexdigest() != sha:
+            raise ResolutionError("prepared commit content identity differs")
+
     def _first_use_verify(self, repo: Path, descriptor: dict):
         d = descriptor
-        raw = self._git_bytes("cat-file", "commit", d["candidate"], cwd=repo)
+        # Retain the original first-error sequence: candidate body/metadata,
+        # candidate header/tree, then parent header/body/tree. No pair preflight.
+        if not isinstance(d["candidate"], str) or not EXACT_COMMIT.fullmatch(d["candidate"]):
+            raise ResolutionError("Git object identity is not exact")
+        raw = self._git_bytes("cat-file", "commit", d["candidate"], cwd=repo,
+                              extra_env={"GIT_NO_LAZY_FETCH": "1"})
         header, separator, message = raw.partition(b"\n\n")
         if (not separator or len(raw) > 16384 or
                 [line for line in header.splitlines() if line.startswith(b"parent ")]
                 != [f'parent {d["parent"]}'.encode("ascii")] or
                 message != self._first_use_json(d["metadata"]) + b"\n"):
             raise ResolutionError("prepared commit parent or operation metadata differs")
-        if self._commit_tree_sha(repo, d["candidate"]) != d["tree"]:
+        candidate_type, candidate_size = self._object_header(repo, d["candidate"])
+        if candidate_type != "commit":
+            raise ResolutionError("Git object is not a commit")
+        candidate_tree = self._commit_tree_from_raw(raw)
+        if candidate_tree != d["tree"]:
             raise ResolutionError("prepared candidate tree differs")
-        if self._commit_tree_sha(repo, d["parent"]) != d["parent_tree"]:
+        self._first_use_check_commit_content(d["candidate"], raw, candidate_size)
+        parent_type, parent_size = self._object_header(repo, d["parent"])
+        if parent_type != "commit":
+            raise ResolutionError("Git object is not a commit")
+        parent_raw = self._git_bytes("cat-file", "commit", d["parent"], cwd=repo,
+                                     extra_env={"GIT_NO_LAZY_FETCH": "1"})
+        parent_tree = self._commit_tree_from_raw(parent_raw)
+        if parent_tree != d["parent_tree"]:
             raise ResolutionError("prepared parent tree differs")
+        self._first_use_check_commit_content(d["parent"], parent_raw, parent_size)
         # Reuse only this invocation's exact, validated object walks. A fresh
         # restore/checkout still performs real Git reads; no cache crosses calls.
         verified = {}
-        for commit in (d["parent"], d["candidate"]):
-            objects = self._verify_regular_tree(repo, commit,
+        for commit, root in ((d["parent"], parent_tree), (d["candidate"], candidate_tree)):
+            objects = self._tree_objects_from_root(repo, root,
                 allow_empty_root=commit == d["parent"] and d["metadata"]["step_index"] == 0)
+            objects = self._verify_regular_tree_objects(objects)
             self._validate_snapshot_budget(repo, objects,
                 fetched_blob_cap=self._bounded_blob_fetch_cap(objects))
             verified[commit] = objects

@@ -379,15 +379,33 @@ class FirstUseTests(unittest.TestCase):
     def test_prepared_verification_reuses_only_current_exact_object_walks(self):
         step = self.stop_after_receipt()
         provider = self.new_provider()
-        real_walk = provider._tree_objects
-        # Each restore must re-read both exact trees; a prior successful call
-        # must never substitute for the next restore's Git object evidence.
+        real_walk, real_git = provider._tree_objects_from_root, provider._git_bytes
+        expected_reads = [
+            ("body", step.candidate), ("header", step.candidate),
+            ("header", step.descriptor["parent"]), ("body", step.descriptor["parent"]),
+        ]
+        # Wrap real traversal and transport; neither successful restoration may
+        # substitute cached commit bytes or a previous walk for current evidence.
+        roots = []
         for _ in range(2):
-            with mock.patch.object(provider, "_tree_objects", wraps=real_walk) as walk:
-                with provider._first_use_restore(step):
-                    pass
-            self.assertEqual([step.descriptor["parent"], step.candidate],
+            reads = []
+            def observe(*args, **kwargs):
+                if args[:2] == ("cat-file", "commit"):
+                    reads.append(("body", args[2]))
+                elif args[:2] == ("cat-file", "--batch-check=%(objectname) %(objecttype) %(objectsize)"):
+                    identities = kwargs["input_bytes"].decode("ascii").splitlines()
+                    reads.extend(("header", sha) for sha in identities
+                                 if sha in (step.candidate, step.descriptor["parent"]))
+                return real_git(*args, **kwargs)
+            with mock.patch.object(provider, "_tree_objects_from_root", wraps=real_walk) as walk, \
+                    mock.patch.object(provider, "_git_bytes", side_effect=observe):
+                with provider._first_use_restore(step) as repo:
+                    roots.append(repo)
+            self.assertEqual([step.descriptor["parent_tree"], step.descriptor["tree"]],
                              [call.args[1] for call in walk.call_args_list])
+            self.assertEqual(expected_reads, reads)
+        self.assertEqual(2, len(set(roots)))
+        self.assertTrue(all(not root.exists() for root in roots))
         self.assertEqual(self.baseline, self.head())
 
     def test_restore_batches_each_type_fresh_and_bypasses_text_filters(self):
