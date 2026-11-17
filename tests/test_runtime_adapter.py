@@ -127,6 +127,9 @@ class FakeProvider:
             raise CasConflict("stale blob")
         return "f" * 40
 
+    def release_materialization(self, snapshot):
+        self.calls.append(("release", snapshot.repository_id))
+
 
 class RuntimeAdapterTests(unittest.TestCase):
     def setUp(self):
@@ -189,6 +192,25 @@ class RuntimeAdapterTests(unittest.TestCase):
         self.provider.read_text = lambda *args: ("[]", "e" * 40, RC_COMMIT)
         with self.assertRaises(ResolutionError):
             DeploymentResolver(self.provider).resolve(locator())
+
+    def test_rollback_records_cleanup_failures_without_masking_primary_error(self):
+        self.provider.contract = contract(core_commit="9" * 40)
+        original_release = self.provider.release_materialization
+        released = []
+
+        def flaky_release(snapshot):
+            released.append(snapshot.repository_id)
+            if snapshot.repository_id == RC_ID:
+                raise RuntimeError("synthetic rollback cleanup error")
+            original_release(snapshot)
+
+        self.provider.release_materialization = flaky_release
+        with self.assertRaises(ResolutionError) as ctx:
+            DeploymentResolver(self.provider).resolve(locator())
+        self.assertEqual([RC_ID], released)
+        self.assertTrue(
+            any("synthetic rollback cleanup error" in n for n in getattr(ctx.exception, "__notes__", ()))
+        )
 
     def test_fresh_guard_rejects_runtime_control_alias_graph_before_parse(self):
         session = self.session()
@@ -368,6 +390,21 @@ core:
                 expected_blob_sha="0" * 40,
                 message="test",
             )
+
+    def test_guarded_update_propagates_unexpected_provider_bugs(self):
+        session = self.session()
+        with mock.patch.object(
+            self.provider, "update_text", side_effect=TypeError("internal bug")
+        ):
+            with self.assertRaisesRegex(TypeError, "internal bug"):
+                DeploymentGuard(self.provider).guarded_update(
+                    session,
+                    branch="main",
+                    path="learner/model.yaml",
+                    content="x",
+                    expected_blob_sha=self.provider.cas_sha,
+                    message="test",
+                )
 
     def test_successful_guarded_update_orders_guard_before_cas(self):
         session = self.session()

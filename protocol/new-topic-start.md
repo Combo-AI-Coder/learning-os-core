@@ -74,16 +74,10 @@ precedence: ask only genuinely blocking questions when needed, leaving
 nonblocking background unknown.
 
 The invitation may accompany the essential learning-goal question when that goal
-is unknown; it need not be a separate workflow. A new conversation for a known
-learner or Topic is not blank first use: recover the relevant recorded context
-and explicitly scoped preferences rather than restarting onboarding. This
-protocol does not prescribe a fixed script or repetition frequency, change the
-Core fallback value, or establish that it represents most learners' preferences.
-
-This experience invitation is separate from trusted first-Topic/Main Branch,
-initial-generation and runtime admission. Offering or answering it grants no
-learner-state persistence, runtime authority, or first-install setup permission;
-the existing ownership, deployment, generation and CAS requirements still apply.
+is unknown. A new conversation for a known learner or Topic is not blank first
+use: recover recorded context and scoped preferences rather than restarting
+onboarding. Offering or answering the invitation grants no persistence, runtime
+authority, or setup permission.
 
 ### Narrow persistence and current interaction agency
 
@@ -97,21 +91,14 @@ unclear, honor the current interaction without silently persisting a guess.
 
 “别问了先讲” or “简短点” during teaching is current interaction agency. Stop or
 defer optional questioning and respond appropriately; do not infer an intake
-default or a learner capability transition. Intake depth is the interaction cost
-of learning relevant unknown context, not learning depth, capability, diagnostic
-frequency or a mandatory placement test.
+default or a learner capability transition. Intake depth governs interaction cost,
+not learning depth, capability, or diagnostic frequency.
 
-A new conversation is not a new Topic. Resume known Goal/Plan/Progress and
-preferences rather than restarting intake. Even `thorough` can require zero
-questions when relevant context is already sufficient. A persistent preference
-change alone does not rewrite the existing Plan, Progress, Knowledge or Evidence.
-
-Only the bound existing Topic Goal may receive a Topic preference. Explicit global
-`minimal`/`thorough` can first-create the minimal lazy Learner Execution owner;
-absent-global `balanced` or reset leaves it absent. An existing owner may store an
-explicit `balanced`. Reset removes only the scoped key to restore inheritance,
-never the owner or unrelated fields. All actions, including no-ops, retain the
-existing role/capability, deployment/generation, fresh-read and CAS requirements.
+A new conversation is not a new Topic; resume known Goal/Plan/Progress and
+preferences without rewriting Plan, Progress, Knowledge, or Evidence.
+All intake-preference operations (including no-ops) remain subject to existing
+Topic-Goal/lazy-Learner-Execution ownership, role, revision, deployment,
+generation, and CAS guards (`deployment-runtime.md`).
 
 High-value fields, when unknown and relevant:
 
@@ -182,11 +169,8 @@ After intake is answered, left unknown, or explicitly skipped:
 Do not present a generic curriculum map as if it were the learner-specific plan.
 ### Trusted first-use reference
 
-For a truly blank, already-supplied Instance, ordinary Runtime cannot claim the
-initial Main by choosing generation 1. The synthetic Host owning transition in
-`deployment-runtime.md` validates a typed intent, stages the full nine-document
-current-unit graph inactive, then activates it by exact prepared registry CAS.
-The optional invitation above stays optional: silence does not persist an intake
-preference, and a viable start-now request need not wait for that choice. The
-reference route uses the existing prediction/context curriculum; it is not a
-production installer or a generic arbitrary-YAML creation endpoint.
+For a blank Instance, `deployment-runtime.md` defines the Host owning transition
+that stages the nine-document graph inactive and activates it by prepared
+registry CAS on the prediction/context curriculum. Silence on the optional
+invitation never persists an intake preference, and start-now requests proceed
+without waiting.

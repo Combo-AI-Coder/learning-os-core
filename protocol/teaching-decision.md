@@ -105,16 +105,7 @@ When material feedback arrives:
 6. use a different task form when useful, e.g. derivation, transfer, prediction, comparison, counterexample, explanation of an error path, or application under changed conditions;
 7. return to ordinary teaching once the relevant uncertainty is sufficiently reduced; do not turn feedback into an open-ended test loop.
 
-Learner feedback MUST NOT by itself upgrade or downgrade persistent Knowledge State. A statement such as "this is too easy" may justify treating the current probe as low-information and changing the next task, but it is not proof of mastery. A statement that a teaching strategy is preferred or feels effective is likewise not proof that the strategy is objectively effective; repeated outcome-linked observations are required for a stronger learner-model hypothesis.
-
-This forbids treating feedback as direct capability evidence. It does not prevent
-a concrete report about how an existing performance was produced from changing
-that performance's interpretation. Reassess such a report alongside the original
-Evidence and relevant portfolio under
-`evidence-integration.md#withdrawing-an-apparent-support-basis`; justified
-refinement or withdrawal may persist through `persistence-policy.md` without
-inventing inability, a new performance, or an automatic write or probe. A
-preference, vague feedback or low-confidence report alone remains insufficient.
+Learner feedback MUST NOT by itself upgrade or downgrade persistent Knowledge State ("too easy" justifies raising task diagnosticity, not claiming mastery; subjective strategy preference is not objective effectiveness without outcome-linked observations). However, a concrete report about how an existing performance was produced MAY change that performance's interpretation when reassessed with the original Evidence under `evidence-integration.md#withdrawing-an-apparent-support-basis`; any resulting refinement or withdrawal persists through `persistence-policy.md` without inventing inability or triggering an automatic write.
 
 Durable learner-authoritative preferences or subjective costs may be persisted under the responsible learner artifact according to `persistence-policy.md`. Stable strategy/calibration hypotheses require broader cross-event support and SHOULD update more slowly than the immediate teaching response.
 

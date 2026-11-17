@@ -277,8 +277,4 @@ durability result, or deployment readiness. See [local-Git recovery results](eva
   retain `failure.json` after a failed journey. Missing output or a missing
   success record never means success. Review machine-specific paths before
   sharing receipts; do not publish raw output blindly.
-- A pass establishes the bounded synthetic replay/integration checks above.
-  It does not establish a clean install on another machine, novice comprehension,
-  model autonomy, teaching effectiveness, a real longitudinal journey, preview
-  acceptance, or a release. `scripts/reference_host.py` exposes classes, not a
-  runnable service; snapshot validators do not bootstrap write authority.
+- A pass verifies the bounded synthetic replay and local-Git integration above (`scripts/reference_host.py` provides the Python façade rather than a standalone daemon or model-provider service).

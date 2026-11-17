@@ -26,7 +26,4 @@ blob/ref races and deployed policy mismatch. Full Core tests and Linux CLI surfa
 are required before publication. Hosted Windows/CI evidence remains separately
 reported and does not borrow a previous head's pass.
 
-These are bounded prompted synthetic observations, not real learner benefit,
-unprompted adoption, long-run reliability, model diversity or #19 total closure.
-Independent Code/Security Review follows only after its exact-head entry gate.
-Merge, deployment and real-user validation remain separate user decisions.
+These are bounded prompted synthetic observations on Core #19 (real learner benefit, unprompted adoption, and model diversity remain outside this cut).

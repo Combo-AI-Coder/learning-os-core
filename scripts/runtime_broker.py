@@ -1171,25 +1171,18 @@ class RuntimeSessionBroker:
                 contract=contract,
             )
             self.guard.check(deployment)
-            try:
-                self.provider.update_text(
-                    deployment.instance_repository_id,
-                    instance_ref,
-                    runtime_path,
-                    candidate_text,
-                    runtime_blob,
-                    (
-                        "Claim learning Branch successor generation "
-                        f"{expected_successor_generation}"
-                    ),
-                    expected_ref_sha=authority_head,
-                )
-            except CasConflict:
-                raise
-            except Exception as exc:
-                raise CasConflict(
-                    f"successor claim compare-and-swap failed: {exc}"
-                ) from None
+            self.provider.update_text(
+                deployment.instance_repository_id,
+                instance_ref,
+                runtime_path,
+                candidate_text,
+                runtime_blob,
+                (
+                    "Claim learning Branch successor generation "
+                    f"{expected_successor_generation}"
+                ),
+                expected_ref_sha=authority_head,
+            )
 
             self.guard.check(deployment)
             claimed_runtime, claimed_head = self._read_branch_runtime(
@@ -2771,21 +2764,14 @@ class RuntimeSessionBroker:
                     )
                     if existing_matches:
                         return InstanceWriteAck(applied=False)
-                    try:
-                        self.provider.create_text(
-                            state.deployment.instance_repository_id,
-                            state.binding.instance_ref,
-                            path,
-                            content,
-                            message,
-                            expected_ref_sha=authority.head,
-                        )
-                    except CasConflict:
-                        raise
-                    except Exception as exc:
-                        raise CasConflict(
-                            f"Instance create-only compare-and-swap failed: {exc}"
-                        ) from None
+                    self.provider.create_text(
+                        state.deployment.instance_repository_id,
+                        state.binding.instance_ref,
+                        path,
+                        content,
+                        message,
+                        expected_ref_sha=authority.head,
+                    )
                 finally:
                     if not release_attempted:
                         pending = [
@@ -3103,32 +3089,25 @@ class RuntimeSessionBroker:
                     self._release_materializations(
                         [core, authority.snapshot]
                     )
-                    try:
-                        if creating:
-                            self.provider.create_text(
-                                state.deployment.instance_repository_id,
-                                state.binding.instance_ref,
-                                path,
-                                content,
-                                message,
-                                expected_ref_sha=authority.head,
-                            )
-                        else:
-                            self.provider.update_text(
-                                state.deployment.instance_repository_id,
-                                state.binding.instance_ref,
-                                path,
-                                content,
-                                expected_blob_sha,
-                                message,
-                                expected_ref_sha=authority.head,
-                            )
-                    except CasConflict:
-                        raise
-                    except Exception as exc:
-                        raise CasConflict(
-                            f"Knowledge compare-and-swap failed: {exc}"
-                        ) from None
+                    if creating:
+                        self.provider.create_text(
+                            state.deployment.instance_repository_id,
+                            state.binding.instance_ref,
+                            path,
+                            content,
+                            message,
+                            expected_ref_sha=authority.head,
+                        )
+                    else:
+                        self.provider.update_text(
+                            state.deployment.instance_repository_id,
+                            state.binding.instance_ref,
+                            path,
+                            content,
+                            expected_blob_sha,
+                            message,
+                            expected_ref_sha=authority.head,
+                        )
                 finally:
                     if not release_attempted:
                         pending = [
@@ -3266,21 +3245,16 @@ class RuntimeSessionBroker:
                     self._release_materializations([core, authority.snapshot])
                     if not no_op:
                         message = "reference-host: " + ("reset" if depth is None else "set") + " intake preference"
-                        try:
-                            if creating:
-                                self.provider.create_text(
-                                    state.deployment.instance_repository_id, state.binding.instance_ref,
-                                    path, content, message, expected_ref_sha=authority.head,
-                                )
-                            else:
-                                self.provider.update_text(
-                                    state.deployment.instance_repository_id, state.binding.instance_ref,
-                                    path, content, expected_blob_sha, message, expected_ref_sha=authority.head,
-                                )
-                        except CasConflict:
-                            raise
-                        except Exception:
-                            raise CasConflict("intake preference compare-and-swap failed") from None
+                        if creating:
+                            self.provider.create_text(
+                                state.deployment.instance_repository_id, state.binding.instance_ref,
+                                path, content, message, expected_ref_sha=authority.head,
+                            )
+                        else:
+                            self.provider.update_text(
+                                state.deployment.instance_repository_id, state.binding.instance_ref,
+                                path, content, expected_blob_sha, message, expected_ref_sha=authority.head,
+                            )
                 finally:
                     if not release_attempted:
                         self._release_materializations([
@@ -3399,22 +3373,15 @@ class RuntimeSessionBroker:
                         [core, authority.snapshot]
                     )
 
-                    try:
-                        self.provider.update_text(
-                            state.deployment.instance_repository_id,
-                            state.binding.instance_ref,
-                            path,
-                            content,
-                            expected_blob_sha,
-                            message,
-                            expected_ref_sha=authority.head,
-                        )
-                    except CasConflict:
-                        raise
-                    except Exception as exc:
-                        raise CasConflict(
-                            f"Instance compare-and-swap failed: {exc}"
-                        ) from None
+                    self.provider.update_text(
+                        state.deployment.instance_repository_id,
+                        state.binding.instance_ref,
+                        path,
+                        content,
+                        expected_blob_sha,
+                        message,
+                        expected_ref_sha=authority.head,
+                    )
                 finally:
                     if not release_attempted:
                         pending = [

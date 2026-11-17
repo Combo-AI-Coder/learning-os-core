@@ -632,6 +632,22 @@ class ReferenceLearningHostTests(unittest.TestCase):
         self.assertFalse(result["ok"])
         self.assertEqual("guard_rejected", result["error"]["code"])
 
+    def test_unexpected_provider_bug_propagates_instead_of_cas_conflict(self):
+        created = self.invoke(
+            "create_evidence",
+            content=typed_evidence(evidence_id=KNOWLEDGE_EVIDENCE_ID),
+        )
+        self.assertTrue(created["ok"])
+        with mock.patch.object(
+            self.provider, "update_text", side_effect=RuntimeError("provider bug")
+        ):
+            with self.assertRaisesRegex(RuntimeError, "provider bug"):
+                self.invoke(
+                    "reconcile_knowledge",
+                    content=knowledge_candidate(),
+                    expected_version_token=self.provider.blobs[READ_PATH],
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -133,20 +133,4 @@ formal review belong in the publication PR receipt, not an inferred all-pass led
 
 ## Remaining limits
 
-The answers are authored and the source question is known. The closing boundary
-is explicitly requested, initial recovery is a fixed complete recipe, and product
-guidance/interface are supplied. This does not establish spontaneous stopping,
-autonomous context selection, unseen transfer, no-guidance adoption or structured-
-state superiority. Existing strong-summary/ablation comparisons are not rerun here.
-
-Consumers and reviewer are instruction-isolated contexts sharing a filesystem;
-hard sandbox isolation and independent model/provider diversity are not
-established. A bridge call reconstructs the fake provider and opens/closes its
-host session. Static fake head/blob tokens and fixed event time do not establish
-production freshness, real concurrent CAS, crash recovery or deployment safety.
-
-No actual learner, retention, transfer or learning benefit was tested. No new
-Runtime/protocol/schema mechanism is justified by this observation. Core #34,
-all earlier failures/partial results and the 28 historical `not_executed` cases
-remain unchanged. In particular, Core #45's two different unexplained local
-full-suite failures are not erased by this study or its hosted results.
+Answers are authored with explicit stopping criteria, instruction-isolated same-family contexts sharing a filesystem, and static fake tokens (does not measure spontaneous stopping, cross-provider diversity, real concurrent CAS, or real learner retention/transfer). Historical Core #34/Core #45 records remain unchanged.

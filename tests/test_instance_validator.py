@@ -925,6 +925,10 @@ class SplitInstanceStorageRegistryTests(unittest.TestCase):
         })
         self.assert_pass()
 
+    def test_malformed_core_curriculum_fails_explicitly(self):
+        write_file(self.core, "domains/broken-domain/curriculum.yaml", ": [\n")
+        self.assertIn("instance.core_curriculum", self.errors())
+
 
 if __name__ == "__main__":
     unittest.main()
