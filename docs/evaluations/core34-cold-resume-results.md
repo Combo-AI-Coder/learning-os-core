@@ -84,21 +84,4 @@ aggregate tests, CLI checks, CI and formal review belong in the PR receipt.
 
 ## Limits and next product obligation
 
-Three individual same-model first responses and a complementary same-model review
-are not independent-provider diversity, statistical reliability or learner effect.
-The full packets include product guidance about hint-based withdrawal and a
-tool-aware optional-request format. This is reduced task-specific prompting, not
-completely unprompted adoption. Responses lack generation-time input-hash or
-invocation attestation; later hashes cannot authenticate what originally generated
-them or independently prove first-response status. Those facts are attributed to
-the original experiment record.
-
-The fake provider reuses head/blob tokens. Replay does not establish real Git
-freshness, concurrency, external durable storage recovery, missing-context handling,
-or broad-portfolio robustness. No learner answer, retention or transfer was tested.
-No strong-summary, protocol ablation, irrelevant-distractor or ambiguous-report arm
-was added in this exploratory cut. Core #34 still owns those comparative and
-longitudinal acceptance obligations; no new mechanism is justified solely by this
-successful bounded observation. The 28 historical `not_executed` cases and all
-prior failures remain unchanged. Development integration, real learner validation,
-Runtime-Control promotion and public release remain separate decisions.
+Three single-sample same-model outputs with static fake tokens and supplied guidance do not establish cross-provider generalization, real Git concurrency, or learner benefit; Core #34 retains open comparative and longitudinal obligations.

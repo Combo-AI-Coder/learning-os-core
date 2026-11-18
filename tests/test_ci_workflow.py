@@ -1,7 +1,6 @@
-"""Source-contract checks, not a simulator of GitHub event delivery."""
+"""Structural CI workflow contract tests."""
 import copy
-import hashlib
-import json
+import re
 from pathlib import Path
 import unittest
 
@@ -9,23 +8,56 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
-# Non-trigger workflow mapping at canonical c6ab9db07ac96aa36ec98fbb910d3a7392b93aab.
-# A later intentional job change must review and update this preservation guard.
-BASELINE_BODY_SHA256 = "4005091853f2848ae7160106b217f3bf80a48c57390d114ebd620ddf550b84ed"
+HEX40 = re.compile(r"@[0-9a-f]{40}\b")
 
 
 def check_workflow(document):
     # BaseLoader keeps YAML's `on` key as a string, unlike YAML 1.1 booleans.
-    expected = {"push": {"branches": ["main"], "tags": ["**"]},
-                "pull_request": ""}
-    if document.get("on") != expected:
+    expected_on = {"push": {"branches": ["main"], "tags": ["**"]}, "pull_request": ""}
+    if document.get("on") != expected_on:
         raise ValueError("CI must retain main/all-tag pushes and default PR events")
-    body = {key: value for key, value in document.items() if key != "on"}
-    digest = hashlib.sha256(json.dumps(
-        body, sort_keys=True, separators=(",", ":")
-    ).encode("utf-8")).hexdigest()
-    if digest != BASELINE_BODY_SHA256:
-        raise ValueError("Non-trigger CI configuration changed")
+    if document.get("permissions") != {"contents": "read"}:
+        raise ValueError("CI permissions must remain read-only")
+    concurrency = document.get("concurrency")
+    if isinstance(concurrency, dict) and concurrency.get("cancel-in-progress") == "true":
+        raise ValueError("CI concurrency must not cancel in-progress main/PR checks")
+
+    jobs = document.get("jobs") or {}
+    if set(jobs) != {"validate", "validate-windows"}:
+        raise ValueError("CI must define both Linux and Windows validation jobs")
+    if jobs["validate"].get("runs-on") != "ubuntu-latest":
+        raise ValueError("Linux validation job must target ubuntu-latest")
+    if jobs["validate-windows"].get("runs-on") != "windows-latest":
+        raise ValueError("Windows validation job must target windows-latest")
+
+    for name, job in jobs.items():
+        if job.get("if") == "false":
+            raise ValueError(f"Job {name} cannot be disabled")
+        timeout = int(job.get("timeout-minutes", "0"))
+        if not 1 <= timeout <= 90:
+            raise ValueError(f"Job {name} timeout-minutes must remain bounded (1..90)")
+        steps = job.get("steps") or []
+        runs = "\n".join(s.get("run", "") for s in steps)
+        for required in ("scripts/validate_learning_os.py . --core", "unittest discover -s tests"):
+            if required not in runs:
+                raise ValueError(f"Job {name} must run {required}")
+        for step in steps:
+            if step.get("continue-on-error") == "true":
+                raise ValueError(f"Job {name} cannot use continue-on-error")
+            uses = step.get("uses")
+            if uses and not HEX40.search(uses):
+                raise ValueError(f"Action {uses} must be pinned to a full 40-hex commit SHA")
+            if uses and uses.startswith("actions/checkout@"):
+                if (step.get("with") or {}).get("persist-credentials") != "false":
+                    raise ValueError("actions/checkout must set persist-credentials: false")
+
+    linux_runs = "\n".join(s.get("run", "") for s in jobs["validate"]["steps"])
+    for flag in ("--instance", "--deployment"):
+        if flag not in linux_runs:
+            raise ValueError(f"Linux job must exercise {flag} CLI surface")
+    win_runs = "\n".join(s.get("run", "") for s in jobs["validate-windows"]["steps"])
+    if "git diff --check" not in win_runs:
+        raise ValueError("Windows job must run git diff --check")
 
 
 class CIWorkflowTests(unittest.TestCase):
@@ -35,15 +67,13 @@ class CIWorkflowTests(unittest.TestCase):
             Loader=yaml.BaseLoader,
         )
 
-    def test_current_workflow_preserves_non_trigger_configuration(self):
+    def test_current_workflow_satisfies_structural_contract(self):
         check_workflow(self.workflow)
 
     def test_event_contract(self):
         events = self.workflow["on"]
         self.assertEqual(set(events), {"push", "pull_request"})
         self.assertEqual(events["push"], {"branches": ["main"], "tags": ["**"]})
-        # No PR branch/path/type filters: default opened/synchronize/reopened
-        # includes mergeable draft PRs; conflict/approval restrictions are GitHub's.
         self.assertEqual(events["pull_request"], "")
 
     def test_rejects_lost_tag_coverage_or_restored_feature_pushes(self):

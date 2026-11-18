@@ -66,21 +66,8 @@ current Knowledge, following `evidence-classification.md` and
   evidence that support is absent or the learner is unable. Do not make a
   persistent withdrawal/downgrade that depends on unavailable context.
 
-This is semantic integration guidance, not an automatic write, state transition,
-or probe trigger. Teaching action remains proportionate under
-`teaching-decision.md`; no diagnostic is required merely because support changed.
-The Runtime reconciliation operation below does not enforce this judgment.
-
+This is semantic integration guidance rather than an automatic write or probe trigger.
 
 ## Runtime reconciliation boundary
 
-When the ordinary Runtime persists a learner Knowledge change, use the dedicated Knowledge reconciliation operation rather than generic replacement. The operation is a mechanical safety/traceability gate, not the semantic reasoner:
-
-- a missing Knowledge owner may be first-materialized only at revision 1;
-- an existing owner is fresh-read and updated under semantic revision + blob/head CAS;
-- every newly added support/challenge Evidence reference must be readable under the session's host-owned capability policy and resolve in the same exact Instance snapshot;
-- one reconciliation may add at most 32 new Evidence references, with the bound checked before per-Evidence repository I/O;
-- newly added references must carry an exact typed capability target matching the Knowledge domain/concept/capability;
-- Evidence interpretation.direction must agree with the support/challenge side.
-
-Existing legacy references may remain in current Knowledge, but a new integration cannot use an untyped or unrelated Evidence target merely because the referenced YAML exists. The model/runtime still owns the actual semantic integration judgment under the principles above; this gate does not infer state/confidence from counts.
+Ordinary Runtime persists learner Knowledge changes through `reconcile_knowledge:v2`, which enforces mechanical traceability (revision-1 creation or revision + blob/head CAS, host-permitted read access on the same pinned snapshot, a 32-reference bound per call, matching target domain/concept/capability, and matching `interpretation.direction`) while leaving semantic integration judgments to the model/runtime above.

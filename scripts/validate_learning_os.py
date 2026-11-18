@@ -957,7 +957,9 @@ class InstanceValidator:
         if ddir.is_dir():
             for f in sorted(ddir.glob("*/curriculum.yaml")):
                 try:c=yaml.safe_load(f.read_text(encoding="utf-8"))
-                except Exception: continue
+                except (OSError, UnicodeError, yaml.YAMLError) as e:
+                    self.error("instance.core_curriculum", f.relative_to(self.core_root).as_posix(), str(e))
+                    continue
                 if isinstance(c,dict) and isinstance(c.get("domain"),dict) and isinstance(c["domain"].get("id"),str): self.core_bases[c["domain"]["id"]]=c
     def check_keys(self,p,d,t):
         self.findings.extend(
