@@ -162,17 +162,6 @@ include its added tracked files, unlike the original 267-file input. The retaine
 output contains synthetic local repositories and operation receipts; it is not
 a production setup or migration command.
 
-## Limits and next trigger
+## Limits
 
-This establishes a bounded actual-local-Git composition witness. It does not
-establish teaching benefit, model decision quality, large-history selection,
-statistical reliability, real GitHub/network durability, platform/Windows
-coverage beyond executed checks, mid-write crash safety, shared-process
-admission, deployment readiness or learner acceptance. The historical model
-trials and #34's stopping conditions remain unchanged.
-
-No new product defect was observed. Stop this slice after the required
-validation/review. Reopen it for a concrete provider/operation change or a
-matching interruption/CAS failure, rather than generating more same-condition
-journeys. Real Host integration, production promotion and real learning remain
-with their existing owners and separate authority.
+Establishes a bounded local-Git composition witness on synthetic repositories (real GitHub/network durability, mid-write OS crash safety, shared-process admission, Windows platform coverage, and real learner benefit remain outside this witness). Reopen for a concrete provider/operation change or matching interruption/CAS failure.

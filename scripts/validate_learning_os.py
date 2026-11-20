@@ -993,7 +993,7 @@ class InstanceValidator:
                 return
             for f in sorted(curricula):
                 try:c=yaml.safe_load(f.read_text(encoding="utf-8"))
-                except Exception:
+                except (OSError, UnicodeError, yaml.YAMLError):
                     # Failed reads are not evidence that a Core base is absent.
                     self.error("instance.core_curriculum",f.relative_to(self.core_root).as_posix(),"Core curriculum could not be read or parsed (fail closed)")
                     continue

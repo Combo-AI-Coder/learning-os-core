@@ -930,6 +930,10 @@ class SplitInstanceStorageRegistryTests(unittest.TestCase):
         })
         self.assert_pass()
 
+    def test_malformed_core_curriculum_fails_explicitly(self):
+        write_file(self.core, "domains/broken-domain/curriculum.yaml", ": [\n")
+        self.assertIn("instance.core_curriculum", self.errors())
+
 
 class InstanceCoreCurriculumLoadTests(unittest.TestCase):
     """A discovered but unreadable Core base must not become an absent base."""

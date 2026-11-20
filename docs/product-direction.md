@@ -104,32 +104,22 @@ At first entry, make the intake-depth choice discoverable through a concise opti
 
 The separate seeded public reference remains useful, but cannot alone satisfy trusted first use. Initial-authority acquisition must be a supported owning transition, not inferred from reading a generation or supplied by test setup. A bounded synthetic verification proposal should cover a genuinely blank Instance, missing/revoked authority, stale deployment, interrupted/retried initialization without duplicates, initial Topic creation, an authorized meaningful save, and fresh-consumer resume. These are verification requirements, not executed evidence, initialization implementation permission, or a claim of cross-crash atomicity/universal rollback. Actual learner/Host verification remains separate.
 
-A large controlled experiment or established long-term learning-effect advantage is **not a prerequisite** for this initial technical preview. A mature claim of causal, sustained learning benefit requires stronger evidence and remains a later research/product frontier. A one-off fluent tutoring answer, synthetic test PASS, single self-graded example, or completed PR does not replace the real journey.
-
-This threshold does not assert that these requirements have been met, declare Core #34 complete, or change its currently selected tests. It grants no merge, deployment/promotion, public release, or real learner/Instance mutation authority.
+A large controlled experiment is **not a prerequisite** for this initial technical preview; establishing causal, sustained learning benefit remains a later research frontier. A one-off fluent tutoring answer or synthetic test PASS does not substitute for the real journey.
 
 ## First post-restart product cycle
 
-The first product cycle follows this **decision order**, not an automatic mutation sequence:
+The first product cycle follows this decision order:
 
-1. **Production-parity assessment** — inspect the complete difference between the currently deployed Core and the current accepted Core, run the applicable promotion/recovery checks, and determine whether promotion is ready.
-2. **Separate promotion decision** — changing Runtime-Control or deploying a newer Core remains an explicit deployment action with its own authority and verification. This document does not authorize it.
-3. **Sustained real learning** — once the active runtime is appropriate for dogfood, continue ordinary advanced self-directed learning and let real teaching/learning interactions exercise the product.
-4. **Evidence-driven product fixes** — prioritize changes that are supported by material real-use evidence, especially around diagnostic targeting, knowledge anchoring, concept closure, and useful capability-state formation.
-5. **Public packaging** — package the behavior that has survived real use into the reference-product early release.
+1. **Production-parity assessment** — inspect the diff between the currently deployed Core and the accepted Core, and run promotion/recovery checks.
+2. **Separate promotion decision** — changing Runtime-Control or deploying a newer Core remains a separate deployment action with its own authority and verification.
+3. **Sustained real learning** — once the active runtime is ready for dogfooding, let real interactions exercise the product.
+4. **Evidence-driven product fixes** — prioritize fixes backed by real-use evidence (diagnostic targeting, knowledge anchoring, concept closure, capability-state formation).
+5. **Public packaging** — package behavior that has survived real use into the reference early release.
 
-This order intentionally rejects two defaults:
+This order rejects packaging an unvalidated product surface solely because Core is stable, or expanding learner-model/framework mechanics speculatively.
 
-- do not package an unvalidated product surface merely because the technical Core is stable;
-- do not proactively expand learner-model mechanics, infrastructure, or framework layers merely because they can be designed.
+## Scope
 
-## Boundaries and non-inferences
-
-- This document does not deploy or promote any Core commit. Runtime-Control remains the sole deployment authority.
-- Core `main` may be ahead of the deployed Core; development integration and production promotion remain separate decisions.
-- This direction does not declare every existing Learning OS mechanism permanently necessary. Historical collaboration mechanisms may still be retired when they lack independent product/runtime value.
-- This direction does not make learner modeling exhaustive. Unknown should remain unknown when evidence is insufficient.
-- This direction does not make tests, Progress completion, or a fluent tutoring response equivalent to mastery.
-- This direction does not require Learning OS to outperform every external tutor feature. The product may deliberately rely on replaceable external capabilities while owning the durable learner-state semantics.
-- Synthetic Core fixtures are valid verification evidence for reusable product semantics, but they are not real learner-outcome evidence.
-- This document is not a fixed V0.5 roadmap. Real learner outcomes and explicit user decisions determine which implementation slice comes next.
+- Runtime-Control remains the sole deployment authority; Core `main` alone does not deploy.
+- Unknown remains unknown when evidence is insufficient; tests, Progress completion, and fluent responses do not equal mastery.
+- Synthetic Core fixtures verify reusable product semantics, separate from real learner outcomes.

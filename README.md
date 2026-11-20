@@ -41,16 +41,12 @@ answer-conditioned continuity and local-Git recovery, with separate fixtures,
 expected outputs, and the limits of what each run establishes.
 
 For a smaller evidence-reading entry, see the
-[Core #19 offline intake-control replay](docs/evaluations/core19-intake-controls-results.md#reproduce-the-retained-evidence-offline).
-It covers the retained scope/set/reset/inheritance cases and explains which
-inputs were pre-seeded. It is a replay of existing synthetic evidence, not a
-new learner session or an end-user quickstart.
+[Core #19 offline intake-control replay](docs/evaluations/core19-intake-controls-results.md#reproduce-the-retained-evidence-offline),
+covering scope/set/reset/inheritance on pre-seeded synthetic inputs.
 
-For the trusted blank first-use results, see the
+For trusted blank first-use results (inactive staging, activation, lost-response
+recovery, and isolated-context A/B sample), see the
 [Core #19 synthetic first-use evidence](docs/evaluations/core19-first-use-results.md).
-It covers inactive staging and activation, lost-response recovery, and one
-isolated-context A/B behavior sample. This is synthetic-only evidence, not
-production setup guidance, a deployment, or proof of real learning benefit.
 
 The V0.4-B2-B split-aware Instance surface validates a materialized Instance
 snapshot against a locally materialized Core snapshot plus an explicit
@@ -97,34 +93,22 @@ permissions, checkout behavior, cleanup, and the Linux 15-minute / Windows
 90-minute limits are unchanged.
 
 A branch without a PR has no automatic hosted validation. Before proposing
-integration, run the Core validator and full unit suite described above in an
-authorized development environment, then open or update a mergeable Draft PR
-for hosted dual-platform evidence. GitHub does not run `pull_request` workflows
-while the PR has merge conflicts: resolve the conflicts and update the branch
-before relying on hosted results. Local results are not a replacement for the
-full hosted matrix. Fork approval restrictions still apply.
+integration, run the Core validator and full unit suite locally, then open or
+update a mergeable Draft PR for dual-platform CI. GitHub does not run
+`pull_request` workflows while a PR has merge conflicts.
 
-PR validation tests GitHub's merge result, not merely the branch head. Preserve
-current-base checks and natural main verification; an older matching source
-tree is not a substitute for current required checks. Tag validation does not
-authorize a release or deployment. No manual-dispatch shortcut is introduced.
-
-The source-contract tests in `tests/test_ci_workflow.py` guard the event mapping
-and non-trigger configuration. They do not simulate GitHub event delivery or
-prove current branch-protection settings. Intentional future job changes must
-review and update the preservation digest.
+The source-contract tests in `tests/test_ci_workflow.py` guard the trigger mapping
+and workflow structure.
 
 ## Thin reference host
 
 The development reference host façade in `scripts/reference_host.py` exposes
 seven bounded operations: learning-context read, Evidence discovery,
 Main-bound learning-checkpoint save, Evidence creation, Knowledge reconciliation,
-and scoped intake preference set/reset. These serve the synthetic reference
-journeys. Trusted locator,
-repository/provider bindings, capability policy and broker session authority
-remain host-side. See [`docs/reference-host.md`](docs/reference-host.md) for the
-public-safe boundary and synthetic coverage; this is not a deployment or a
-model-provider/RPC implementation.
+and scoped intake preference set/reset. Trusted locator, repository/provider
+bindings, capability policy, and broker session authority remain host-side. See
+[`docs/reference-host.md`](docs/reference-host.md) for the boundary and
+synthetic coverage.
 
 ## REST provider safety and compatibility
 
