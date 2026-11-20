@@ -976,7 +976,11 @@ class InstanceValidator:
         if isinstance(sv,list) and all(isinstance(x,str) and x for x in sv): self.supported_state_schemas=set(sv)
         else: self.error("instance.core_manifest","config/core.yaml","Core manifest.supported_instance_state_schema_versions missing or invalid (fail closed)")
         ddir=self.core_root/"domains"
-        if ddir.is_dir():
+        # Python 3.14 Path.is_dir() calls os.path.isdir() and swallows OSError;
+        # stat() keeps PermissionError visible while treating absent/non-dir as sparse.
+        try: domains_is_dir=stat.S_ISDIR(ddir.stat().st_mode)
+        except (FileNotFoundError, NotADirectoryError): domains_is_dir=False
+        if domains_is_dir:
             # Path.glob suppresses scan/stat errors, which can hide Core bases.
             try:
                 curricula=[]
