@@ -17,7 +17,7 @@ from scripts.validate_learning_os import InstanceValidator, validate_instance
 
 class InstanceDiscoveryTests(unittest.TestCase):
     def setUp(self):
-        self.root = Path(tempfile.mkdtemp(prefix="instance-discovery-"))
+        self.root = Path(tempfile.mkdtemp(prefix="instance-discovery-")).resolve()
         self.directories = [self.root]
         self.files = {}
         self.removed = {}

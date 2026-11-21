@@ -941,7 +941,7 @@ class InstanceCoreCurriculumLoadTests(unittest.TestCase):
     def setUp(self):
         td = tempfile.TemporaryDirectory()
         self.addCleanup(td.cleanup)
-        self.root = Path(td.name)
+        self.root = Path(td.name).resolve()
         self.core = make_core(self.root / "core")
         self.instance = make_instance(self.root / "instance")
         self.curriculum = self.core / f"domains/{DOMAIN}/curriculum.yaml"
@@ -1045,7 +1045,7 @@ class InstanceCoreEnumerationTests(unittest.TestCase):
     def setUp(self):
         td = tempfile.TemporaryDirectory()
         self.addCleanup(td.cleanup)
-        self.root = Path(td.name)
+        self.root = Path(td.name).resolve()
         self.core = make_core(self.root / "core")
         self.instance = make_instance(self.root / "instance")
         self.domains = self.core / "domains"
