@@ -4297,6 +4297,30 @@ class BoundedWritePolicyFingerprintTests(unittest.TestCase):
                     ["synthetic-fingerprint"], cwd=ROOT
                 )
 
+    def test_missing_stdout_pipe_fails_closed_and_reaps(self):
+        self.process.stdout = None
+        self.process.returncode = None
+        with mock.patch.object(runtime_broker.subprocess, "Popen", return_value=self.process):
+            with self.assertRaisesRegex(GuardRejected, "failed closed"):
+                runtime_broker._compute_bounded_write_policy_fingerprint(
+                    ["synthetic-fingerprint"], cwd=ROOT
+                )
+        self.process.kill.assert_called_once_with()
+        self.process.wait.assert_called_once_with(timeout=1)
+
+    def test_kill_error_still_closes_pipe(self):
+        self.process.returncode = None
+        self.process.kill.side_effect = OSError("synthetic kill failure")
+        with self.assertRaises(OSError):
+            self.invoke([])
+        self.process.kill.assert_called_once_with()
+        self.process.wait.assert_not_called()
+
+    def test_exited_child_drains_buffered_chunks_before_eof(self):
+        self.process.returncode = 0
+        self.assertEqual("abcd", self.invoke([b"ab", BlockingIOError(), b"cd\n", b""]))
+        self.process.kill.assert_not_called()
+
     def test_real_pipe_held_writer_has_bounded_drain_and_closes(self):
         if runtime_broker.sys.platform == "win32" and runtime_broker.sys.version_info < (3, 12):
             self.skipTest("Windows nonblocking pipes require Python 3.12+")

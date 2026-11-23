@@ -225,7 +225,10 @@ def _compute_bounded_write_policy_fingerprint(
 
     output = bytearray()
     try:
-        assert process.stdout is not None
+        if process.stdout is None:
+            raise GuardRejected(
+                "deployed Core write policy computation failed closed"
+            )
         # Never let an inherited writer hold a reader thread (or close lock).
         # Nonblocking pipes are supported on POSIX and Windows Python 3.12+.
         try:
@@ -274,7 +277,7 @@ def _compute_bounded_write_policy_fingerprint(
                 raise GuardRejected(
                     "deployed Core write policy output exceeded Runtime budget"
                 )
-        if process.returncode != 0:
+        if returncode != 0:
             raise GuardRejected(
                 "deployed Core write policy computation failed closed"
             )
@@ -285,14 +288,16 @@ def _compute_bounded_write_policy_fingerprint(
                 "deployed Core write policy computation failed closed"
             ) from None
     finally:
-        if process.poll() is None:
-            process.kill()
-            try:
-                process.wait(timeout=1)
-            except subprocess.TimeoutExpired:
-                pass
-        if process.stdout is not None:
-            process.stdout.close()
+        try:
+            if process.poll() is None:
+                process.kill()
+                try:
+                    process.wait(timeout=1)
+                except subprocess.TimeoutExpired:
+                    pass
+        finally:
+            if process.stdout is not None:
+                process.stdout.close()
 
 
 class DeploymentWriteAdmission(Protocol):
