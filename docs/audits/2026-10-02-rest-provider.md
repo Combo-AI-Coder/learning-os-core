@@ -44,15 +44,6 @@ python scripts/validate_learning_os.py . --core
 python -m unittest discover -s tests -v
 ```
 
-## Limits and integration boundary
+## Limits and compatibility
 
-This is deterministic implementation evidence plus same-agent source review,
-not a blind independent security assessment, formal proof, production promotion,
-or learner acceptance. No real learner data is used in these fixtures.
-Archive byte/expansion limits do not establish an absolute process-memory or
-whole-transfer wall-clock limit; parser-level fuzzing and representative resource
-measurements remain useful follow-up work. Git CLI policy extraction into a
-separate module is deferred until a consumer needs more than these pure helpers.
-The default-read-only change intentionally requires explicit migration of legacy
-REST write callers; broker-authorized writes should continue using exact-head-CAS
-capable transport. Runtime-Control and Instance are not modified by this PR.
+Archive byte/expansion limits do not replace process-memory monitoring or whole-transfer wall-clock limits. Legacy REST write callers must explicitly opt into numeric repository IDs (`writable_repository_ids`); broker-authorized writes continue using exact-head-CAS capable transport.

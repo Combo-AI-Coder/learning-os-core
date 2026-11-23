@@ -150,15 +150,4 @@ complete receipt/review coverage, discovered-owner ordering, optional absence,
 visible distractor inclusion, full state/source-occurrence preservation and Git
 checkout byte parity. They protect this witness, not a universal read sequence.
 
-There are only nine or ten stored document paths and unusually helpful checkpoints.
-Unknown bindings/schema, sparse or misleading checkpoints, large/noisy portfolios,
-ranking/minimal-read efficiency, capacity recovery and cross-topic selection remain
-untested. Same-family instruction isolation shares a filesystem and is not a hard
-sandbox. Static fake tokens and reconstructed sessions do not prove production
-freshness, concurrent CAS, durable transport or process-crash recovery.
-
-No real learner, subsequent answer, retention, transfer or learning benefit was
-measured. Core #34, earlier failed/partial results and 28 historical `not_executed`
-cases remain unchanged. Core #45's two different unexplained local full-suite
-failures are not erased by later green checks. This slice does not authorize
-Runtime changes, deployment or product acceptance.
+Limited to 9–10 coherent documents with fake tokens and instruction isolation (large/noisy portfolios, ranking efficiency, real concurrent CAS, and real learner outcomes remain outside this witness; Core #34/#45 prior records remain unchanged).

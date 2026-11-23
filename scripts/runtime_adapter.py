@@ -466,12 +466,14 @@ class DeploymentResolver:
                 contract_path=rc["contract_path"],
             )
             return ResolvedDeployment(context, control, core, instance)
-        except Exception:
+        except Exception as exc:
             for snapshot in reversed(snapshots):
                 try:
                     self.provider.release_materialization(snapshot)
-                except Exception:
-                    pass
+                except Exception as cleanup_exc:
+                    exc.add_note(
+                        f"materialization cleanup failed for {snapshot.repository_id}: {cleanup_exc}"
+                    )
             raise
 
 
@@ -585,21 +587,16 @@ class DeploymentGuard:
                 raise GuardRejected("generation guard input is missing")
             if generation_reader() != expected_generation:
                 raise GuardRejected("semantic generation changed")
-        try:
-            if expected_ref_sha is None:
-                return self.provider.update_text(
-                    session.instance_repository_id, branch, path, content,
-                    expected_blob_sha, message,
-                )
+        if expected_ref_sha is None:
             return self.provider.update_text(
                 session.instance_repository_id, branch, path, content,
                 expected_blob_sha, message,
-                expected_ref_sha=expected_ref_sha,
             )
-        except CasConflict:
-            raise
-        except Exception as exc:
-            raise CasConflict(f"target blob CAS failed: {exc}") from None
+        return self.provider.update_text(
+            session.instance_repository_id, branch, path, content,
+            expected_blob_sha, message,
+            expected_ref_sha=expected_ref_sha,
+        )
 
 
 

@@ -166,20 +166,4 @@ Admission, hashes and shape checks alone do not establish decision quality.
 
 The successor also reread the original neutral report. Its correct continuation therefore does not isolate the changed Knowledge as causally necessary, nor prove that a Knowledge-only continuation would preserve the same limits. It demonstrates safe actual readback use in this saved state, not a controlled mediation result.
 
-The authored original answer and report semantics are reused historical
-fictional material. Public product guidance explicitly discusses assistance and
-withdrawal. This is neither an unguided discovery nor a new capability domain,
-statistical reliability result, or causal estimate separated from model variation.
-The portfolio has six/seven stored documents, known Topic/Subtopic binding and
-generally coherent state. It does not establish sparse/contradictory history
-handling in general, large-scale selection, repeated/conflicting reports or
-minimal-read efficiency. Fixed fake head/blob tokens and per-call reconstructed
-sessions do not establish real Git freshness/CAS, process-crash recovery or
-external durability.
-
-No learner response, learning benefit, retention or transfer was measured. The
-earlier failures, Core34 partial/open status and 28 historical not_executed
-scenarios remain unchanged. The predeclared observation window ends after these
-two worlds and one actually triggered successor, semantic review and replay; no
-additional same-condition model samples will be added. Publication, real Host
-integration and real-learner research retain separate authorization boundaries.
+Reused fictional artifacts, supplied public guidance, six/seven stored documents, and static fake tokens scope this observation to coherent synthetic portfolios; sparse/conflicting history, real Git concurrency/crash recovery, and learner outcomes remain unmeasured. The observation window stops after these two worlds, one triggered successor, review, and replay.

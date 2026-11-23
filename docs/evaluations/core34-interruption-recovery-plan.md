@@ -65,8 +65,4 @@ all returned reference facts derive from the same immutable snapshot. Complete
 Core validator and full tests, plus complementary native boundary review and an
 exact-content pre-Codex gate before any review-triggering publication.
 
-No Evidence creation/retry, reconciliation, automatic capability promotion,
-correction event, real learner mutation, deployment or merge occurs during
-recovery. Correction propagation remains a later #34 slice. #39's same-model,
-synthetic, blinding and teaching-effect limits, all failed outputs, and the 28
-historical not_executed scenarios remain unchanged.
+No Evidence creation/reconciliation/mutation occurs during recovery; Core #34/#39 limits and the 28 historical `not_executed` scenarios remain unchanged.

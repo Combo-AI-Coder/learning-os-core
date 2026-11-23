@@ -177,15 +177,4 @@ three earlier misses.
 
 ## Remaining boundaries
 
-Consumers explicitly received the new product guidance and were asked to consider
-durable updates. This demonstrates prompted compliance on synthetic inputs, not
-unprompted adoption or sustained reliability. Isolation is instructional within a
-shared filesystem. Full Evidence-plus-Knowledge recovery is covered;
-Knowledge-only explanation, cross-topic discovery and long/over-budget history
-resolution are not established. Typed correction relations and neutral-context
-reference fields remain unimplemented, with no new state enum or batch migration.
-
-Core #34 and its wider longitudinal obligations remain open. All 28 historical
-scenarios remain `not_executed`; earlier failures/inconclusive results remain
-unchanged. This work neither deploys Core nor writes real learner/Instance state.
-Merge, production promotion and product acceptance retain their separate gates.
+Demonstrates prompted compliance on synthetic Evidence+Knowledge recovery within a shared filesystem; unprompted adoption, Knowledge-only explanation, cross-topic discovery, over-budget history resolution, and real learner outcomes remain outside scope. Core #34 remains open.
