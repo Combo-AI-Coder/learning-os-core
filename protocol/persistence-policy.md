@@ -119,9 +119,7 @@ If a reconciliation changes canonical Plan/Progress/Weekly decisions, write and 
 
 Learning handoffs for materialized learning Branch conversation generations follow `continuity-policy.md` and live with the relevant Topic/Subtopic lineage. They are supplemental product continuity, not canonical learner state or Evidence.
 
-Project/design Agent collaboration is outside ordinary Learning OS Core. Core does not define a project-design generation, claim/takeover transaction, packet publication protocol, or session writer credential. A target repository or current execution environment may maintain its own recovery/control artifacts, but those rules neither become learner/runtime state nor bypass the product fresh-read, deployment, learning-lineage, or target-CAS guards defined here.
-
-Do not archive full transcripts by default and do not persist private chain-of-thought in product state.
+Project/design Agent collaboration sits outside ordinary Learning OS Core; external target/environment authority checks never bypass product fresh-read, deployment, learning-lineage, or target-CAS guards. Do not archive full transcripts by default or persist private chain-of-thought in product state.
 
 ## 10. Visibility
 

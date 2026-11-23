@@ -172,10 +172,4 @@ A reminder failure or missing provider task ID MUST NOT corrupt learning state. 
 
 ## Initial admission versus successor continuity
 
-The synthetic first-use transition in `deployment-runtime.md` owns initial
-Topic/Main creation and the first authorized capability. It does not replace
-normal learner-authorized handoff/pending-successor/claim. An interrupted result
-may recover only under its original grant and exact prepared activation window,
-without a second parallel writer. A new read-only consumer may recover canonical
-Goal/Plan/Progress through its Host's current read authorization; reading
-`active_generation: 1` grants no writable identity.
+The first-use transition (`deployment-runtime.md`) owns initial Topic/Main creation and first writer capability rather than normal successor handoff; interrupted results recover strictly under their original grant and prepared window, and reading `active_generation: 1` alone confers read-only visibility rather than writer identity.

@@ -69,21 +69,6 @@ not independent audit.
 
 ## Explicit limits and continuation
 
-- Producer loss is synthetic session revocation after persistence, not a real
-  process/OS-crash or distributed exactly-once guarantee
-- ‘Not referenced by current Knowledge’ never means unprocessed or permission to
-  retry an observation. Knowledge retains representative references
-- No recovery call creates Evidence, reconciles Knowledge, automatically promotes
-  capability state, introduces correction events or duplicates a performance
-- The scan caps are fail-closed. Larger histories need a separately justified
-  bounded selector; this slice does not silently truncate or add pagination
-- This is deterministic mechanical recovery evidence. There is no model teaching
-  decision, real learner benefit, delayed retention/transfer or product acceptance
-- Core #39's retained failed/inconclusive outputs, same-model and blinding limits
-  are unchanged; the 28 historical scenarios remain `not_executed`
-- No production pin, Instance/real learner data, provider/spending permission,
-  deployment or merge is changed by this implementation
+- Bounded deterministic mechanical witness only (session revocation, not OS-crash durability, semantic judgment, or real learner outcomes); scan caps fail closed rather than truncating silently; Core #39 and the 28 historical `not_executed` cases remain unchanged.
 
-Correction/reinterpretation that preserves one source occurrence remains the next
-separate product question under #34. The existing target owner and continuing
-LearningOS task carry that obligation; no duplicate umbrella issue is created.
+Correction/reinterpretation preserving single source occurrence remains the next slice under Core #34.

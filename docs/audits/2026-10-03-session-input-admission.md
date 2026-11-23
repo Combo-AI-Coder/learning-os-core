@@ -29,21 +29,6 @@ Hosted results are attached to the PR. Fixtures are synthetic only.
 
 ## Unfinished product and release work
 
-This development change is not a deployment promotion. Runtime-Control remains
-at its accepted exact Core pin and epoch; promotion still requires its separate
-freeze/drain/pin/activate/verification sequence. The active Instance and learner
-state are untouched.
+Issue #19's real intake-experience evidence remains open for an authorized learner surface.
 
-Issue #19's real intake-experience evidence is still outstanding: on an authorized
-learner surface, evaluate minimal/balanced/thorough, immediate-start with deferred
-questions, a current-instruction override, and removing a durable preference to
-inherit again. Existing deterministic policy tests cannot settle teaching quality
-or learner experience. Do not manufacture a learner trial for this maintenance PR.
-
-Persistence scope: target code, regression tests and this factual receipt.
-The reproduced admission defects are repaid at the deterministic-code scope;
-real learner acceptance and deployment remain separate, open obligations.
-
-A minimized, tool-free independent static patch review returned
-NO_BLOCKING_FINDINGS for the changed Core functions and four tests. It did not
-review unrelated PCN/Harness changes or perform live Runtime operations.
+Scope: target code, regression tests, and this receipt. Static patch review returned `NO_BLOCKING_FINDINGS` for the changed Core functions and four tests.

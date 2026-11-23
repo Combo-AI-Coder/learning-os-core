@@ -46,18 +46,10 @@ The reviewer first inspected actual question text, attempted a misconception-con
 - **h06:** introduces the uncovered negative-factor condition locally, without assuming competence or inability beyond positive-factor evidence
 - **r02/r03:** preserve the ordinary application demand across irrelevant extra context
 
-Important limitations remain. q01/q02 revisit challenging conditions rather than establish novel transfer. q10's prefixes have different lengths: the question refutes the exact fixed-ID implication, but does not isolate lexical content from token position. A response based only on position must not earn the stronger claim of lexical-context sensitivity at a fixed position. No downstream learner-answer grading or branching execution was tested. No actual learner participated, and no durable retention, transfer or teaching benefit was measured.
+Important limitations remain: q01/q02 revisit challenging conditions rather than novel transfer, q10 prefixes differ in length (so position is not isolated from lexical context), and no downstream learner-answer grading or real learner outcome was tested.
 
 ## Reproduction and verification
 
-- `scripts/evaluate_diagnostic_repair.py q10` exports the exact retained clean packet
-- Adding `--response response.json` performs declared-contract checks; without a bound semantic review it cannot establish behavioral acceptance
-- `--semantic-review review.json` requires the exact run/packet/response binding and affirmative task-specific semantic checks
-- `tests/fixtures/core34-diagnostic-repair/prospective-manifest.json` preserves packet hashes, execution status and source-case hashes
-- `prospective-observations.json` preserves all q/h raw outputs, both grader profiles and bound assessments
-- `adversarial-review.json` preserves counterexample attempts, scope limits and supplemental reviews
-- Historical policy and exporter snapshots preserve all old packet hashes. The q10 reproduction exporter snapshot was added during review and is explicitly not claimed as a pre-run freeze; q10's input hash was recorded before its consumer call. Hashes do not independently authenticate chronology
-
-The regression tests cover historical preservation, failed-oracle retention, declaration/text spoofing, weak shared-prerequisite probes, answer leakage, malformed data, stale/transplanted reviews, exact supplied-source labels, path/budget/capability bounds, snapshot drift, read-only consumer recovery and clean-context provenance. Green unit tests establish those checks and faithful evidence handling; they do not turn the old failed cases into successes.
-
-The result owner/PR should record the latest full-suite, Core-validator, hosted-platform and review status for the exact candidate. No hosted result should be inferred from local tests. Exact model build, temperature, seed and full provider prompt are not exposed; packet regeneration and retained-output re-scoring are deterministic, model sampling is not.
+- `scripts/evaluate_diagnostic_repair.py q10` exports the retained clean packet.
+- `--response response.json` validates declared output shape; `--semantic-review review.json` requires matching run/packet/response bindings and semantic checks.
+- `tests/fixtures/core34-diagnostic-repair/prospective-manifest.json`, `prospective-observations.json`, and `adversarial-review.json` preserve the packet hashes, raw outputs, grader profiles, and counterexample reviews. The q10 reproduction exporter snapshot was added during review (q10's input hash was recorded prior to its call). Model sampling is non-deterministic, while packet regeneration and response re-scoring are deterministic.

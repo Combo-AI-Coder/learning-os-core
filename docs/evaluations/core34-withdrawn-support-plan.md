@@ -55,9 +55,4 @@ action. Optional assisted refinement is valid if its scope is explicit; neutral
 reports must not be fabricated as support/challenge. Actual independently scoped
 negative evidence must not be erased by the new unknown rule.
 
-The host is a synthetic provider with fixed fake tokens; replay does not prove real
-Git provenance or concurrent-process safety. Full-context successor recovery does
-not prove Knowledge-only explanation. No learner-benefit, structured superiority,
-sustained model reliability, general correction safety or deployment claim follows.
-The #41 outputs/hashes and prior failed/inconclusive runs remain historical. Core
-#34 and its remaining obligations stay open. Merge requires separate approval.
+Synthetic fake-token replay does not substitute for real Git provenance, concurrent-process safety, or real learner outcomes; #41/Core #34 records remain unchanged.

@@ -137,13 +137,6 @@ belong to the task/PR receipt. A previous head's pass is not reused. Required
 validation and applicable review-entry rules remain separate from merge gates.
 Hosted platform coverage that did not execute remains missing, not a pass.
 
-## Limits and remaining outcome
+## Limits
 
-This demonstrates bounded prompted behavior and owning-operation mechanics on
-controlled synthetic input. It does not show real learner benefit, long-run
-reliability, unprompted adoption, cross-provider diversity, user acceptance or a
-production host rollout. Resource token/compute/cost metrics are unavailable and
-are not inferred from agent counts or elapsed time. Core #19 remains open for
-broader experience acceptance; this is not a prerequisite for #34's existing-Topic
-longitudinal work. Merge, deployment and real learner observation remain separate
-authorization and acceptance boundaries.
+Demonstrates bounded prompted behavior and owning-operation mechanics on controlled synthetic input (does not measure real learner gain, unprompted adoption, or cross-provider diversity; token/compute metrics were unavailable). Core #19 remains open for broader experience acceptance.

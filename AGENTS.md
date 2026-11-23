@@ -4,7 +4,6 @@ This repository is the reusable **product Core** for Learning OS. It owns reusab
 
 ## Authority and plane boundaries
 
-- Current explicit user instructions and applicable safety constraints remain highest priority.
 - Runtime-Control is authoritative for whether an exact Core commit is deployed. The current `main` branch is development state and does not self-deploy.
 - Real learner state, Evidence, Instance state, credentials, private Control data, project/session writer state, and deployment pins do not belong in Core.
 - Learning-specific Branch continuity and generation fencing remain product/runtime semantics where they protect learner-state continuity and writes.
@@ -17,4 +16,3 @@ This repository is the reusable **product Core** for Learning OS. It owns reusab
 - Before proposing integration, run:
   - `python scripts/validate_learning_os.py . --core`
   - `python -m unittest discover -s tests -v`
-- A green test or PR is verification evidence, not deployment, user acceptance, or promotion of the new Core commit.

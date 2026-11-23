@@ -128,16 +128,4 @@ Linux/Windows checks and formal review belong in the PR receipt.
 - The ordinary request still includes full product guidance and an explicit
   coverage output field. No policy ablation or structured-state superiority is
   established. The guidance already discusses unavailable context.
-- Native contexts are instructionally isolated in a shared filesystem.
-  Independent model/provider diversity and unseen generation history are not
-  established. Four first outputs are not statistical reliability evidence.
-- Fixed fake blob/head tokens and synthetic intervention do not establish real
-  Git freshness, concurrent writes, operating-system crash recovery, or external
-  durable storage behavior. The host does not enforce semantic judgment.
-- No actual learner response, retention, transfer or learning benefit was tested.
-  The earlier failures, #44's partial assessment and all 28 historical
-  `not_executed` cases are unchanged.
-
-This narrows one actual-read evidence gap. It creates no new runtime operation,
-protocol, schema, capability policy, deployment, real learner state, merge
-authority, public-release decision or product acceptance.
+- Four single-sample instruction-isolated outputs with supplied guidance, fake tokens, and no real learner outcomes narrow the read-gap witness without adding new runtime operations, schemas, or deployment claims; historical #44/28 `not_executed` records remain unchanged.

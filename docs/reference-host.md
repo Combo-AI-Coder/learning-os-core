@@ -206,9 +206,4 @@ activation and current grant/deployment checks produce the opaque checkpoint
 writer. The seeded examples above are still seeded examples, not blank setup
 proof. The new acceptance tests are `tests/test_first_use.py`.
 
-An authenticated retry recovers an exact prepared effect after lost responses.
-It never accepts same text as proof of ownership, changes its expected parent,
-creates generation 2, overwrites later learning, or grants a fresh consumer write
-identity. See `protocol/deployment-runtime.md` for unknown outcomes, retained
-artifacts, revocation and unsupported production boundaries. Fresh read-only
-recovery and a separate learner-authorized writable handoff are different paths.
+An authenticated retry recovers a prepared effect after lost responses without accepting identical text as ownership, shifting its expected parent, creating generation 2, overwriting later learning, or granting a fresh consumer write identity. See `protocol/deployment-runtime.md` for unknown outcomes, retained artifacts, and revocation rules.
