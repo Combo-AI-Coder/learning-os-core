@@ -1,4 +1,4 @@
-"""Synthetic source-only candidate tests; execution requires separate approval."""
+"""Regression tests for first-use commit read ordering and content validation."""
 from copy import deepcopy
 import hashlib
 from pathlib import Path
@@ -106,6 +106,13 @@ class CommitReadOrderTests(unittest.TestCase):
             self.assertEqual([("body", self.candidate), ("header", self.candidate),
                               ("header", self.parent), ("body", self.parent)], self.calls)
             self.assertEqual(2, walks.call_count, "failed fresh read must not reuse or start a walk")
+
+    def test_non_exact_candidate_identity_fails_before_git_call(self):
+        descriptor = deepcopy(self.descriptor)
+        descriptor["candidate"] = "HEAD"
+        with self.assertRaisesRegex(ResolutionError, "Git object identity is not exact"):
+            self.provider._first_use_verify(self.repo, descriptor)
+        self.assertEqual([], self.calls)
 
     def test_content_size_and_hash_are_checked(self):
         for size, text in ((len(self.raw) + 1, "content size differs"),
