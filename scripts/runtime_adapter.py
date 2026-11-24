@@ -81,6 +81,38 @@ class CasConflict(RuntimeError):
     pass
 
 
+class WriteOutcomeError(RuntimeError):
+    """A write cannot be reported as either complete success or retryable CAS.
+
+    Publication knowledge and checkout cleanup are independent. Details remain
+    in the trusted provider/operator layer, never the public Host envelope.
+    """
+
+
+class WriteOutcomeUnknown(WriteOutcomeError):
+    publication_state = "unknown"
+
+    def __init__(self, message: str, *, cleanup_failed: bool = False):
+        super().__init__(message)
+        self.cleanup_failed = cleanup_failed
+
+
+class WriteCleanupFailed(WriteOutcomeError):
+    publication_state = "not_published"
+    cleanup_failed = True
+
+
+class WritePublishedCleanupFailed(WriteOutcomeError):
+    publication_state = "published"
+    cleanup_failed = True
+
+    def __init__(self, published_commit: str):
+        if not EXACT_COMMIT.fullmatch(published_commit):
+            raise ValueError("published commit must be exact")
+        super().__init__("Git push was acknowledged but checkout cleanup failed")
+        self.published_commit = published_commit
+
+
 class TransitionRejected(RuntimeError):
     pass
 
@@ -2297,6 +2329,36 @@ class GitCliProvider:
         finally:
             self._cleanup_checkout_tempdir(td)
 
+    def _push_write(
+        self, repo: Path, binding: GitRepositoryBinding, branch_ref: str, commit: str,
+    ) -> None:
+        # A failed push may have reached the remote before acknowledgement.
+        try:
+            self._git(
+                "push", "-q", f"--force-with-lease={branch_ref}:{commit}",
+                "origin", f"HEAD:{branch_ref}", cwd=repo, cas=True, binding=binding,
+            )
+        except (CasConflict, ResolutionError, OSError, subprocess.SubprocessError) as exc:
+            raise WriteOutcomeUnknown("Git push outcome is unconfirmed") from exc
+
+    def _cleanup_write_checkout(
+        self, td: tempfile.TemporaryDirectory, *, push_attempted: bool,
+        published_commit: str | None,
+    ) -> None:
+        try:
+            self._cleanup_checkout_tempdir(td)
+        except OSError as exc:
+            if published_commit is not None:
+                raise WritePublishedCleanupFailed(published_commit) from exc
+            if push_attempted:
+                raise WriteOutcomeUnknown(
+                    "Git push outcome is unconfirmed and checkout cleanup failed",
+                    cleanup_failed=True,
+                ) from exc
+            raise WriteCleanupFailed(
+                "write was not published and checkout cleanup failed"
+            ) from exc
+
     def update_text(
         self,
         repository_id: int,
@@ -2320,6 +2382,8 @@ class GitCliProvider:
         (
             td, repo, commit, branch_ref, snapshot_total, blob_cap
         ) = self._checkout_branch(binding, branch)
+        push_attempted = False
+        published_commit = None
         try:
             if expected_ref_sha is not None and commit != expected_ref_sha:
                 raise CasConflict("branch head compare-and-swap mismatch")
@@ -2409,15 +2473,14 @@ class GitCliProvider:
             if not EXACT_COMMIT.fullmatch(new_commit):
                 raise CasConflict("Git update returned no exact commit")
 
-            self._git(
-                "push", "-q",
-                f"--force-with-lease={branch_ref}:{commit}",
-                "origin", f"HEAD:{branch_ref}",
-                cwd=repo, cas=True, binding=binding,
-            )
+            push_attempted = True
+            self._push_write(repo, binding, branch_ref, commit)
+            published_commit = new_commit
             return new_commit
         finally:
-            self._cleanup_checkout_tempdir(td)
+            self._cleanup_write_checkout(
+                td, push_attempted=push_attempted, published_commit=published_commit,
+            )
 
 
     def create_text(
@@ -2441,6 +2504,8 @@ class GitCliProvider:
         (
             td, repo, commit, branch_ref, snapshot_total, blob_cap
         ) = self._checkout_branch(binding, branch)
+        push_attempted = False
+        published_commit = None
         try:
             if expected_ref_sha is not None and commit != expected_ref_sha:
                 raise CasConflict("branch head compare-and-swap mismatch")
@@ -2535,15 +2600,14 @@ class GitCliProvider:
                     f"created snapshot is not Runtime-materializable: {exc}"
                 ) from None
 
-            self._git(
-                "push", "-q",
-                f"--force-with-lease={branch_ref}:{commit}",
-                "origin", f"HEAD:{branch_ref}",
-                cwd=repo, cas=True, binding=binding,
-            )
+            push_attempted = True
+            self._push_write(repo, binding, branch_ref, commit)
+            published_commit = new_commit
             return new_commit
         finally:
-            self._cleanup_checkout_tempdir(td)
+            self._cleanup_write_checkout(
+                td, push_attempted=push_attempted, published_commit=published_commit,
+            )
 
 
 @dataclass(frozen=True)

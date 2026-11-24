@@ -45,7 +45,18 @@ Expected broker failures use stable public codes:
 
 - `resolution_failed`;
 - `guard_rejected`;
-- `cas_conflict` (marked retryable).
+- `cas_conflict` (retryable). The provider refused the write before publication.
+- `write_outcome_unknown` (non-retryable). Git push did not return a reliable
+  acknowledgement. The remote may contain the change.
+- `write_published_cleanup_failed` (non-retryable). Git acknowledged the push,
+  then local checkout cleanup failed.
+- `write_cleanup_failed` (non-retryable). Local write checkout cleanup failed
+  before a push was attempted.
+
+After an uncertain or acknowledged publication, use authorized reads to recover
+the state before deciding whether to retry. For Evidence, use the original ID
+and content so recovery preserves a single occurrence. The trusted operator can
+inspect the underlying cleanup failure and any acknowledged commit.
 
 Internal repository paths, remotes, commits and credential material are not reflected in those failure envelopes. Unexpected implementation failures remain host-operator exceptions rather than being converted into false success.
 
