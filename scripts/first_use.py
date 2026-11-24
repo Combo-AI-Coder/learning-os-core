@@ -32,7 +32,7 @@ from scripts.runtime_adapter import (
     _load_contract, load_locator,
 )
 from scripts.runtime_broker import (
-    RuntimeSessionBroker,
+    CANDIDATE_YAML_MAX_BYTES, RuntimeSessionBroker,
     _compute_bounded_write_policy_fingerprint, _run_pinned_core_validator,
 )
 from scripts.validate_learning_os import (
@@ -335,14 +335,20 @@ def _bound_progress_path(host: object) -> str | None:
 
 def _host_can_save_checkpoint(host: object) -> bool:
     """Return True only when host holds an open, unrevoked Main Subtopic write capability."""
-    progress_path = _bound_progress_path(host)
-    if progress_path is None:
+    if not isinstance(host, ReferenceLearningHost) or getattr(host, "_closed", False):
         return False
     try:
-        state = host._broker._session_state(host._session)
-    except GuardRejected:
+        with host._broker._session_operation(host._session) as state:
+            if state.binding.role != "main" or not state.binding.subtopic:
+                return False
+            progress_path = f"topics/{state.binding.topic}/subtopics/{state.binding.subtopic}/progress.yaml"
+            if not (state.policy.may_write(progress_path) and state.policy.may_read(progress_path)):
+                return False
+            host._broker.guard.check(state.deployment, require_active=True)
+            generation, _ = host._broker._fresh_generation(state)
+            return generation == state.binding.generation
+    except (GuardRejected, ResolutionError, OSError):
         return False
-    return state.policy.may_write(progress_path) and state.policy.may_read(progress_path)
 
 
 def _default_starter_state_for_status(status: str) -> str:
@@ -373,7 +379,7 @@ def _starter_state_for_receipt(receipt: Mapping[str, Any], *, observed_status: s
 def _parse_subtopic_progress(progress_document: Mapping[str, Any] | str) -> dict[str, Any]:
     """Validate and normalize a Subtopic Progress document or YAML string."""
     if isinstance(progress_document, str):
-        if _utf8_size(progress_document, "invalid_progress_document") > 64 * 1024:
+        if _utf8_size(progress_document, "invalid_progress_document") > CANDIDATE_YAML_MAX_BYTES:
             raise FirstUseRejected("invalid_progress_document")
         try:
             parsed = yaml.safe_load(progress_document)
@@ -510,7 +516,21 @@ def save_and_verify_learning_checkpoint(
             progress_path=progress_path,
             error_code="readback_missing",
         )
-    parsed = _parse_subtopic_progress(document["content"])
+    try:
+        content = document.get("content")
+        if not isinstance(content, str):
+            raise FirstUseRejected("invalid_progress_document")
+        parsed = _parse_subtopic_progress(content)
+    except FirstUseRejected:
+        return CheckpointSaveResult(
+            saved=applied,
+            verified=False,
+            status="saved_unverified" if applied else "unverified",
+            can_save_checkpoint=_host_can_save_checkpoint(host),
+            applied=applied,
+            progress_path=progress_path,
+            error_code="invalid_progress_document",
+        )
     persisted = {
         "milestone": parsed["current"].get("milestone"),
         "return_point": parsed["resume"].get("return_point"),
@@ -650,8 +670,6 @@ def assess_first_use_ux(
             learning_position_state = (
                 "saved_verified" if has_saved_learning_position(parsed_progress) else "not_saved"
             )
-        elif result is not None and result.status == "active":
-            learning_position_state = "not_saved"
         else:
             learning_position_state = "unknown"
     elif parsed_progress is not None:

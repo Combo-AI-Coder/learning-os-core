@@ -30,6 +30,7 @@ from scripts.runtime_adapter import (
     SyntheticPreparedGitProvider,
 )
 from scripts.runtime_broker import (
+    CANDIDATE_YAML_MAX_BYTES,
     DeploymentWriteGate,
     RuntimeCapabilityPolicy,
     RuntimeSessionBroker,
@@ -298,6 +299,121 @@ class FirstUseUxContractTests(unittest.TestCase):
         self.assertEqual("verification_mismatch", mismatch.status)
         self.assertEqual("saved_unverified", assess_first_use_ux(host=host, checkpoint_result=mismatch).learning_position_state)
 
+    def test_checkpoint_capability_rechecks_generation_and_deployment(self):
+        for fence in ("generation", "frozen"):
+            with (self.subTest(fence=fence), mock.patch.dict(self.provider.docs),
+                  mock.patch.dict(self.provider.contract["deployment"])):
+                host = self.open_host()
+                activated = FirstUseResult("active", host)
+                self.assertTrue(activated.can_save_checkpoint)
+                self.assertTrue(assess_first_use_ux(activated).can_save_checkpoint)
+                if fence == "generation":
+                    runtime = yaml.safe_load(self.provider.docs[RUNTIME_PATH])
+                    runtime["active_generation"] = 4
+                    runtime["generations"][3]["lifecycle"] = "archived"
+                    runtime["generations"][4] = {"lifecycle": "active"}
+                    self.provider.docs[RUNTIME_PATH] = yaml.safe_dump(runtime, sort_keys=False)
+                else:
+                    self.provider.contract["deployment"]["write_state"] = "frozen"
+
+                self.assertFalse(activated.can_save_checkpoint)
+                self.assertFalse(assess_first_use_ux(activated).can_save_checkpoint)
+                rejected = save_and_verify_learning_checkpoint(
+                    host,
+                    progress_path=CHECKPOINT_PATH,
+                    checkpoint={"milestone": ["foundation"], "return_point": None, "ready_next": []},
+                    expected_version_token=CHECKPOINT_BLOB,
+                )
+                self.assertEqual("rejected", rejected.status)
+                self.assertEqual("guard_rejected", rejected.error_code)
+                self.assertFalse(rejected.can_save_checkpoint)
+
+    def test_large_progress_within_broker_limit_can_be_saved_and_verified(self):
+        progress = yaml.safe_load(checkpoint_progress())
+        progress["resume"]["return_point"]["focus"] = "x" * (70 * 1024)
+        content = yaml.safe_dump(progress, sort_keys=False)
+        self.assertGreater(len(content.encode("utf-8")), 64 * 1024)
+        self.assertLess(len(content.encode("utf-8")), CANDIDATE_YAML_MAX_BYTES)
+        self.assertTrue(has_saved_learning_position(content))
+
+        saved = save_and_verify_learning_checkpoint(
+            self.open_host(),
+            progress_path=CHECKPOINT_PATH,
+            checkpoint={
+                "milestone": progress["current"]["milestone"],
+                "return_point": progress["resume"]["return_point"],
+                "ready_next": progress["resume"]["ready_next"],
+            },
+            expected_version_token=CHECKPOINT_BLOB,
+        )
+        self.assertTrue(saved.saved)
+        self.assertTrue(saved.verified)
+        self.assertTrue(saved.applied)
+        self.assertEqual("saved_verified", saved.status)
+        self.assertTrue(has_saved_learning_position(self.provider.docs[CHECKPOINT_PATH]))
+
+    def test_invalid_readback_preserves_applied_checkpoint_result(self):
+        host = self.open_host()
+        real_invoke = host.invoke
+        for index, fields in enumerate((
+            {},
+            {"content": None},
+            {"content": yaml.safe_load(starter_progress())},
+            {"content": "schema_version: [\n"},
+            {"content": "just a string"},
+        )):
+            with self.subTest(fields=fields):
+                def invalid_readback(request):
+                    response = real_invoke(request)
+                    if request.get("operation") == "read_learning_context" and response.get("ok"):
+                        document = response["result"]["documents"][0]
+                        document.pop("content", None)
+                        document.update(fields)
+                    return response
+
+                with mock.patch.object(host, "invoke", side_effect=invalid_readback):
+                    saved = save_and_verify_learning_checkpoint(
+                        host,
+                        progress_path=CHECKPOINT_PATH,
+                        checkpoint={
+                            "milestone": ["foundation"],
+                            "return_point": None,
+                            "ready_next": [f"Step {index}."],
+                        },
+                        expected_version_token=self.provider.blobs[CHECKPOINT_PATH],
+                    )
+                self.assertTrue(saved.saved)
+                self.assertFalse(saved.verified)
+                self.assertEqual("saved_unverified", saved.status)
+                self.assertTrue(saved.applied)
+                self.assertEqual("invalid_progress_document", saved.error_code)
+
+    def test_conflict_after_saved_checkpoint_requires_fresh_progress_for_ux(self):
+        host = self.open_host()
+        activated = FirstUseResult("active", host)
+        checkpoint = {
+            "milestone": ["foundation"],
+            "return_point": {"focus": "Saved foundation example."},
+            "ready_next": [],
+        }
+        saved = save_and_verify_learning_checkpoint(
+            host, progress_path=CHECKPOINT_PATH, checkpoint=checkpoint,
+            expected_version_token=CHECKPOINT_BLOB,
+        )
+        self.assertEqual("saved_verified", saved.status)
+        conflict = save_and_verify_learning_checkpoint(
+            host, progress_path=CHECKPOINT_PATH, checkpoint=checkpoint,
+            expected_version_token=CHECKPOINT_BLOB,
+        )
+        self.assertEqual("conflict", conflict.status)
+        self.assertEqual("unknown", assess_first_use_ux(activated, checkpoint_result=conflict).learning_position_state)
+        fresh = host.invoke({"operation": "read_learning_context", "arguments": {"required_paths": [CHECKPOINT_PATH]}})
+        self.assertTrue(fresh["ok"], fresh)
+        self.assertEqual("saved_verified", assess_first_use_ux(
+            activated, checkpoint_result=conflict,
+            progress_document=fresh["result"]["documents"][0]["content"],
+        ).learning_position_state)
+
     def test_has_saved_learning_position_validation(self):
         for bad in (
             "schema_version: [\n",
@@ -306,7 +422,7 @@ class FirstUseUxContractTests(unittest.TestCase):
             {"document_type": "subtopic_progress", "revision": True, "milestones": {}, "current": {}, "resume": {}},
             {"document_type": "subtopic_progress", "revision": 0, "milestones": {}, "current": {}, "resume": {}},
             {"document_type": "subtopic_progress", "revision": 1, "milestones": [], "current": {}, "resume": {}},
-            "x" * (65 * 1024),
+            "x" * (CANDIDATE_YAML_MAX_BYTES + 1),
             123,
         ):
             with self.subTest(bad=str(bad)[:30]), self.assertRaises(FirstUseRejected):
