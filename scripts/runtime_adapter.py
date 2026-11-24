@@ -63,6 +63,7 @@ MAX_SNAPSHOT_PATH_BYTES = 4096
 MAX_SNAPSHOT_PATH_DEPTH = 128
 MAX_SNAPSHOT_EXPANDED_PATH_BYTES = 16 * 1024 * 1024
 FETCH_POLL_SECONDS = 0.02
+TREE_BATCH_READ_TIMEOUT_SECONDS = 90
 BOUNDED_YAML_MAX_BYTES = 1024 * 1024
 BOUNDED_YAML_MAX_NODES = 20000
 BOUNDED_YAML_MAX_DEPTH = 64
@@ -1522,6 +1523,23 @@ class GitCliProvider:
         except OSError:
             raise ResolutionError("Git tree read failed") from None
 
+        deadline = time.monotonic() + TREE_BATCH_READ_TIMEOUT_SECONDS
+        timed_out = threading.Event()
+
+        def _abort_on_timeout() -> None:
+            timed_out.set()
+            try:
+                if process.poll() is None:
+                    if getattr(process, "pid", None) is not None:
+                        self._terminate_process_tree(process)
+                    else:
+                        process.terminate()
+            except (OSError, subprocess.SubprocessError):
+                pass
+
+        watchdog = threading.Timer(TREE_BATCH_READ_TIMEOUT_SECONDS, _abort_on_timeout)
+        watchdog.daemon = True
+        watchdog.start()
         try:
             if process.stdin is None or process.stdout is None:
                 raise ResolutionError("Git tree read failed")
@@ -1529,9 +1547,13 @@ class GitCliProvider:
                 prefix, tree_sha, depth = pending_trees.pop()
                 raw = tree_cache.get(tree_sha)
                 if raw is None:
+                    if timed_out.is_set() or time.monotonic() >= deadline:
+                        raise ResolutionError("Git tree read timed out")
                     process.stdin.write((tree_sha + "\n").encode("ascii"))
                     process.stdin.flush()
                     header = process.stdout.readline(128)
+                    if timed_out.is_set() or time.monotonic() >= deadline:
+                        raise ResolutionError("Git tree read timed out")
                     try:
                         parts = header.decode("ascii").split()
                     except UnicodeDecodeError:
@@ -1552,7 +1574,14 @@ class GitCliProvider:
                             "Git tree listing exceeds Runtime byte budget"
                         )
                     raw = process.stdout.read(size)
-                    if len(raw) != size or process.stdout.read(1) != b"\n":
+                    if timed_out.is_set() or time.monotonic() >= deadline:
+                        raise ResolutionError("Git tree read timed out")
+                    if len(raw) != size:
+                        raise ResolutionError("Git tree content size differs")
+                    delimiter = process.stdout.read(1)
+                    if timed_out.is_set() or time.monotonic() >= deadline:
+                        raise ResolutionError("Git tree read timed out")
+                    if delimiter != b"\n":
                         raise ResolutionError("Git tree content size differs")
                     digest = hashlib.sha1(
                         b"tree " + str(size).encode("ascii") + b"\0" + raw
@@ -1604,12 +1633,20 @@ class GitCliProvider:
                                 )
                         pending_trees.append((full_path, sha, entry_depth))
             process.stdin.close()
-            process.wait(timeout=90)
+            if timed_out.is_set():
+                raise ResolutionError("Git tree read timed out")
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise ResolutionError("Git tree read timed out")
+            process.wait(timeout=remaining)
             if process.returncode:
                 raise ResolutionError("Git tree read failed")
-        except (OSError, subprocess.SubprocessError):
+        except (OSError, subprocess.SubprocessError) as exc:
+            if timed_out.is_set() or isinstance(exc, subprocess.TimeoutExpired):
+                raise ResolutionError("Git tree read timed out") from None
             raise ResolutionError("Git tree read failed") from None
         finally:
+            watchdog.cancel()
             for pipe in (process.stdin, process.stdout):
                 if pipe is not None:
                     try:
@@ -1617,12 +1654,17 @@ class GitCliProvider:
                     except OSError:
                         pass
             if process.poll() is None:
-                process.terminate()
-                try:
-                    process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait()
+                if getattr(process, "pid", None) is not None:
+                    self._terminate_process_tree(process)
+                else:
+                    process.terminate()
+                    try:
+                        process.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
+            else:
+                process.wait()
         return objects
 
     def _tree_entries(

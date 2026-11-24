@@ -3,7 +3,10 @@ import hashlib
 import io
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
+import threading
+import time
 import unittest
 from unittest import mock
 
@@ -30,11 +33,18 @@ class RecordingInput(io.BytesIO):
 
 
 class FakeBatchProcess:
-    def __init__(self, payload):
+    def __init__(self, payload, *, block=None):
         self.stdin = RecordingInput()
         self.stdout = io.BytesIO(payload)
         self.returncode = None
         self.terminated = self.waited = False
+        self.unblocked = threading.Event()
+        if block is not None:
+            setattr(self.stdout, block, self._blocked_read)
+
+    def _blocked_read(self, size):
+        self.unblocked.wait(5)
+        return b""
 
     def poll(self):
         return self.returncode
@@ -42,6 +52,7 @@ class FakeBatchProcess:
     def terminate(self):
         self.terminated = True
         self.returncode = -15
+        self.unblocked.set()
 
     def wait(self, timeout=None):
         self.waited = True
@@ -231,6 +242,50 @@ class BatchTreeWalkTests(unittest.TestCase):
                 self.provider._tree_objects_from_root(self.repo, tree_id(entry()))
         self.assertTrue(process.terminated)
         self.assert_reaped(process)
+
+    def test_blocked_header_read_times_out_and_reaps_process(self):
+        process = FakeBatchProcess(b"", block="readline")
+        with mock.patch("scripts.runtime_adapter.subprocess.Popen", return_value=process), \
+                mock.patch("scripts.runtime_adapter.TREE_BATCH_READ_TIMEOUT_SECONDS", 0.05):
+            with self.assertRaisesRegex(ResolutionError, "^Git tree read timed out$"):
+                self.provider._tree_objects_from_root(self.repo, tree_id(entry()))
+        self.assertTrue(process.terminated)
+        self.assert_reaped(process)
+
+    def test_blocked_body_read_times_out_and_reaps_process(self):
+        raw = entry()
+        process = FakeBatchProcess(response(raw), block="read")
+        with mock.patch("scripts.runtime_adapter.subprocess.Popen", return_value=process), \
+                mock.patch("scripts.runtime_adapter.TREE_BATCH_READ_TIMEOUT_SECONDS", 0.05):
+            with self.assertRaisesRegex(ResolutionError, "^Git tree read timed out$"):
+                self.provider._tree_objects_from_root(self.repo, tree_id(raw))
+        self.assertTrue(process.terminated)
+        self.assert_reaped(process)
+
+    def test_stalled_os_process_times_out_and_exits(self):
+        real_popen, processes = subprocess.Popen, []
+
+        def spawn(args, **kwargs):
+            if args != ["git", "cat-file", "--batch"]:
+                return real_popen(args, **kwargs)
+            process = real_popen(
+                [sys.executable, "-c", "import time; time.sleep(30)"],
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                **self.provider._fetch_process_kwargs(),
+            )
+            processes.append(process)
+            self.addCleanup(process.wait)
+            self.addCleanup(lambda: process.poll() is None and process.kill())
+            return process
+
+        start = time.monotonic()
+        with mock.patch("scripts.runtime_adapter.subprocess.Popen", side_effect=spawn), \
+                mock.patch("scripts.runtime_adapter.TREE_BATCH_READ_TIMEOUT_SECONDS", 0.2):
+            with self.assertRaisesRegex(ResolutionError, "^Git tree read timed out$"):
+                self.provider._tree_objects_from_root(self.repo, tree_id(entry()))
+        self.assertLess(time.monotonic() - start, 5)
+        self.assertEqual(1, len(processes))
+        self.assertIsNotNone(processes[0].poll())
 
 
 if __name__ == "__main__":
