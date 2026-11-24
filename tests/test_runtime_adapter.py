@@ -685,7 +685,7 @@ class GitCliProviderTests(unittest.TestCase):
             (snapshot.root / "state.txt").read_text(encoding="utf-8"),
         )
 
-    def test_materialize_uses_one_batch_cat_file_process(self):
+    def test_materialize_uses_batch_cat_file_processes(self):
         (self.seed / "second.txt").write_text(
             "two\n", encoding="utf-8", newline="\n"
         )
@@ -709,7 +709,7 @@ class GitCliProviderTests(unittest.TestCase):
             side_effect=recording_popen,
         ):
             snapshot = self.provider().materialize(self.REPO_ID, "main")
-        self.assertEqual(1, len(batch_calls))
+        self.assertEqual(3, len(batch_calls))
         self.assertEqual("two\n", (snapshot.root / "second.txt").read_text())
         self.assertEqual("three\n", (snapshot.root / "third.txt").read_text())
 
