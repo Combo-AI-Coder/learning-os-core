@@ -1,4 +1,6 @@
 """Ordinary Git write outcome tests; all Git, checkout and cleanup are doubles."""
+from contextlib import redirect_stderr, redirect_stdout
+from io import StringIO
 from pathlib import PurePosixPath
 from types import SimpleNamespace
 import unittest
@@ -39,7 +41,7 @@ class FakeGitWriter(GitCliProvider):
         return PurePosixPath(path)
 
     def _checkout_branch(self, binding, branch):
-        return object(), object(), ("d" * 40 if self.stale else BASE), "refs/heads/main", 100, 100000
+        return SimpleNamespace(name="private-synthetic-checkout"), object(), ("d" * 40 if self.stale else BASE), "refs/heads/main", 100, 100000
 
     def _regular_blob(self, *args, **kwargs):
         return None if self.create else (BLOB, "100644")
@@ -155,6 +157,40 @@ class OrdinaryWriteOutcomeTests(unittest.TestCase):
                 })
                 self.assertNotIn(COMMIT, repr(result))
                 self.assertNotIn("operator-only", repr(result))
+
+    def test_operator_hook_receives_original_write_failure_separately(self):
+        for create, operation in ((True, "create_evidence"), (False, "save_learning_checkpoint")):
+            with self.subTest(operation=operation):
+                cleanup_error = PermissionError("private cleanup detail")
+                writer = FakeGitWriter(create=create, cleanup_error=cleanup_error)
+
+                def write(*args, **kwargs):
+                    return writer.write()
+
+                host = ReferenceLearningHost(SimpleNamespace(**{operation: write}), object())
+                arguments = ({"content": CONTENT} if create else {
+                    "checkpoint": {"milestone": "synthetic", "ready_next": [], "return_point": "synthetic"},
+                    "expected_version_token": BLOB,
+                })
+                request = {"operation": operation, "arguments": arguments}
+                failures = []
+                with redirect_stdout(StringIO()) as stdout, redirect_stderr(StringIO()) as stderr:
+                    invalid = host.invoke({**request, "on_write_failure": failures.append})
+                    default_response = host.invoke(request)
+                    response = host.invoke(request, on_write_failure=failures.append)
+
+                self.assertEqual(invalid["error"]["code"], "resolution_failed")
+                self.assertEqual(response, default_response)
+                self.assertEqual(response["error"], {
+                    "code": "write_published_cleanup_failed", "retryable": False,
+                })
+                self.assertEqual((stdout.getvalue(), stderr.getvalue()), ("", ""))
+                self.assertEqual(len(failures), 1)
+                self.assertIs(failures[0].__cause__, cleanup_error)
+                self.assertEqual(failures[0].published_commit, COMMIT)
+                self.assertIn("Git write checkout: private-synthetic-checkout", cleanup_error.__notes__)
+                for private in ("private cleanup detail", "private-synthetic-checkout", COMMIT):
+                    self.assertNotIn(private, repr(response))
 
     def test_deployment_guard_preserves_typed_outcomes(self):
         for error in (CasConflict("refused"), WriteOutcomeUnknown("unknown"), WriteCleanupFailed("cleanup"), WritePublishedCleanupFailed(COMMIT)):

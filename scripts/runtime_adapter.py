@@ -90,6 +90,7 @@ class WriteOutcomeError(RuntimeError):
 
 
 class WriteOutcomeUnknown(WriteOutcomeError):
+    public_code = "write_outcome_unknown"
     publication_state = "unknown"
 
     def __init__(self, message: str, *, cleanup_failed: bool = False):
@@ -98,11 +99,13 @@ class WriteOutcomeUnknown(WriteOutcomeError):
 
 
 class WriteCleanupFailed(WriteOutcomeError):
+    public_code = "write_cleanup_failed"
     publication_state = "not_published"
     cleanup_failed = True
 
 
 class WritePublishedCleanupFailed(WriteOutcomeError):
+    public_code = "write_published_cleanup_failed"
     publication_state = "published"
     cleanup_failed = True
 
@@ -2348,6 +2351,7 @@ class GitCliProvider:
         try:
             self._cleanup_checkout_tempdir(td)
         except OSError as exc:
+            exc.add_note(f"Git write checkout: {td.name}")
             if published_commit is not None:
                 raise WritePublishedCleanupFailed(published_commit) from exc
             if push_attempted:
