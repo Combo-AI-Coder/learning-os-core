@@ -475,23 +475,34 @@ def save_and_verify_learning_checkpoint(
             "expected_version_token": expected_version_token,
         },
     })
+    write_error_code = None
     if not write_response.get("ok"):
         error = write_response.get("error") or {}
-        code = error.get("code")
-        return CheckpointSaveResult(
-            saved=False,
-            verified=False,
-            status="conflict" if code == "cas_conflict" else "rejected",
-            can_save_checkpoint=_host_can_save_checkpoint(host),
-            progress_path=progress_path,
-            error_code=code,
-            retryable=bool(error.get("retryable", False)),
-        )
-    applied = bool((write_response.get("result") or {}).get("applied", False))
-    read_response = host.invoke({
-        "operation": "read_learning_context",
-        "arguments": {"required_paths": [progress_path]},
-    })
+        write_error_code = error.get("code")
+        if write_error_code != "write_published_cleanup_failed":
+            status = {
+                "cas_conflict": "conflict",
+                "write_outcome_unknown": "outcome_unknown",
+            }.get(write_error_code, "rejected")
+            return CheckpointSaveResult(
+                saved=False,
+                verified=False,
+                status=status,
+                can_save_checkpoint=_host_can_save_checkpoint(host),
+                progress_path=progress_path,
+                error_code=write_error_code,
+                retryable=bool(error.get("retryable", False)),
+            )
+    applied = write_error_code is not None or bool((write_response.get("result") or {}).get("applied", False))
+    try:
+        read_response = host.invoke({
+            "operation": "read_learning_context",
+            "arguments": {"required_paths": [progress_path]},
+        })
+    except OSError:
+        if write_error_code is None:
+            raise
+        read_response = {"ok": False}
     if not read_response.get("ok"):
         error = read_response.get("error") or {}
         return CheckpointSaveResult(
@@ -501,8 +512,8 @@ def save_and_verify_learning_checkpoint(
             can_save_checkpoint=_host_can_save_checkpoint(host),
             applied=applied,
             progress_path=progress_path,
-            error_code=error.get("code"),
-            retryable=bool(error.get("retryable", False)),
+            error_code=error.get("code") or write_error_code,
+            retryable=write_error_code is None and bool(error.get("retryable", False)),
         )
     documents = (read_response.get("result") or {}).get("documents") or []
     document = next((item for item in documents if item.get("path") == progress_path), None)
@@ -540,7 +551,7 @@ def save_and_verify_learning_checkpoint(
         return CheckpointSaveResult(
             saved=applied,
             verified=False,
-            status="verification_mismatch",
+            status="saved_unverified" if write_error_code else "verification_mismatch",
             can_save_checkpoint=_host_can_save_checkpoint(host),
             applied=applied,
             progress_path=progress_path,
@@ -563,6 +574,7 @@ def save_and_verify_learning_checkpoint(
         progress_path=progress_path,
         revision=parsed["revision"],
         version_token=document.get("version_token"),
+        error_code=write_error_code,
     )
 
 
@@ -649,7 +661,11 @@ def assess_first_use_ux(
     else:
         setup_preparation_recorded = False
         if parsed_progress is not None or (
-            checkpoint_result is not None and (checkpoint_result.saved or checkpoint_result.verified)
+            checkpoint_result is not None and (
+                checkpoint_result.saved
+                or checkpoint_result.verified
+                or checkpoint_result.status == "outcome_unknown"
+            )
         ):
             starter_setup_state = "established"
         else:

@@ -28,6 +28,9 @@ from scripts.runtime_adapter import (
     PreparedFirstUseStep,
     SessionDeploymentContext,
     SyntheticPreparedGitProvider,
+    WriteCleanupFailed,
+    WriteOutcomeUnknown,
+    WritePublishedCleanupFailed,
 )
 from scripts.runtime_broker import (
     CANDIDATE_YAML_MAX_BYTES,
@@ -298,6 +301,83 @@ class FirstUseUxContractTests(unittest.TestCase):
         self.assertFalse(mismatch.verified)
         self.assertEqual("verification_mismatch", mismatch.status)
         self.assertEqual("saved_unverified", assess_first_use_ux(host=host, checkpoint_result=mismatch).learning_position_state)
+
+    def test_published_checkpoint_with_cleanup_failure_is_verified_by_readback(self):
+        host = self.open_host()
+        update_text = self.provider.update_text
+        real_invoke = host.invoke
+
+        def publish_then_fail_cleanup(*args, **kwargs):
+            raise WritePublishedCleanupFailed(update_text(*args, **kwargs))
+
+        for readback, error_code in (
+            ("match", "write_published_cleanup_failed"),
+            ("denied", "guard_rejected"),
+            ("unavailable", "write_published_cleanup_failed"),
+            ("mismatch", "verification_mismatch"),
+        ):
+            with self.subTest(readback=readback):
+                def invoke(request):
+                    if request["operation"] == "read_learning_context":
+                        if readback == "denied":
+                            return {"ok": False, "error": {"code": "guard_rejected", "retryable": False}}
+                        if readback == "unavailable":
+                            raise OSError("synthetic snapshot unavailable")
+                        if readback == "mismatch":
+                            with mock.patch.dict(self.provider.docs, {CHECKPOINT_PATH: starter_progress()}):
+                                return real_invoke(request)
+                    return real_invoke(request)
+
+                with (mock.patch.object(self.provider, "update_text", side_effect=publish_then_fail_cleanup),
+                      mock.patch.object(host, "invoke", side_effect=invoke) as calls):
+                    saved = save_and_verify_learning_checkpoint(
+                        host, progress_path=CHECKPOINT_PATH,
+                        checkpoint={
+                            "milestone": ["foundation"], "return_point": None, "ready_next": [f"Review {readback}."],
+                        },
+                        expected_version_token=self.provider.blobs[CHECKPOINT_PATH],
+                    )
+                verified = readback == "match"
+                status = "saved_verified" if verified else "saved_unverified"
+                self.assertTrue(saved.saved)
+                self.assertTrue(saved.applied)
+                self.assertEqual(verified, saved.verified)
+                self.assertEqual(status, saved.status)
+                self.assertEqual(error_code, saved.error_code)
+                self.assertFalse(saved.retryable)
+                self.assertEqual(status, assess_first_use_ux(host=host, checkpoint_result=saved).learning_position_state)
+                self.assertEqual(2, calls.call_count)
+                calls.assert_called_with({
+                    "operation": "read_learning_context", "arguments": {"required_paths": [CHECKPOINT_PATH]},
+                })
+                if verified:
+                    self.assertEqual(2, saved.revision)
+                    self.assertEqual(self.provider.blobs[CHECKPOINT_PATH], saved.version_token)
+
+    def test_unacknowledged_checkpoint_writes_do_not_report_a_save_or_retry(self):
+        host = self.open_host()
+        for error, code, status in (
+            (WriteOutcomeUnknown("synthetic push unconfirmed"), "write_outcome_unknown", "outcome_unknown"),
+            (WriteCleanupFailed("synthetic cleanup failure"), "write_cleanup_failed", "rejected"),
+        ):
+            with (self.subTest(code=code), mock.patch.object(self.provider, "update_text", side_effect=error),
+                  mock.patch.object(host, "invoke", wraps=host.invoke) as invoke):
+                request = {
+                    "checkpoint": {"milestone": ["next-step"], "return_point": None, "ready_next": []},
+                    "expected_version_token": CHECKPOINT_BLOB,
+                }
+                saved = save_and_verify_learning_checkpoint(host, progress_path=CHECKPOINT_PATH, **request)
+                self.assertFalse(saved.saved)
+                self.assertFalse(saved.applied)
+                self.assertFalse(saved.verified)
+                self.assertFalse(saved.retryable)
+                self.assertEqual(status, saved.status)
+                self.assertEqual(code, saved.error_code)
+                invoke.assert_called_once_with({"operation": "save_learning_checkpoint", "arguments": request})
+                ux = assess_first_use_ux(host=host, checkpoint_result=saved)
+                self.assertFalse(ux.auto_overwrite_allowed)
+                if status == "outcome_unknown":
+                    self.assertEqual("unknown", ux.learning_position_state)
 
     def test_checkpoint_capability_rechecks_generation_and_deployment(self):
         for fence in ("generation", "frozen"):
