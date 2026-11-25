@@ -31,7 +31,19 @@ def check_workflow(document):
         raise ValueError("Linux validation job must target ubuntu-latest")
     if jobs["validate-windows"].get("runs-on") != "windows-latest":
         raise ValueError("Windows validation job must target windows-latest")
+    if jobs["validate-windows"].get("strategy") != {
+        "fail-fast": "false",
+        "matrix": {"shard": ["1", "2", "3", "4"]},
+    }:
+        raise ValueError("Windows validation must run shards 1..4 with fail-fast disabled")
 
+    pytest_commands = {
+        "validate": "python -m pytest -p no:cacheprovider -n auto --dist worksteal tests/",
+        "validate-windows": (
+            "python -m pytest -p no:cacheprovider -p scripts.pytest_shard "
+            "--shard-index=${{ matrix.shard }} --shard-count=4 -n auto --dist worksteal tests/"
+        ),
+    }
     for name, job in jobs.items():
         if job.get("if") == "false":
             raise ValueError(f"Job {name} cannot be disabled")
@@ -39,13 +51,23 @@ def check_workflow(document):
         if not 1 <= timeout <= 90:
             raise ValueError(f"Job {name} timeout-minutes must remain bounded (1..90)")
         steps = job.get("steps") or []
-        runs = "\n".join(s.get("run", "") for s in steps)
+        runs = [step.get("run", "") for step in steps]
         for required in (
-            "scripts/validate_learning_os.py . --core",
-            "python -m pytest -p no:cacheprovider -n auto --dist worksteal tests/",
+            "python scripts/validate_learning_os.py . --core",
+            pytest_commands[name],
         ):
             if required not in runs:
                 raise ValueError(f"Job {name} must run {required}")
+        setup_python = next(
+            (step for step in steps if step.get("uses", "").startswith("actions/setup-python@")),
+            {},
+        )
+        setup_options = setup_python.get("with") or {}
+        if (
+            setup_options.get("cache") != "pip"
+            or setup_options.get("cache-dependency-path") != "requirements-dev.txt"
+        ):
+            raise ValueError(f"Job {name} must cache pip using requirements-dev.txt")
         for step in steps:
             if step.get("continue-on-error") == "true":
                 raise ValueError(f"Job {name} cannot use continue-on-error")

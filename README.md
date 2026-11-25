@@ -88,9 +88,9 @@ repository's `main` branch alone does not change the deployed Core.
 
 The full Linux and Windows validation jobs run for pull requests (including
 mergeable Draft PRs), pushes to `main`, and pushes of any tag name. Ordinary
-non-main branch pushes do not start a second copy of the PR matrix. Job steps,
-permissions, checkout behavior, cleanup, and the Linux 15-minute / Windows
-90-minute limits are unchanged.
+non-main branch pushes do not start a second copy of PR validation. Windows
+runs the full pytest suite across four parallel shards, each with a 90-minute
+limit. Linux validation has a 15-minute limit.
 
 A branch without a PR has no automatic hosted validation. Before proposing
 integration, run the Core validator and full unit suite locally, then open or
