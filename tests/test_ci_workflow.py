@@ -18,9 +18,11 @@ def check_workflow(document):
         raise ValueError("CI must retain main/all-tag pushes and default PR events")
     if document.get("permissions") != {"contents": "read"}:
         raise ValueError("CI permissions must remain read-only")
-    concurrency = document.get("concurrency")
-    if isinstance(concurrency, dict) and concurrency.get("cancel-in-progress") == "true":
-        raise ValueError("CI concurrency must not cancel in-progress main/PR checks")
+    if document.get("concurrency") != {
+        "group": "validate-core-${{ github.ref }}",
+        "cancel-in-progress": "${{ github.event_name == 'pull_request' }}",
+    }:
+        raise ValueError("CI must group runs by ref and cancel in-progress PR checks only")
 
     jobs = document.get("jobs") or {}
     if set(jobs) != {"validate", "validate-windows"}:
@@ -38,7 +40,10 @@ def check_workflow(document):
             raise ValueError(f"Job {name} timeout-minutes must remain bounded (1..90)")
         steps = job.get("steps") or []
         runs = "\n".join(s.get("run", "") for s in steps)
-        for required in ("scripts/validate_learning_os.py . --core", "unittest discover -s tests"):
+        for required in (
+            "scripts/validate_learning_os.py . --core",
+            "python -m pytest -p no:cacheprovider -n auto --dist worksteal tests/",
+        ):
             if required not in runs:
                 raise ValueError(f"Job {name} must run {required}")
         for step in steps:
