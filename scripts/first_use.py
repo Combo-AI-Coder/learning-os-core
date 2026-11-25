@@ -500,9 +500,12 @@ def save_and_verify_learning_checkpoint(
             "arguments": {"required_paths": [progress_path]},
         })
     except OSError:
-        if write_error_code is None:
+        if not applied:
             raise
-        read_response = {"ok": False}
+        read_response = {
+            "ok": False,
+            "error": {"code": write_error_code or "readback_io_error", "retryable": False},
+        }
     if not read_response.get("ok"):
         error = read_response.get("error") or {}
         return CheckpointSaveResult(

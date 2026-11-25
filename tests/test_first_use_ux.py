@@ -379,6 +379,33 @@ class FirstUseUxContractTests(unittest.TestCase):
                 if status == "outcome_unknown":
                     self.assertEqual("unknown", ux.learning_position_state)
 
+    def test_ordinary_checkpoint_save_preserves_saved_unverified_on_readback_oserror(self):
+        host = self.open_host()
+        real_invoke = host.invoke
+
+        def fail_readback_with_oserror(request):
+            if request.get("operation") == "read_learning_context":
+                raise OSError("synthetic temp checkout failure")
+            return real_invoke(request)
+
+        with mock.patch.object(host, "invoke", side_effect=fail_readback_with_oserror):
+            saved = save_and_verify_learning_checkpoint(
+                host,
+                progress_path=CHECKPOINT_PATH,
+                checkpoint={"milestone": ["next-step"], "return_point": None, "ready_next": ["Review topic."]},
+                expected_version_token=CHECKPOINT_BLOB,
+            )
+        self.assertTrue(saved.saved)
+        self.assertTrue(saved.applied)
+        self.assertFalse(saved.verified)
+        self.assertFalse(saved.retryable)
+        self.assertEqual("saved_unverified", saved.status)
+        self.assertEqual("readback_io_error", saved.error_code)
+        self.assertEqual(
+            "saved_unverified",
+            assess_first_use_ux(host=host, checkpoint_result=saved).learning_position_state,
+        )
+
     def test_checkpoint_capability_rechecks_generation_and_deployment(self):
         for fence in ("generation", "frozen"):
             with (self.subTest(fence=fence), mock.patch.dict(self.provider.docs),
