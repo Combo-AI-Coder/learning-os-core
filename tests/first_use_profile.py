@@ -20,8 +20,8 @@ from unittest import mock
 
 
 CASES = {
-    "lost-ack": "test_all_ten_accepted_lost_ack_restart_exact_candidates",
-    "empty-tree": "test_truly_empty_tree_baseline_activates_and_recovers_first_ack",
+    "lost-ack": "test_accepted_lost_ack_restart_exact_candidate_step_",
+    "empty-tree": "test_truly_empty_tree_baseline_",
 }
 GIT_FAMILIES = frozenset({
     "init", "checkout", "config", "add", "commit", "clone", "rev-parse",
@@ -134,16 +134,19 @@ def instrument(target, metrics):
 
 
 def run_case(case, target):
-    """Run the original complete test through unittest, preserving setup and cleanup."""
+    """Run all matching tests through unittest, preserving setup and cleanup."""
     if case not in CASES:
         raise ValueError("unsupported profile case")
     metrics = Measurements()
-    suite = unittest.TestSuite([target.FirstUseTests(CASES[case])])
+    names = [name for name in unittest.defaultTestLoader.getTestCaseNames(target.FirstUseTests)
+             if name.startswith(CASES[case])]
+    suite = unittest.TestSuite(target.FirstUseTests(name) for name in names)
     result = unittest.TestResult()  # No raw exception text or filesystem paths in JSON.
     with instrument(target, metrics):
         with metrics.measure(metrics.phases, "selected_test_total"):
             suite.run(result)
-    passed = result.wasSuccessful() and result.testsRun == 1 and not result.skipped
+    passed = (result.wasSuccessful() and result.testsRun == len(names) and result.testsRun > 0
+              and not result.skipped)
     return dict(schema_version=1, case=case, passed=passed, tests_run=result.testsRun,
                 failures=len(result.failures), errors=len(result.errors), skips=len(result.skipped),
                 **metrics.report())
