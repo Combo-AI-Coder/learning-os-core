@@ -264,50 +264,54 @@ class FirstUseTests(unittest.TestCase):
             self.assertEqual(head, self.head())
         result.host.close()
 
-    def test_truly_empty_tree_baseline_activates_and_recovers_first_ack(self):
-        for interruption in ("none", "prepared", "accepted"):
-            with self.subTest(interruption=interruption):
-                if interruption != "none":
-                    self.doCleanups()
-                    self.setUp()
-                self.instance_remote = repository(self.root / "empty-baseline", {})
-                self.baseline = git("--git-dir", str(self.instance_remote), "rev-parse", "main")
-                self.assertEqual("", git("--git-dir", str(self.instance_remote), "ls-tree", "-r", "main"))
-                self.provider.bindings[INSTANCE_ID] = GitRepositoryBinding(INSTANCE_ID, str(self.instance_remote),
-                                                                          "synthetic/instance", writable=True)
-                self.bindings = [binding if binding.repository_id != INSTANCE_ID else self.provider.bindings[INSTANCE_ID]
-                                 for binding in self.bindings]
-                # Public ordinary transport remains strict, even on the synthetic subclass.
-                with self.assertRaisesRegex(ResolutionError, "empty directory"):
-                    self.provider.materialize(INSTANCE_ID, "main")
-                with self.assertRaisesRegex(ResolutionError, "empty directory"):
-                    self.provider.create_text(INSTANCE_ID, "main", "ordinary.txt", "not allowed", "synthetic ordinary create",
-                                              expected_ref_sha=self.baseline)
-                self.prepare()
-                self.assertEqual([], self.store.read()["manifest"]["baseline"]["entries"])
-                real_git = self.provider._git
-                def lost_response(*args, **kwargs):
-                    value = real_git(*args, **kwargs)
-                    if args and args[0] == "push" and self.store.read()["confirmed"] == 0:
-                        raise CasConflict("synthetic empty baseline first acknowledgement lost")
-                    return value
-                if interruption == "prepared":
-                    step = self.stop_after_receipt()
-                    self.assertEqual(self.baseline, self.head())
-                    result = self.apply(self.new_service(provider=self.new_provider()))
-                    self.assertEqual(step.candidate, self.store.read()["steps"][0]["candidate"])
-                elif interruption == "accepted":
-                    with mock.patch.object(self.provider, "_git", side_effect=lost_response):
-                        self.assertEqual("outcome_unknown", self.apply().status)
-                    candidate = self.store.read()["steps"][0]["candidate"]
-                    self.assertEqual(candidate, self.head())
-                    result = self.apply(self.new_service(provider=self.new_provider()))
-                    self.assertEqual(candidate, self.store.read()["steps"][0]["candidate"])
-                else:
-                    result = self.apply()
-                self.assertEqual("active", result.status)
-                self.assert_ten_transitions()
-                result.host.close()
+    def _assert_truly_empty_tree_baseline_case(self, interruption):
+        self.instance_remote = repository(self.root / "empty-baseline", {})
+        self.baseline = git("--git-dir", str(self.instance_remote), "rev-parse", "main")
+        self.assertEqual("", git("--git-dir", str(self.instance_remote), "ls-tree", "-r", "main"))
+        self.provider.bindings[INSTANCE_ID] = GitRepositoryBinding(INSTANCE_ID, str(self.instance_remote),
+                                                                  "synthetic/instance", writable=True)
+        self.bindings = [binding if binding.repository_id != INSTANCE_ID else self.provider.bindings[INSTANCE_ID]
+                         for binding in self.bindings]
+        # Public ordinary transport remains strict, even on the synthetic subclass.
+        with self.assertRaisesRegex(ResolutionError, "empty directory"):
+            self.provider.materialize(INSTANCE_ID, "main")
+        with self.assertRaisesRegex(ResolutionError, "empty directory"):
+            self.provider.create_text(INSTANCE_ID, "main", "ordinary.txt", "not allowed", "synthetic ordinary create",
+                                      expected_ref_sha=self.baseline)
+        self.prepare()
+        self.assertEqual([], self.store.read()["manifest"]["baseline"]["entries"])
+        real_git = self.provider._git
+        def lost_response(*args, **kwargs):
+            value = real_git(*args, **kwargs)
+            if args and args[0] == "push" and self.store.read()["confirmed"] == 0:
+                raise CasConflict("synthetic empty baseline first acknowledgement lost")
+            return value
+        if interruption == "prepared":
+            step = self.stop_after_receipt()
+            self.assertEqual(self.baseline, self.head())
+            result = self.apply(self.new_service(provider=self.new_provider()))
+            self.assertEqual(step.candidate, self.store.read()["steps"][0]["candidate"])
+        elif interruption == "accepted":
+            with mock.patch.object(self.provider, "_git", side_effect=lost_response):
+                self.assertEqual("outcome_unknown", self.apply().status)
+            candidate = self.store.read()["steps"][0]["candidate"]
+            self.assertEqual(candidate, self.head())
+            result = self.apply(self.new_service(provider=self.new_provider()))
+            self.assertEqual(candidate, self.store.read()["steps"][0]["candidate"])
+        else:
+            result = self.apply()
+        self.assertEqual("active", result.status)
+        self.assert_ten_transitions()
+        result.host.close()
+
+    def test_truly_empty_tree_baseline_activates_without_interruption(self):
+        self._assert_truly_empty_tree_baseline_case("none")
+
+    def test_truly_empty_tree_baseline_recovers_prepared_ack(self):
+        self._assert_truly_empty_tree_baseline_case("prepared")
+
+    def test_truly_empty_tree_baseline_recovers_accepted_ack(self):
+        self._assert_truly_empty_tree_baseline_case("accepted")
 
     def test_bootstrap_empty_root_exception_still_rejects_nested_empty_tree(self):
         clone = self.working_clone(self.instance_remote)
@@ -330,42 +334,67 @@ class FirstUseTests(unittest.TestCase):
         self.assertEqual(commit, self.head())
         self.assertFalse(self.provider.first_use_trace)
 
-    def test_all_ten_accepted_lost_ack_restart_exact_candidates(self):
-        # Each subtest uses a fresh blank fixture. Never seed learner documents.
-        for index in range(10):
-            with self.subTest(step=index):
-                if index:
-                    self.doCleanups()
-                    self.setUp()
-                real_git = self.provider._git
-                def lose_transport_ack(*args, **kwargs):
-                    value = real_git(*args, **kwargs)
-                    if args and args[0] == "push" and self.store.read()["confirmed"] == index:
-                        candidate = self.store.read()["steps"][-1]["candidate"]
-                        self.provider.first_use_trace.append(("remote_accepted", index, candidate))
-                        self.provider.first_use_trace.append(("response_lost", index, candidate))
-                        raise CasConflict("synthetic ack lost after local remote accepted")
-                    return value
-                self.prepare()
-                with mock.patch.object(self.provider, "_git", side_effect=lose_transport_ack):
-                    self.assertEqual("outcome_unknown", self.apply().status)
-                pending = self.store.read()["steps"][-1]
-                self.assertEqual(pending["candidate"], self.head())
-                self.assertEqual(b"started", (self.root / "prepared" / f'{pending["candidate"]}.publisher').read_bytes())
-                self.assertTrue((self.root / "prepared" / f'{pending["candidate"]}.json').exists())
-                old_trace = self.provider.first_use_trace[:]
-                provider = self.new_provider()
-                restarted = self.new_service(provider=provider)
-                self.assertEqual("applied", restarted.inspect("operation-a", self.receiver, self.intent).status)
-                result = self.apply(restarted)
-                self.assertEqual("active", result.status)
-                self.assert_ten_transitions()
-                self.assertEqual(pending, self.store.read()["steps"][index])
-                events = [entry[0] for entry in old_trace if entry[1] == index]
-                self.assertLess(events.index("objects_durable"), events.index("receipt_durable"))
-                self.assertLess(events.index("receipt_durable"), events.index("publish_start"))
-                self.assertLess(events.index("publish_start"), events.index("remote_accepted"))
-                result.host.close()
+    def _assert_accepted_lost_ack_restart_step(self, step_index):
+        # Each test uses a fresh blank fixture. Never seed learner documents.
+        real_git = self.provider._git
+        def lose_transport_ack(*args, **kwargs):
+            value = real_git(*args, **kwargs)
+            if args and args[0] == "push" and self.store.read()["confirmed"] == step_index:
+                candidate = self.store.read()["steps"][-1]["candidate"]
+                self.provider.first_use_trace.append(("remote_accepted", step_index, candidate))
+                self.provider.first_use_trace.append(("response_lost", step_index, candidate))
+                raise CasConflict("synthetic ack lost after local remote accepted")
+            return value
+        self.prepare()
+        with mock.patch.object(self.provider, "_git", side_effect=lose_transport_ack):
+            self.assertEqual("outcome_unknown", self.apply().status)
+        pending = self.store.read()["steps"][-1]
+        self.assertEqual(pending["candidate"], self.head())
+        self.assertEqual(b"started", (self.root / "prepared" / f'{pending["candidate"]}.publisher').read_bytes())
+        self.assertTrue((self.root / "prepared" / f'{pending["candidate"]}.json').exists())
+        old_trace = self.provider.first_use_trace[:]
+        provider = self.new_provider()
+        restarted = self.new_service(provider=provider)
+        self.assertEqual("applied", restarted.inspect("operation-a", self.receiver, self.intent).status)
+        result = self.apply(restarted)
+        self.assertEqual("active", result.status)
+        self.assert_ten_transitions()
+        self.assertEqual(pending, self.store.read()["steps"][step_index])
+        events = [entry[0] for entry in old_trace if entry[1] == step_index]
+        self.assertLess(events.index("objects_durable"), events.index("receipt_durable"))
+        self.assertLess(events.index("receipt_durable"), events.index("publish_start"))
+        self.assertLess(events.index("publish_start"), events.index("remote_accepted"))
+        result.host.close()
+
+    def test_accepted_lost_ack_restart_exact_candidate_step_0(self):
+        self._assert_accepted_lost_ack_restart_step(0)
+
+    def test_accepted_lost_ack_restart_exact_candidate_step_1(self):
+        self._assert_accepted_lost_ack_restart_step(1)
+
+    def test_accepted_lost_ack_restart_exact_candidate_step_2(self):
+        self._assert_accepted_lost_ack_restart_step(2)
+
+    def test_accepted_lost_ack_restart_exact_candidate_step_3(self):
+        self._assert_accepted_lost_ack_restart_step(3)
+
+    def test_accepted_lost_ack_restart_exact_candidate_step_4(self):
+        self._assert_accepted_lost_ack_restart_step(4)
+
+    def test_accepted_lost_ack_restart_exact_candidate_step_5(self):
+        self._assert_accepted_lost_ack_restart_step(5)
+
+    def test_accepted_lost_ack_restart_exact_candidate_step_6(self):
+        self._assert_accepted_lost_ack_restart_step(6)
+
+    def test_accepted_lost_ack_restart_exact_candidate_step_7(self):
+        self._assert_accepted_lost_ack_restart_step(7)
+
+    def test_accepted_lost_ack_restart_exact_candidate_step_8(self):
+        self._assert_accepted_lost_ack_restart_step(8)
+
+    def test_accepted_lost_ack_restart_exact_candidate_step_9(self):
+        self._assert_accepted_lost_ack_restart_step(9)
 
 
     def stop_after_receipt(self, index=0):

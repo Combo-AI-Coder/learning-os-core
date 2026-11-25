@@ -8,10 +8,15 @@ ordinary-Runtime operations needed by the synthetic reference journey.
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from typing import Any
 
 from scripts.runtime_adapter import (
     CasConflict,
+    WriteOutcomeError,
+    WriteOutcomeUnknown,
+    WriteCleanupFailed,
+    WritePublishedCleanupFailed,
     GuardRejected,
     RepositoryProvider,
     ResolutionError,
@@ -151,11 +156,16 @@ class ReferenceLearningHost:
             "result": result,
         }
 
-    def invoke(self, request: object) -> dict[str, object]:
+    def invoke(
+        self, request: object, *,
+        on_write_failure: Callable[[WriteOutcomeError], None] | None = None,
+    ) -> dict[str, object]:
         """Execute one allowlisted operation and return a bounded result envelope.
 
         Expected broker/authority failures are converted into stable error codes
         rather than reflecting internal paths, remotes, commits or credentials.
+        The trusted caller may receive the original write exception through
+        on_write_failure. This callback is outside the request and response.
         Unexpected implementation failures remain host-operator exceptions.
         """
         operation: str | None = None
@@ -319,6 +329,10 @@ class ReferenceLearningHost:
             raise GuardRejected(
                 "reference host operation has no dispatcher"
             )
+        except (WritePublishedCleanupFailed, WriteCleanupFailed, WriteOutcomeUnknown) as exc:
+            if on_write_failure is not None:
+                on_write_failure(exc)
+            return self._failure(operation, exc.public_code)
         except CasConflict:
             return self._failure(operation, "cas_conflict")
         except GuardRejected:
