@@ -222,3 +222,12 @@ writer. The seeded examples above are still seeded examples, not blank setup
 proof. The new acceptance tests are `tests/test_first_use.py`.
 
 An authenticated retry recovers a prepared effect after lost responses without accepting identical text as ownership, shifting its expected parent, creating generation 2, overwriting later learning, or granting a fresh consumer write identity. See `protocol/deployment-runtime.md` for unknown outcomes, retained artifacts, and revocation rules.
+
+Creation records preparation recovery material and starter setup, with initial
+Subtopic Progress `planned` and `return_point: null`. It does not save a session
+learning position or establish mastery. `assess_first_use_ux` distinguishes these
+states; `save_and_verify_learning_checkpoint` uses the authorized Host write and
+readback to verify a checkpoint. Result labels such as `already_applied` and
+`delivery_pending` do not imply checkpoint writability without a live writable
+Host or require recreating setup. Declining setup allows teaching to continue.
+See `tests/test_first_use_ux.py` for synthetic coverage.

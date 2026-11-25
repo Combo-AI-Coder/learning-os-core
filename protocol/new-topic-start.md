@@ -174,3 +174,22 @@ that stages the nine-document graph inactive and activates it by prepared
 registry CAS on the prediction/context curriculum. Silence on the optional
 invitation never persists an intake preference, and start-now requests proceed
 without waiting.
+
+Separating setup creation from saving a learning position:
+
+- **Before and during creation:** clarify what setup will record vs what
+  remains unsaved. Once `prepare` or partial staging runs, private recovery
+  material is already recorded—do not tell the learner nothing was saved.
+- **Declining creation:** declining profile/setup creation does not block
+  continuing the current explanation or teaching turn, and must not fabricate
+  profile, capability, or persistence state.
+- **Starter setup vs learning checkpoint:** establishing the initial Topic Goal,
+  provisional Plans, `planned` initial Subtopic Progress (`return_point: null`),
+  and active Main Branch establishes starter setup only; it neither saves a
+  current-session learning checkpoint nor implies mastery.
+- **Verified position and non-recreation:** only claim a current learning
+  position is saved and verified after an authorized `save_learning_checkpoint`
+  write and readback check. Never infer checkpoint writability solely from
+  `already_applied`, `delivery_pending`, or `activated_unissued` when no active
+  writable Host handle is held, never auto-overwrite `outcome_unknown`, and never
+  instruct the learner to recreate an already-prepared or established profile.

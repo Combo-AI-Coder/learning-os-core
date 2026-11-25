@@ -6,6 +6,7 @@ production authentication, persistent permissions and deployment are not supplie
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -20,7 +21,7 @@ import shutil
 import sys
 import tempfile
 import threading
-from typing import Callable
+from typing import Any, Callable
 
 import yaml
 
@@ -31,7 +32,7 @@ from scripts.runtime_adapter import (
     _load_contract, load_locator,
 )
 from scripts.runtime_broker import (
-    RuntimeSessionBroker,
+    CANDIDATE_YAML_MAX_BYTES, RuntimeSessionBroker,
     _compute_bounded_write_policy_fingerprint, _run_pinned_core_validator,
 )
 from scripts.validate_learning_os import (
@@ -313,10 +314,408 @@ def _activation_document(documents):
     return path, yaml.safe_dump(active, sort_keys=False, allow_unicode=True)
 
 
+STARTER_SETUP_STATES = frozenset({"not_established", "established", "unknown"})
+_ESTABLISHED_RESULT_STATUSES = frozenset({"active", "already_applied", "delivery_pending", "activated_unissued"})
+_UNKNOWN_RESULT_STATUSES = frozenset({"outcome_unknown", "conflict"})
+_PREPARED_RESULT_STATUSES = frozenset({"prepared", "applied", "not_applied"})
+
+
+def _bound_progress_path(host: object) -> str | None:
+    """Return the bound Main Subtopic progress path if host holds an active Main session."""
+    if not isinstance(host, ReferenceLearningHost) or getattr(host, "_closed", False):
+        return None
+    try:
+        state = host._broker._session_state(host._session)
+    except GuardRejected:
+        return None
+    if state.binding.role != "main" or not state.binding.subtopic:
+        return None
+    return f"topics/{state.binding.topic}/subtopics/{state.binding.subtopic}/progress.yaml"
+
+
+def _host_can_save_checkpoint(host: object) -> bool:
+    """Return True only when host holds an open, unrevoked Main Subtopic write capability."""
+    if not isinstance(host, ReferenceLearningHost) or getattr(host, "_closed", False):
+        return False
+    try:
+        with host._broker._session_operation(host._session) as state:
+            if state.binding.role != "main" or not state.binding.subtopic:
+                return False
+            progress_path = f"topics/{state.binding.topic}/subtopics/{state.binding.subtopic}/progress.yaml"
+            if not (state.policy.may_write(progress_path) and state.policy.may_read(progress_path)):
+                return False
+            host._broker.guard.check(state.deployment, require_active=True)
+            generation, _ = host._broker._fresh_generation(state)
+            return generation == state.binding.generation
+    except (GuardRejected, ResolutionError, OSError):
+        return False
+
+
+def _default_starter_state_for_status(status: str) -> str:
+    if status in _ESTABLISHED_RESULT_STATUSES:
+        return "established"
+    if status in _UNKNOWN_RESULT_STATUSES:
+        return "unknown"
+    if status in _PREPARED_RESULT_STATUSES or status.startswith("staging_"):
+        return "not_established"
+    return "unknown"
+
+
+def _starter_state_for_receipt(receipt: Mapping[str, Any], *, observed_status: str | None = None) -> str:
+    if receipt.get("completed") or receipt.get("confirmed", 0) >= 10:
+        return "established"
+    confirmed = receipt.get("confirmed", 0)
+    steps = receipt.get("steps", ())
+    if confirmed == 9 and len(steps) > 9:
+        status = observed_status if observed_status is not None else receipt.get("status")
+        if status == "applied":
+            return "established"
+        if status == "not_applied":
+            return "not_established"
+        return "unknown"
+    return "not_established"
+
+
+def _parse_subtopic_progress(progress_document: Mapping[str, Any] | str) -> dict[str, Any]:
+    """Validate and normalize a Subtopic Progress document or YAML string."""
+    if isinstance(progress_document, str):
+        if _utf8_size(progress_document, "invalid_progress_document") > CANDIDATE_YAML_MAX_BYTES:
+            raise FirstUseRejected("invalid_progress_document")
+        try:
+            parsed = yaml.safe_load(progress_document)
+        except (yaml.YAMLError, ValueError, OverflowError):
+            raise FirstUseRejected("invalid_progress_document") from None
+    elif isinstance(progress_document, Mapping):
+        parsed = dict(progress_document)
+    else:
+        raise FirstUseRejected("invalid_progress_document")
+    if not isinstance(parsed, dict) or parsed.get("document_type") != "subtopic_progress":
+        raise FirstUseRejected("invalid_progress_document")
+    revision = parsed.get("revision")
+    if type(revision) is not int or revision < 1:
+        raise FirstUseRejected("invalid_progress_document")
+    if not all(isinstance(parsed.get(section), Mapping) for section in ("milestones", "current", "resume")):
+        raise FirstUseRejected("invalid_progress_document")
+    return parsed
+
+
+def has_saved_learning_position(progress_document: Mapping[str, Any] | str) -> bool:
+    """Return True only when Progress reflects a persisted change beyond starter setup."""
+    parsed = _parse_subtopic_progress(progress_document)
+    if parsed["revision"] > 1:
+        return True
+    return_point = parsed["resume"].get("return_point")
+    if return_point is not None and return_point != {}:
+        return True
+    return any(
+        isinstance(entry, Mapping) and entry.get("status") not in (None, "planned")
+        for entry in parsed["milestones"].values()
+    )
+
+
+@dataclass(frozen=True)
+class CheckpointSaveResult:
+    """Outcome of attempting and readback-verifying save_learning_checkpoint."""
+
+    saved: bool
+    verified: bool
+    status: str
+    can_save_checkpoint: bool
+    applied: bool = False
+    progress_path: str | None = None
+    revision: int | None = None
+    version_token: str | None = None
+    error_code: str | None = None
+    retryable: bool = False
+    mastery_established: bool = False
+    requires_recreation: bool = False
+
+
+def save_and_verify_learning_checkpoint(
+    host: ReferenceLearningHost | None,
+    *,
+    progress_path: str,
+    checkpoint: dict[str, object],
+    expected_version_token: str,
+) -> CheckpointSaveResult:
+    """Save a session learning checkpoint through host and verify persisted readback."""
+    if not isinstance(progress_path, str) or not progress_path:
+        raise FirstUseRejected("invalid_progress_path")
+    if host is None:
+        return CheckpointSaveResult(
+            saved=False,
+            verified=False,
+            status="host_unavailable",
+            can_save_checkpoint=False,
+            progress_path=progress_path,
+            error_code="host_unavailable",
+        )
+    if not _host_can_save_checkpoint(host):
+        return CheckpointSaveResult(
+            saved=False,
+            verified=False,
+            status="rejected",
+            can_save_checkpoint=False,
+            progress_path=progress_path,
+            error_code="guard_rejected",
+        )
+    if progress_path != _bound_progress_path(host):
+        return CheckpointSaveResult(
+            saved=False,
+            verified=False,
+            status="rejected",
+            can_save_checkpoint=_host_can_save_checkpoint(host),
+            progress_path=progress_path,
+            error_code="guard_rejected",
+        )
+    write_response = host.invoke({
+        "operation": "save_learning_checkpoint",
+        "arguments": {
+            "checkpoint": checkpoint,
+            "expected_version_token": expected_version_token,
+        },
+    })
+    write_error_code = None
+    if not write_response.get("ok"):
+        error = write_response.get("error") or {}
+        write_error_code = error.get("code")
+        if write_error_code != "write_published_cleanup_failed":
+            status = {
+                "cas_conflict": "conflict",
+                "write_outcome_unknown": "outcome_unknown",
+            }.get(write_error_code, "rejected")
+            return CheckpointSaveResult(
+                saved=False,
+                verified=False,
+                status=status,
+                can_save_checkpoint=_host_can_save_checkpoint(host),
+                progress_path=progress_path,
+                error_code=write_error_code,
+                retryable=bool(error.get("retryable", False)),
+            )
+    applied = write_error_code is not None or bool((write_response.get("result") or {}).get("applied", False))
+    try:
+        read_response = host.invoke({
+            "operation": "read_learning_context",
+            "arguments": {"required_paths": [progress_path]},
+        })
+    except OSError:
+        if not applied:
+            raise
+        read_response = {
+            "ok": False,
+            "error": {"code": write_error_code or "readback_io_error", "retryable": False},
+        }
+    if not read_response.get("ok"):
+        error = read_response.get("error") or {}
+        return CheckpointSaveResult(
+            saved=applied,
+            verified=False,
+            status="saved_unverified" if applied else "unverified",
+            can_save_checkpoint=_host_can_save_checkpoint(host),
+            applied=applied,
+            progress_path=progress_path,
+            error_code=error.get("code") or write_error_code,
+            retryable=write_error_code is None and bool(error.get("retryable", False)),
+        )
+    documents = (read_response.get("result") or {}).get("documents") or []
+    document = next((item for item in documents if item.get("path") == progress_path), None)
+    if document is None:
+        return CheckpointSaveResult(
+            saved=applied,
+            verified=False,
+            status="saved_unverified" if applied else "unverified",
+            can_save_checkpoint=_host_can_save_checkpoint(host),
+            applied=applied,
+            progress_path=progress_path,
+            error_code="readback_missing",
+        )
+    try:
+        content = document.get("content")
+        if not isinstance(content, str):
+            raise FirstUseRejected("invalid_progress_document")
+        parsed = _parse_subtopic_progress(content)
+    except FirstUseRejected:
+        return CheckpointSaveResult(
+            saved=applied,
+            verified=False,
+            status="saved_unverified" if applied else "unverified",
+            can_save_checkpoint=_host_can_save_checkpoint(host),
+            applied=applied,
+            progress_path=progress_path,
+            error_code="invalid_progress_document",
+        )
+    persisted = {
+        "milestone": parsed["current"].get("milestone"),
+        "return_point": parsed["resume"].get("return_point"),
+        "ready_next": parsed["resume"].get("ready_next"),
+    }
+    if not RuntimeSessionBroker._type_sensitive_semantic_equal(persisted, checkpoint):
+        return CheckpointSaveResult(
+            saved=applied,
+            verified=False,
+            status="saved_unverified" if write_error_code else "verification_mismatch",
+            can_save_checkpoint=_host_can_save_checkpoint(host),
+            applied=applied,
+            progress_path=progress_path,
+            revision=parsed["revision"],
+            version_token=document.get("version_token"),
+            error_code="verification_mismatch",
+        )
+    if applied:
+        status, saved = "saved_verified", True
+    elif has_saved_learning_position(parsed):
+        status, saved = "already_saved_verified", True
+    else:
+        status, saved = "unchanged_starter_only", False
+    return CheckpointSaveResult(
+        saved=saved,
+        verified=True,
+        status=status,
+        can_save_checkpoint=_host_can_save_checkpoint(host),
+        applied=applied,
+        progress_path=progress_path,
+        revision=parsed["revision"],
+        version_token=document.get("version_token"),
+        error_code=write_error_code,
+    )
+
+
 @dataclass(frozen=True)
 class FirstUseResult:
     status: str
     host: ReferenceLearningHost | None = None
+    setup_preparation_recorded: bool = True
+    starter_setup_state: str | None = None
+
+    def __post_init__(self):
+        if self.starter_setup_state is None:
+            object.__setattr__(
+                self, "starter_setup_state", _default_starter_state_for_status(self.status)
+            )
+        if self.starter_setup_state not in STARTER_SETUP_STATES:
+            raise FirstUseRejected("invalid_state")
+
+    @property
+    def starter_setup_established(self) -> bool:
+        return self.starter_setup_state == "established"
+
+    @property
+    def can_save_checkpoint(self) -> bool:
+        return _host_can_save_checkpoint(self.host)
+
+    @property
+    def requires_recreation(self) -> bool:
+        return False
+
+    @property
+    def auto_overwrite_allowed(self) -> bool:
+        return False
+
+
+@dataclass(frozen=True)
+class FirstUseUxState:
+    """Explicit separation of preparation, starter setup, checkpoint saving, and mastery."""
+
+    phase: str
+    setup_preparation_recorded: bool
+    starter_setup_state: str
+    learning_position_state: str
+    can_save_checkpoint: bool
+    can_continue_teaching: bool = True
+    requires_recreation: bool = False
+    auto_overwrite_allowed: bool = False
+    mastery_established: bool = False
+
+
+def assess_first_use_ux(
+    result: FirstUseResult | None = None,
+    *,
+    declined: bool = False,
+    host: ReferenceLearningHost | None = None,
+    progress_document: Mapping[str, Any] | str | None = None,
+    checkpoint_result: CheckpointSaveResult | None = None,
+) -> FirstUseUxState:
+    """Compute an unambiguous UX state separating profile creation from checkpoint saving."""
+    if type(declined) is not bool:
+        raise FirstUseRejected("invalid_state")
+    if declined and (
+        result is not None or checkpoint_result is not None or progress_document is not None
+    ):
+        raise FirstUseRejected("invalid_state")
+    if declined:
+        return FirstUseUxState(
+            phase="declined",
+            setup_preparation_recorded=False,
+            starter_setup_state="not_established",
+            learning_position_state="not_saved",
+            can_save_checkpoint=False,
+        )
+
+    parsed_progress = (
+        _parse_subtopic_progress(progress_document) if progress_document is not None else None
+    )
+    effective_host = host if host is not None else (result.host if result is not None else None)
+    can_save = _host_can_save_checkpoint(effective_host)
+
+    if result is not None:
+        setup_preparation_recorded = bool(result.setup_preparation_recorded)
+        starter_setup_state = result.starter_setup_state
+    else:
+        setup_preparation_recorded = False
+        if parsed_progress is not None or (
+            checkpoint_result is not None and (
+                checkpoint_result.saved
+                or checkpoint_result.verified
+                or checkpoint_result.status == "outcome_unknown"
+            )
+        ):
+            starter_setup_state = "established"
+        else:
+            starter_setup_state = "not_established"
+
+    if starter_setup_state == "unknown":
+        learning_position_state = "unknown"
+    elif starter_setup_state == "not_established":
+        learning_position_state = "not_saved"
+    elif checkpoint_result is not None:
+        if checkpoint_result.status in {"saved_verified", "already_saved_verified"}:
+            learning_position_state = "saved_verified"
+        elif checkpoint_result.status in {"saved_unverified", "unverified", "verification_mismatch"}:
+            learning_position_state = "saved_unverified" if checkpoint_result.saved else "unknown"
+        elif checkpoint_result.status == "unchanged_starter_only":
+            learning_position_state = "not_saved"
+        elif parsed_progress is not None:
+            learning_position_state = (
+                "saved_verified" if has_saved_learning_position(parsed_progress) else "not_saved"
+            )
+        else:
+            learning_position_state = "unknown"
+    elif parsed_progress is not None:
+        learning_position_state = (
+            "saved_verified" if has_saved_learning_position(parsed_progress) else "not_saved"
+        )
+    elif result is not None and result.status == "active":
+        learning_position_state = "not_saved"
+    else:
+        learning_position_state = "unknown"
+
+    if (result is not None and result.status == "outcome_unknown") or starter_setup_state == "unknown":
+        phase = "outcome_unknown"
+    elif starter_setup_state == "not_established":
+        phase = "preparation_recorded" if setup_preparation_recorded else "not_started"
+    elif learning_position_state == "saved_verified":
+        phase = "checkpoint_saved_verified"
+    else:
+        phase = "starter_setup_established"
+
+    return FirstUseUxState(
+        phase=phase,
+        setup_preparation_recorded=setup_preparation_recorded,
+        starter_setup_state=starter_setup_state,
+        learning_position_state=learning_position_state,
+        can_save_checkpoint=can_save,
+    )
 
 
 class SyntheticFirstUseService:
@@ -436,7 +835,10 @@ class SyntheticFirstUseService:
                 if previous["binding"] != binding:
                     raise FirstUseRejected("intent_conflict")
                 self._current(previous, receiver)
-                return FirstUseResult("already_applied" if previous["completed"] else previous["status"])
+                return FirstUseResult(
+                    "already_applied" if previous["completed"] else previous["status"],
+                    starter_setup_state=_starter_state_for_receipt(previous),
+                )
             if slot is not None and slot["initialized"]:
                 raise FirstUseRejected("receipt_missing")
             now = datetime.now(timezone.utc)
@@ -476,8 +878,14 @@ class SyntheticFirstUseService:
                     status = self.provider.inspect_first_use_step(PreparedFirstUseStep(**receipt["steps"][-1]))
                 except (OSError, ResolutionError, CasConflict):
                     status = "outcome_unknown"
-                return FirstUseResult(status)
-            return FirstUseResult(receipt["status"])
+                return FirstUseResult(
+                    status,
+                    starter_setup_state=_starter_state_for_receipt(receipt, observed_status=status),
+                )
+            return FirstUseResult(
+                receipt["status"],
+                starter_setup_state=_starter_state_for_receipt(receipt),
+            )
 
     def apply(self, operation_id, receiver, intent):
         binding = self._binding(receiver, operation_id, intent)
@@ -524,7 +932,10 @@ class SyntheticFirstUseService:
                     if outcome != "applied":
                         receipt["status"] = outcome
                         self.store.write(receipt)
-                        return FirstUseResult(outcome)
+                        return FirstUseResult(
+                            outcome,
+                            starter_setup_state=_starter_state_for_receipt(receipt, observed_status=outcome),
+                        )
                     receipt["confirmed"] = index + 1
                     receipt["status"] = "activated_unissued" if index == 9 else f"staging_{index + 1}"
                     self.store.write(receipt)
