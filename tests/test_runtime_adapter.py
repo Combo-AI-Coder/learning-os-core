@@ -19,6 +19,8 @@ import yaml
 from scripts.runtime_adapter import (
     BOUNDED_YAML_MAX_NODES,
     CasConflict,
+    WriteOutcomeUnknown,
+    WritePublishedCleanupFailed,
     DeploymentGuard,
     DeploymentResolver,
     GuardRejected,
@@ -685,7 +687,7 @@ class GitCliProviderTests(unittest.TestCase):
             (snapshot.root / "state.txt").read_text(encoding="utf-8"),
         )
 
-    def test_materialize_uses_one_batch_cat_file_process(self):
+    def test_materialize_uses_batch_cat_file_processes(self):
         (self.seed / "second.txt").write_text(
             "two\n", encoding="utf-8", newline="\n"
         )
@@ -709,7 +711,7 @@ class GitCliProviderTests(unittest.TestCase):
             side_effect=recording_popen,
         ):
             snapshot = self.provider().materialize(self.REPO_ID, "main")
-        self.assertEqual(1, len(batch_calls))
+        self.assertEqual(3, len(batch_calls))
         self.assertEqual("two\n", (snapshot.root / "second.txt").read_text())
         self.assertEqual("three\n", (snapshot.root / "third.txt").read_text())
 
@@ -1592,6 +1594,26 @@ class GitCliProviderTests(unittest.TestCase):
             ),
         )
 
+    def test_remote_contains_acknowledged_write_when_checkout_cleanup_fails(self):
+        provider = self.provider()
+
+        def cleanup_then_report_error(td):
+            td.cleanup()
+            raise PermissionError("synthetic cleanup failure")
+
+        with mock.patch.object(provider, "_cleanup_checkout_tempdir", cleanup_then_report_error):
+            with self.assertRaises(WritePublishedCleanupFailed) as caught:
+                provider.update_text(
+                    self.REPO_ID, "main", "state.txt", "updated\n", self.initial_blob,
+                    "test: publish before cleanup", expected_ref_sha=self.initial_commit,
+                )
+
+        remote = ("--git-dir", str(self.remote))
+        self.assertEqual(self._git(*remote, "rev-parse", "refs/heads/main"),
+                         caught.exception.published_commit)
+        self.assertEqual(self._git(*remote, "show", "refs/heads/main:state.txt"), "updated")
+        self.assertIsInstance(caught.exception.__cause__, PermissionError)
+
     def test_expected_branch_head_rejects_advance_with_same_target_blob(self):
         (self.seed / "other.txt").write_text(
             "advance\n", encoding="utf-8", newline="\n"
@@ -1658,7 +1680,7 @@ class GitCliProviderTests(unittest.TestCase):
             )
         ])
         self.addCleanup(provider.close)
-        with self.assertRaisesRegex(CasConflict, "compare-and-swap"):
+        with self.assertRaisesRegex(WriteOutcomeUnknown, "push outcome"):
             provider.update_text(
                 self.REPO_ID,
                 "main",
@@ -2010,7 +2032,9 @@ class GitCliProviderTests(unittest.TestCase):
             )
         ])
         self.addCleanup(provider.close)
-        with self.assertRaisesRegex(CasConflict, "compare-and-swap"):
+        # A failed push is conservatively unknown to the provider; the independent
+        # fixture readback below still proves this particular race did not write.
+        with self.assertRaisesRegex(WriteOutcomeUnknown, "push outcome"):
             provider.update_text(
                 self.REPO_ID,
                 "main",

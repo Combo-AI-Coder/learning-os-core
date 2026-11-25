@@ -124,6 +124,14 @@ class FirstUseTests(unittest.TestCase):
             files[name] = (ROOT / name).read_text(encoding="utf-8")
         cls.core_remote = repository(cls.core_root, files)
         cls.core_commit = git("rev-parse", "HEAD", cwd=cls.core_root)
+        template_root = Path(cls.core_temp.name)
+        cls.instance_template = repository(template_root / "instance", {"README.md": "# Synthetic blank Instance\n"})
+        cls.baseline = git("--git-dir", str(cls.instance_template), "rev-parse", "main")
+        cls.contract = dict(schema_version="0.4", document_type="deployment_binding",
+            deployment=dict(id="synthetic-first-use", topology="split", epoch=1, write_state="active"),
+            core=dict(repository_id=CORE_ID, commit=cls.core_commit))
+        cls.control_template = repository(template_root / "control", {
+            "deployment.yaml": yaml.safe_dump(cls.contract, sort_keys=False)})
 
     @classmethod
     def tearDownClass(cls):
@@ -133,13 +141,10 @@ class FirstUseTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.instance_remote = repository(self.root / "instance", {"README.md": "# Synthetic blank Instance\n"})
-        self.baseline = git("--git-dir", str(self.instance_remote), "rev-parse", "main")
-        self.contract = dict(schema_version="0.4", document_type="deployment_binding",
-            deployment=dict(id="synthetic-first-use", topology="split", epoch=1, write_state="active"),
-            core=dict(repository_id=CORE_ID, commit=self.core_commit))
-        self.control_remote = repository(self.root / "control", {
-            "deployment.yaml": yaml.safe_dump(self.contract, sort_keys=False)})
+        self.instance_remote = shutil.copytree(self.instance_template, self.root / "instance.git")
+        self.control_remote = shutil.copytree(self.control_template, self.root / "control.git")
+        self.baseline = self.__class__.baseline
+        self.contract = deepcopy(self.__class__.contract)
         self.locator = dict(runtime_control=dict(repository_id=RC_ID, canonical_ref="main", contract_path="deployment.yaml"),
                             instance=dict(repository_id=INSTANCE_ID, canonical_ref="main"))
         self.bindings = [GitRepositoryBinding(RC_ID, str(self.control_remote), "synthetic/control"),
@@ -153,6 +158,14 @@ class FirstUseTests(unittest.TestCase):
         self.store = SyntheticFirstUseStore(self.root / "receipts", self.authority.integrity_key)
         self.provider = self.new_provider()
         self.service = self.new_service()
+
+    def working_clone(self, remote):
+        working = self.root / remote.stem
+        if not working.exists():
+            git("clone", "-q", "-b", "main", str(remote), str(working))
+            git("config", "user.name", "Synthetic First Use", cwd=working)
+            git("config", "user.email", "fixture@learning-os.invalid", cwd=working)
+        return working
 
     def new_provider(self):
         provider = LocalFixtureProvider(self.bindings, prepared_store=self.root / "prepared",
@@ -301,7 +314,7 @@ class FirstUseTests(unittest.TestCase):
         self._assert_truly_empty_tree_baseline_case("accepted")
 
     def test_bootstrap_empty_root_exception_still_rejects_nested_empty_tree(self):
-        clone = self.root / "instance"
+        clone = self.working_clone(self.instance_remote)
         empty_tree = subprocess.run(["git", "hash-object", "-t", "tree", "--stdin"], cwd=clone,
                                     input=b"", capture_output=True, check=True).stdout.decode("ascii").strip()
         # Binary NUL records avoid Windows text-mode CRLF becoming part of
@@ -774,7 +787,7 @@ class FirstUseTests(unittest.TestCase):
     def test_deployment_change_before_activation_stops_inactive(self):
         def freeze(event, receipt):
             if event == "step_confirmed" and receipt["confirmed"] == 9:
-                clone = self.root / "control"
+                clone = self.working_clone(self.control_remote)
                 self.contract["deployment"]["write_state"] = "frozen"
                 (clone / "deployment.yaml").write_text(yaml.safe_dump(self.contract), encoding="utf-8")
                 git("add", ".", cwd=clone)
@@ -860,7 +873,7 @@ class FirstUseTests(unittest.TestCase):
         self.assertEqual(self.baseline, self.head())
 
     def replace_blank_baseline(self, *, readme=None, message=None):
-        working = self.root / "instance"
+        working = self.working_clone(self.instance_remote)
         if readme is not None:
             (working / "README.md").write_text(readme, encoding="utf-8")
         git("add", ".", cwd=working)
@@ -892,7 +905,7 @@ class FirstUseTests(unittest.TestCase):
         self.assertEqual("prepared", self.prepare_new_binding().status)
 
     def test_baseline_object_payload_exact_limit_is_admitted_and_next_byte_rejected(self):
-        working = self.root / "instance"
+        working = self.working_clone(self.instance_remote)
         self.replace_blank_baseline(readme="")
         overhead = sum(int(git("cat-file", "-s", identity, cwd=working))
                        for identity in ("HEAD", "HEAD^{tree}"))
@@ -999,10 +1012,11 @@ InstanceValidator.run = _stricter_instance_run
         self.core_commit = git("rev-parse", "HEAD", cwd=self.core_root)
         self.provider.core_root, self.provider.core_commit = self.core_root, self.core_commit
         self.contract["core"]["commit"] = self.core_commit
-        (self.root / "control/deployment.yaml").write_text(yaml.safe_dump(self.contract), encoding="utf-8")
-        git("add", ".", cwd=self.root / "control")
-        git("commit", "-qm", "Synthetic strict pin", cwd=self.root / "control")
-        git("push", "-q", str(self.control_remote), "main", cwd=self.root / "control")
+        clone = self.working_clone(self.control_remote)
+        (clone / "deployment.yaml").write_text(yaml.safe_dump(self.contract), encoding="utf-8")
+        git("add", ".", cwd=clone)
+        git("commit", "-qm", "Synthetic strict pin", cwd=clone)
+        git("push", "-q", str(self.control_remote), "main", cwd=clone)
         fingerprint = subprocess.run([os.sys.executable, str(validator), "--write-policy-fingerprint"],
             capture_output=True, text=True, check=True).stdout.strip()
         from scripts.validate_learning_os import instance_write_policy_fingerprint
@@ -1173,7 +1187,7 @@ InstanceValidator.run = _stricter_instance_run
                     self.doCleanups()
                     self.setUp()
                 self.stop_after_receipt()
-                clone = self.root / "control"
+                clone = self.working_clone(self.control_remote)
                 if change == "epoch":
                     self.contract["deployment"]["epoch"] = 2
                 elif change == "core":

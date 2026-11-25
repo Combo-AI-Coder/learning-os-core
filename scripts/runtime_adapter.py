@@ -63,6 +63,7 @@ MAX_SNAPSHOT_PATH_BYTES = 4096
 MAX_SNAPSHOT_PATH_DEPTH = 128
 MAX_SNAPSHOT_EXPANDED_PATH_BYTES = 16 * 1024 * 1024
 FETCH_POLL_SECONDS = 0.02
+TREE_BATCH_READ_TIMEOUT_SECONDS = 90
 BOUNDED_YAML_MAX_BYTES = 1024 * 1024
 BOUNDED_YAML_MAX_NODES = 20000
 BOUNDED_YAML_MAX_DEPTH = 64
@@ -78,6 +79,41 @@ class GuardRejected(RuntimeError):
 
 class CasConflict(RuntimeError):
     pass
+
+
+class WriteOutcomeError(RuntimeError):
+    """A write cannot be reported as either complete success or retryable CAS.
+
+    Publication knowledge and checkout cleanup are independent. Details remain
+    in the trusted provider/operator layer, never the public Host envelope.
+    """
+
+
+class WriteOutcomeUnknown(WriteOutcomeError):
+    public_code = "write_outcome_unknown"
+    publication_state = "unknown"
+
+    def __init__(self, message: str, *, cleanup_failed: bool = False):
+        super().__init__(message)
+        self.cleanup_failed = cleanup_failed
+
+
+class WriteCleanupFailed(WriteOutcomeError):
+    public_code = "write_cleanup_failed"
+    publication_state = "not_published"
+    cleanup_failed = True
+
+
+class WritePublishedCleanupFailed(WriteOutcomeError):
+    public_code = "write_published_cleanup_failed"
+    publication_state = "published"
+    cleanup_failed = True
+
+    def __init__(self, published_commit: str):
+        if not EXACT_COMMIT.fullmatch(published_commit):
+            raise ValueError("published commit must be exact")
+        super().__init__("Git push was acknowledged but checkout cleanup failed")
+        self.published_commit = published_commit
 
 
 class TransitionRejected(RuntimeError):
@@ -1498,51 +1534,172 @@ class GitCliProvider:
         expanded_path_bytes = 0
         tree_cache: dict[str, bytes] = {}
         unique_trees = {root_tree}
+        canonical_modes = {
+            b"40000": b"040000 tree",
+            b"100644": b"100644 blob",
+            b"100755": b"100755 blob",
+            b"120000": b"120000 blob",
+            b"160000": b"160000 commit",
+        }
+        if not EXACT_COMMIT.fullmatch(root_tree):
+            raise ResolutionError("Git object identity is not exact")
+        env = self._env()
+        env["GIT_NO_LAZY_FETCH"] = "1"
+        try:
+            process = subprocess.Popen(
+                ["git", "cat-file", "--batch"],
+                cwd=repo,
+                env=env,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                **self._fetch_process_kwargs(),
+            )
+        except OSError:
+            raise ResolutionError("Git tree read failed") from None
 
-        while pending_trees:
-            prefix, tree_sha, depth = pending_trees.pop()
-            raw = tree_cache.get(tree_sha)
-            if raw is None:
-                object_type, _ = self._object_header(repo, tree_sha)
-                if object_type != "tree":
-                    raise ResolutionError("Git tree identity is not a tree")
-                raw = self._git_bytes(
-                    "ls-tree", "-z", tree_sha,
-                    cwd=repo,
-                    extra_env={"GIT_NO_LAZY_FETCH": "1"},
-                )
-                if not raw:
-                    if allow_empty_root and not prefix and depth == 0 and tree_sha == root_tree:
-                        return []
-                    raise ResolutionError("Git tree contains an empty directory")
-                tree_cache[tree_sha] = raw
-            listing_bytes += len(raw)
-            if listing_bytes > MAX_SNAPSHOT_TREE_LIST_BYTES:
-                raise ResolutionError(
-                    "Git tree listing exceeds Runtime byte budget"
-                )
-            for record in (item for item in raw.split(b"\x00") if item):
-                path, sha, mode, kind = self._decode_tree_object_record(
-                    record
-                )
-                full_path, entry_depth, expanded_path_bytes = (
-                    self._expanded_tree_path(
-                        prefix, path, depth, expanded_path_bytes
-                    )
-                )
-                objects.append((full_path, sha, mode, kind))
-                if len(objects) > MAX_SNAPSHOT_TREE_ENTRIES:
+        deadline = time.monotonic() + TREE_BATCH_READ_TIMEOUT_SECONDS
+        timed_out = threading.Event()
+
+        def _abort_on_timeout() -> None:
+            timed_out.set()
+            try:
+                if process.poll() is None:
+                    if getattr(process, "pid", None) is not None:
+                        self._terminate_process_tree(process)
+                    else:
+                        process.terminate()
+            except (OSError, subprocess.SubprocessError):
+                pass
+
+        watchdog = threading.Timer(TREE_BATCH_READ_TIMEOUT_SECONDS, _abort_on_timeout)
+        watchdog.daemon = True
+        watchdog.start()
+        try:
+            if process.stdin is None or process.stdout is None:
+                raise ResolutionError("Git tree read failed")
+            while pending_trees:
+                prefix, tree_sha, depth = pending_trees.pop()
+                raw = tree_cache.get(tree_sha)
+                if raw is None:
+                    if timed_out.is_set() or time.monotonic() >= deadline:
+                        raise ResolutionError("Git tree read timed out")
+                    process.stdin.write((tree_sha + "\n").encode("ascii"))
+                    process.stdin.flush()
+                    header = process.stdout.readline(128)
+                    if timed_out.is_set() or time.monotonic() >= deadline:
+                        raise ResolutionError("Git tree read timed out")
+                    try:
+                        parts = header.decode("ascii").split()
+                    except UnicodeDecodeError:
+                        raise ResolutionError("Git object header is invalid") from None
+                    if (not header.endswith(b"\n") or len(parts) != 3
+                            or parts[0] != tree_sha or not parts[2].isdigit()):
+                        raise ResolutionError("Git object header is invalid")
+                    object_type, size = parts[1], int(parts[2])
+                    if (object_type in {"commit", "tag", "tree"}
+                            and size > MAX_GIT_METADATA_OBJECT_BYTES):
+                        raise ResolutionError(
+                            "Git metadata object exceeds Runtime expanded-size budget"
+                        )
+                    if object_type != "tree":
+                        raise ResolutionError("Git tree identity is not a tree")
+                    if listing_bytes + size > MAX_SNAPSHOT_TREE_LIST_BYTES:
+                        raise ResolutionError(
+                            "Git tree listing exceeds Runtime byte budget"
+                        )
+                    raw = process.stdout.read(size)
+                    if timed_out.is_set() or time.monotonic() >= deadline:
+                        raise ResolutionError("Git tree read timed out")
+                    if len(raw) != size:
+                        raise ResolutionError("Git tree content size differs")
+                    delimiter = process.stdout.read(1)
+                    if timed_out.is_set() or time.monotonic() >= deadline:
+                        raise ResolutionError("Git tree read timed out")
+                    if delimiter != b"\n":
+                        raise ResolutionError("Git tree content size differs")
+                    digest = hashlib.sha1(
+                        b"tree " + str(size).encode("ascii") + b"\0" + raw
+                    ).hexdigest()
+                    if digest != tree_sha:
+                        raise ResolutionError("Git tree content identity differs")
+                    if not raw:
+                        if allow_empty_root and not prefix and depth == 0 and tree_sha == root_tree:
+                            break
+                        raise ResolutionError("Git tree contains an empty directory")
+                    tree_cache[tree_sha] = raw
+                listing_bytes += len(raw)
+                if listing_bytes > MAX_SNAPSHOT_TREE_LIST_BYTES:
                     raise ResolutionError(
-                        "Git tree exceeds Runtime entry budget"
+                        "Git tree listing exceeds Runtime byte budget"
                     )
-                if kind == "tree":
-                    if sha not in unique_trees:
-                        unique_trees.add(sha)
-                        if len(unique_trees) > MAX_SNAPSHOT_TREE_OBJECTS:
-                            raise ResolutionError(
-                                "Git tree exceeds Runtime subtree budget"
-                            )
-                    pending_trees.append((full_path, sha, entry_depth))
+                offset = 0
+                while offset < len(raw):
+                    end = raw.find(b"\0", offset)
+                    if end < 0 or end + 21 > len(raw):
+                        raise ResolutionError("Git tree contains an undecodable entry")
+                    try:
+                        mode_raw, name = raw[offset:end].split(b" ", 1)
+                    except ValueError:
+                        raise ResolutionError("Git tree contains an undecodable entry") from None
+                    if mode_raw not in canonical_modes:
+                        raise ResolutionError("Git tree contains an unsupported non-regular entry")
+                    sha_raw = raw[end + 1:end + 21].hex().encode("ascii")
+                    path, sha, mode, kind = self._decode_tree_object_record(
+                        canonical_modes[mode_raw] + b" " + sha_raw + b"\t" + name
+                    )
+                    offset = end + 21
+                    full_path, entry_depth, expanded_path_bytes = (
+                        self._expanded_tree_path(
+                            prefix, path, depth, expanded_path_bytes
+                        )
+                    )
+                    objects.append((full_path, sha, mode, kind))
+                    if len(objects) > MAX_SNAPSHOT_TREE_ENTRIES:
+                        raise ResolutionError(
+                            "Git tree exceeds Runtime entry budget"
+                        )
+                    if kind == "tree":
+                        if sha not in unique_trees:
+                            unique_trees.add(sha)
+                            if len(unique_trees) > MAX_SNAPSHOT_TREE_OBJECTS:
+                                raise ResolutionError(
+                                    "Git tree exceeds Runtime subtree budget"
+                                )
+                        pending_trees.append((full_path, sha, entry_depth))
+            process.stdin.close()
+            if timed_out.is_set():
+                raise ResolutionError("Git tree read timed out")
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise ResolutionError("Git tree read timed out")
+            process.wait(timeout=remaining)
+            if process.returncode:
+                raise ResolutionError("Git tree read failed")
+        except (OSError, subprocess.SubprocessError) as exc:
+            if timed_out.is_set() or isinstance(exc, subprocess.TimeoutExpired):
+                raise ResolutionError("Git tree read timed out") from None
+            raise ResolutionError("Git tree read failed") from None
+        finally:
+            watchdog.cancel()
+            for pipe in (process.stdin, process.stdout):
+                if pipe is not None:
+                    try:
+                        pipe.close()
+                    except OSError:
+                        pass
+            if process.poll() is None:
+                if getattr(process, "pid", None) is not None:
+                    self._terminate_process_tree(process)
+                else:
+                    process.terminate()
+                    try:
+                        process.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
+            else:
+                process.wait()
         return objects
 
     def _tree_entries(
@@ -2175,6 +2332,37 @@ class GitCliProvider:
         finally:
             self._cleanup_checkout_tempdir(td)
 
+    def _push_write(
+        self, repo: Path, binding: GitRepositoryBinding, branch_ref: str, commit: str,
+    ) -> None:
+        # A failed push may have reached the remote before acknowledgement.
+        try:
+            self._git(
+                "push", "-q", f"--force-with-lease={branch_ref}:{commit}",
+                "origin", f"HEAD:{branch_ref}", cwd=repo, cas=True, binding=binding,
+            )
+        except (CasConflict, ResolutionError, OSError, subprocess.SubprocessError) as exc:
+            raise WriteOutcomeUnknown("Git push outcome is unconfirmed") from exc
+
+    def _cleanup_write_checkout(
+        self, td: tempfile.TemporaryDirectory, *, push_attempted: bool,
+        published_commit: str | None,
+    ) -> None:
+        try:
+            self._cleanup_checkout_tempdir(td)
+        except OSError as exc:
+            exc.add_note(f"Git write checkout: {td.name}")
+            if published_commit is not None:
+                raise WritePublishedCleanupFailed(published_commit) from exc
+            if push_attempted:
+                raise WriteOutcomeUnknown(
+                    "Git push outcome is unconfirmed and checkout cleanup failed",
+                    cleanup_failed=True,
+                ) from exc
+            raise WriteCleanupFailed(
+                "write was not published and checkout cleanup failed"
+            ) from exc
+
     def update_text(
         self,
         repository_id: int,
@@ -2198,6 +2386,8 @@ class GitCliProvider:
         (
             td, repo, commit, branch_ref, snapshot_total, blob_cap
         ) = self._checkout_branch(binding, branch)
+        push_attempted = False
+        published_commit = None
         try:
             if expected_ref_sha is not None and commit != expected_ref_sha:
                 raise CasConflict("branch head compare-and-swap mismatch")
@@ -2287,15 +2477,14 @@ class GitCliProvider:
             if not EXACT_COMMIT.fullmatch(new_commit):
                 raise CasConflict("Git update returned no exact commit")
 
-            self._git(
-                "push", "-q",
-                f"--force-with-lease={branch_ref}:{commit}",
-                "origin", f"HEAD:{branch_ref}",
-                cwd=repo, cas=True, binding=binding,
-            )
+            push_attempted = True
+            self._push_write(repo, binding, branch_ref, commit)
+            published_commit = new_commit
             return new_commit
         finally:
-            self._cleanup_checkout_tempdir(td)
+            self._cleanup_write_checkout(
+                td, push_attempted=push_attempted, published_commit=published_commit,
+            )
 
 
     def create_text(
@@ -2319,6 +2508,8 @@ class GitCliProvider:
         (
             td, repo, commit, branch_ref, snapshot_total, blob_cap
         ) = self._checkout_branch(binding, branch)
+        push_attempted = False
+        published_commit = None
         try:
             if expected_ref_sha is not None and commit != expected_ref_sha:
                 raise CasConflict("branch head compare-and-swap mismatch")
@@ -2413,15 +2604,14 @@ class GitCliProvider:
                     f"created snapshot is not Runtime-materializable: {exc}"
                 ) from None
 
-            self._git(
-                "push", "-q",
-                f"--force-with-lease={branch_ref}:{commit}",
-                "origin", f"HEAD:{branch_ref}",
-                cwd=repo, cas=True, binding=binding,
-            )
+            push_attempted = True
+            self._push_write(repo, binding, branch_ref, commit)
+            published_commit = new_commit
             return new_commit
         finally:
-            self._cleanup_checkout_tempdir(td)
+            self._cleanup_write_checkout(
+                td, push_attempted=push_attempted, published_commit=published_commit,
+            )
 
 
 @dataclass(frozen=True)
