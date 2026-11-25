@@ -25,36 +25,57 @@ def check_workflow(document):
         raise ValueError("CI must group runs by ref and cancel in-progress PR checks only")
 
     jobs = document.get("jobs") or {}
-    if set(jobs) != {"validate", "validate-windows"}:
-        raise ValueError("CI must define both Linux and Windows validation jobs")
+    if set(jobs) != {"validate", "validate-windows-shard", "validate-windows"}:
+        raise ValueError("CI must define Linux validation, Windows shards, and their aggregate")
     if jobs["validate"].get("runs-on") != "ubuntu-latest":
         raise ValueError("Linux validation job must target ubuntu-latest")
-    if jobs["validate-windows"].get("runs-on") != "windows-latest":
-        raise ValueError("Windows validation job must target windows-latest")
-    if jobs["validate-windows"].get("strategy") != {
+    if jobs["validate"].get("name", "validate") != "validate":
+        raise ValueError("Linux validation must report the required check name validate")
+
+    windows_shards = jobs["validate-windows-shard"]
+    if windows_shards.get("runs-on") != "windows-latest":
+        raise ValueError("Windows validation shards must target windows-latest")
+    if windows_shards.get("strategy") != {
         "fail-fast": "false",
         "matrix": {"shard": ["1", "2", "3", "4"]},
     }:
         raise ValueError("Windows validation must run shards 1..4 with fail-fast disabled")
 
+    if jobs["validate-windows"] != {
+        "runs-on": "ubuntu-latest",
+        "needs": ["validate-windows-shard"],
+        "if": "always()",
+        "timeout-minutes": "5",
+        "steps": [
+            {
+                "name": "Require all Windows validation shards to pass",
+                "env": {"SHARD_RESULT": "${{ needs.validate-windows-shard.result }}"},
+                "run": 'test "$SHARD_RESULT" = "success"',
+            },
+        ],
+    }:
+        raise ValueError("validate-windows must run unconditionally and require successful shards")
+
     pytest_commands = {
         "validate": "python -m pytest -p no:cacheprovider -n auto --dist worksteal tests/",
-        "validate-windows": (
+        "validate-windows-shard": (
             "python -m pytest -p no:cacheprovider -p scripts.pytest_shard "
             "--shard-index=${{ matrix.shard }} --shard-count=4 -n auto --dist worksteal tests/"
         ),
     }
-    for name, job in jobs.items():
-        if job.get("if") == "false":
-            raise ValueError(f"Job {name} cannot be disabled")
+    for name, pytest_command in pytest_commands.items():
+        job = jobs[name]
+        if "if" in job or job.get("continue-on-error", "false") != "false":
+            raise ValueError(f"Job {name} cannot be skipped or allowed to fail")
         timeout = int(job.get("timeout-minutes", "0"))
         if not 1 <= timeout <= 90:
             raise ValueError(f"Job {name} timeout-minutes must remain bounded (1..90)")
         steps = job.get("steps") or []
         runs = [step.get("run", "") for step in steps]
         for required in (
+            "python -m pip install -r requirements-dev.txt",
             "python scripts/validate_learning_os.py . --core",
-            pytest_commands[name],
+            pytest_command,
         ):
             if required not in runs:
                 raise ValueError(f"Job {name} must run {required}")
@@ -68,9 +89,11 @@ def check_workflow(document):
             or setup_options.get("cache-dependency-path") != "requirements-dev.txt"
         ):
             raise ValueError(f"Job {name} must cache pip using requirements-dev.txt")
+        if not any(step.get("uses", "").startswith("actions/checkout@") for step in steps):
+            raise ValueError(f"Job {name} must use actions/checkout")
         for step in steps:
-            if step.get("continue-on-error") == "true":
-                raise ValueError(f"Job {name} cannot use continue-on-error")
+            if "if" in step or step.get("continue-on-error", "false") != "false":
+                raise ValueError(f"Steps in {name} cannot be skipped or allowed to fail")
             uses = step.get("uses")
             if uses and not HEX40.search(uses):
                 raise ValueError(f"Action {uses} must be pinned to a full 40-hex commit SHA")
@@ -82,7 +105,7 @@ def check_workflow(document):
     for flag in ("--instance", "--deployment"):
         if flag not in linux_runs:
             raise ValueError(f"Linux job must exercise {flag} CLI surface")
-    win_runs = "\n".join(s.get("run", "") for s in jobs["validate-windows"]["steps"])
+    win_runs = [step.get("run", "") for step in windows_shards["steps"]]
     if "git diff --check" not in win_runs:
         raise ValueError("Windows job must run git diff --check")
 
@@ -128,11 +151,12 @@ class CIWorkflowTests(unittest.TestCase):
     def test_rejects_job_timeout_skip_or_cancellation_changes(self):
         candidates = []
         candidate = copy.deepcopy(self.workflow)
-        candidate["jobs"]["validate-windows"]["timeout-minutes"] = "120"
+        candidate["jobs"]["validate-windows-shard"]["timeout-minutes"] = "120"
         candidates.append(candidate)
-        candidate = copy.deepcopy(self.workflow)
-        candidate["jobs"]["validate"]["if"] = "false"
-        candidates.append(candidate)
+        for job in self.workflow["jobs"]:
+            candidate = copy.deepcopy(self.workflow)
+            candidate["jobs"][job]["if"] = "false"
+            candidates.append(candidate)
         candidate = copy.deepcopy(self.workflow)
         candidate["concurrency"] = {"group": "ci", "cancel-in-progress": "true"}
         candidates.append(candidate)
@@ -140,6 +164,17 @@ class CIWorkflowTests(unittest.TestCase):
             with self.subTest(candidate=candidate):
                 with self.assertRaises(ValueError):
                     check_workflow(candidate)
+
+    def test_rejects_bypassed_windows_shard_results(self):
+        candidate = copy.deepcopy(self.workflow)
+        candidate["jobs"]["validate-windows-shard"]["continue-on-error"] = "true"
+        with self.assertRaises(ValueError):
+            check_workflow(candidate)
+
+        candidate = copy.deepcopy(self.workflow)
+        candidate["jobs"]["validate-windows"]["steps"][0]["run"] = "true"
+        with self.assertRaises(ValueError):
+            check_workflow(candidate)
 
 
 if __name__ == "__main__":

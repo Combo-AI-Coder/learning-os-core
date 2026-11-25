@@ -125,7 +125,7 @@ jobs:
             --locator "$tmp/locator.yaml" \
             --provenance "$tmp/provenance.yaml"
 
-  validate-windows:
+  validate-windows-shard:
     runs-on: windows-latest
     timeout-minutes: 90
     strategy:
@@ -148,3 +148,14 @@ jobs:
       - run: python scripts/validate_learning_os.py . --core
       - run: python -m pytest -p no:cacheprovider -p scripts.pytest_shard --shard-index=${{ matrix.shard }} --shard-count=4 -n auto --dist worksteal tests/
       - run: git diff --check
+
+  validate-windows:
+    runs-on: ubuntu-latest
+    needs: [validate-windows-shard]
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - name: Require all Windows validation shards to pass
+        env:
+          SHARD_RESULT: ${{ needs.validate-windows-shard.result }}
+        run: test "$SHARD_RESULT" = "success"
